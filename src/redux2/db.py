@@ -116,14 +116,14 @@ class DB(object):
         with open(REDUX_DATA+'/sample-sort-data.csv','r') as FILE:
             for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
                 row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
-                self.dc.execute("insert into s_variants (variant_loc,name) values ("+row['v']+",'"+row['n']+"');")
+                self.dc.execute("insert into s_variants (variant_loc,name) values ('"+row['v']+"','"+row['n']+"');")
                 #print(' - inserting sample variant data: '+str(row['v']))
                 for k in range(1,cols+1):
                     kv = str(row['k'+str(k)])
                     #'null' if kv == "None" else kv
                     vv = str(row['v'])
                     #print (kv)
-                    self.dc.execute("insert into s_calls (kit_id,variant_loc,assigned) values ("+str(k)+","+vv+","+kv+");")
+                    self.dc.execute("insert into s_calls (kit_id,variant_loc,assigned) values ('k"+str(k)+"','"+vv+"',"+kv+");")
                     #self.commit()
                     #print (kv+":"+vv)
                 #break;
@@ -245,14 +245,46 @@ class DB(object):
         self.dc.execute(sql)
         F = self.dc.fetchall()
         print("all kits + variants")
-        print("+ grabbing kits by variant: 3019783")
+        print("+ grabbing kits by variant: F")
         #[(1, 3019783), (1, 6920349), (1, 7378685), (1, 8928037), ... ]
-        Fa = list(filter(lambda x: x[1]==3019783, F))
+        Fa = list(filter(lambda x: x[1]=="A", F))
         Fb = [(a) for a,b in Fa] #strip out 2nd element, the count
         #[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         print(Fb)
         print("---")
         
+        sets = {}
+        V={}
+        print("===")
+        print("SETS")
+        print("===")
+        sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
+        self.dc.execute(sql)
+        F = self.dc.fetchall()
+        #print(F)
+        Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
+        print(Fp)
+        Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
+        print(Fn)
+        #sys.exit()
+        print("---")
+        for k in Fp:
+            V[k] = sorted(list(set([i[1]+'+' for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            #Va = list(filter(lambda x: x[0]==k and x[2]==1, F))
+            #print(F) 
+            #print(k+':'+str(Vp))
+            #    sets[k]['pos'].append()
+            #if neg:
+            #    sets[k]['neg'].append()
+        print("---")
+        for k in Fn:
+            Vn = sorted(list(set([i[1]+'-' for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
+            if k in V.keys():
+                V[k] = sorted(V[k]+Vn)
+            else:
+                V[k] = Vn
+            #print(k+':'+str(V[k]))
+        print(V)
         sys.exit()
 
         #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"

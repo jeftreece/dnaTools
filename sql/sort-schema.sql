@@ -14,7 +14,8 @@ drop table if exists s_kits;
 
 create table s_variants (
  -- variant_id int, -- not needed for prototype
- variant_loc int,  -- PK
+ -- variant_loc int,  -- PK
+ variant_loc varchar(10),
  name varchar(20),
  -- old_reference varchar(2), -- commenting out right now cuz not part of ian's doc
  sort_order int
@@ -22,8 +23,10 @@ create table s_variants (
 
 create table s_calls(
  -- call_id int, -- PK - commenting out for now
- kit_id int, 
- variant_loc int,
+ -- kit_id int, 
+ kit_id varchar(10), 
+ -- variant_loc int,
+ variant_loc varchar(10),
  assigned boolean 
 );
 -- unique index (kit_id,variant_loc) -- commented out for now
@@ -51,7 +54,8 @@ create table call_fails (
 -- );
 
 create table s_kits(
- kit_id  int,  -- later this can be person_id
+ -- kit_id  int,  -- later this can be person_id
+ kit_id  varchar(10),  -- later this can be person_id
  sort_order int
 );
 
