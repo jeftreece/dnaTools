@@ -142,6 +142,8 @@ class DB(object):
         
     def sort_data(self):
 
+        #HIDE-ME: old stuff based on Iain's PDF - to redo {{{
+
         print("===")
         print("FILTER, step: A ")
         print("===")
@@ -207,7 +209,8 @@ class DB(object):
         print(D1) #D1 - perfect share variants
         #sys.exit()
 
-        #NOTE: a type study {{{
+        #}}}
+        #HIDE-ME: a type study - may no longer be useful{{{
         #------------------------------
 
         #I'm thinking byK is what we're looking to work with
@@ -243,6 +246,7 @@ class DB(object):
         #    ]
             
         #------------------------------ }}}
+        HIDE-ME: some code - may no longer be useful {{{
 
         print("===")
         print("SORT")
@@ -262,6 +266,8 @@ class DB(object):
         print("===")
         print("SETS")
         print("===")
+
+        # }}}
 
         #all kits, variant, assignment mixes 
         sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
@@ -284,7 +290,8 @@ class DB(object):
         print(VARIANTSa)
         #sys.exit()
         
-        #start tree
+        #HIDE-ME: some code - start tree (prototype){{{
+
         VA = {}
         top = Node("top")
         for v in VARIANTS:
@@ -294,7 +301,7 @@ class DB(object):
         for pre, fill, node in RenderTree(top):
             print("%s%s" % (pre, node.name))
 
-        ##loop kits looking for relations btw variants
+        #}}}
 
         #kits with positive assignments
         Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
@@ -326,6 +333,8 @@ class DB(object):
                 KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
             else:
                 KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
+
+        # HIDE-ME - these notes may not be useful {{{
 
         #loop dict's variant sets with unique variant types to find relations
         #(step1) A+ {B:(B+,B-)} :: [(A+,B+),(A+,B-)]
@@ -379,7 +388,7 @@ class DB(object):
         #        if key=='variants':
         #            for Vy in value:
                        
-
+        #}}}
 
         #loop dict to create list
         newV1 = []
@@ -391,6 +400,7 @@ class DB(object):
         for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
             d.update((k, cnt) for k, v in d.items() if k == "sort")
             cnt = cnt + 1
+
         #create a var for the sorted version (not necessary)
         newV2 = sorted(newV1, key=lambda k: (k['sort']))
 
@@ -401,45 +411,29 @@ class DB(object):
             STR = d['kit']+':'+str(d['variants'])
             print(STR.replace("'",""))
 
-        #blocks
+        #blocks - perhaps a better term might be applicable?
         print("---")
         blocks = {}
-        #print("blocks")
         for VX in VARIANTS:
             blocks[VX] = {'mix':[],'pos':[],'neg':[]}
             VXP = '+'+VX
-            #print(VXP)
             for VY in VARIANTS:
                 VYP = '+'+VY
                 if VXP == VYP:
                     foo=1
-                    #print("-VXP:"+VXP)
-                    #print("-VYP:"+VYP)
-                    #print("here")
-                    #sys.exit()
                 else:
                     VYN = '-'+VY
-                    #print(VYP)
-                    #print(VYN)
                     chk1 = False
                     chk2 = False
                     for d in newV2:
                         if VXP in d['variants']:
-                            #print("VXP:"+VXP)
-                            #print("VYP:"+VYP)
-                            #print("VYN:"+VYN)
-                            #print("variants:"+str(d['variants']))
                             if chk1 is False and VYP in d['variants']:
-                                #print("here1")
                                 chk1 = True
                             if chk2 is False and VYN in d['variants']:
-                                #print("here2")
                                 chk2 = True
-                            #print("finish checks")
                         if chk1 is True and chk2 is True:
                             blocks[VX]['mix'].append(VY)
                             break
-                            #return
                     if chk1 is True and chk2 is False:
                         blocks[VX]['pos'].append(VY)
                     if chk2 is True and chk1 is False:
@@ -448,7 +442,7 @@ class DB(object):
         for key, value in blocks.items():
             print(key+'|'+str(value))
             
-        #---
+        #HIDE-ME: some sort rules and how to use them {{{
 
         # sample data
 
@@ -526,15 +520,15 @@ class DB(object):
         #   (5) K-pos-L
         #   (6) I-pos-L
 
-        #---
+        #}}}
 
         sys.exit()
 
-        #and print a json version nof it (debugging)
+        #json/stdout a variable (debugging)
         print(json.dumps(newV2, indent=4, sort_keys=True))
         sys.exit()
 
-        #{{{ 
+        #HIDE-ME: some code (may not be useful){{{ 
 
         #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
         #self.dc.execute(sql_2b)
