@@ -524,6 +524,8 @@ class DB(object):
 
         #}}}
 
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+
         sys.exit()
 
         #json/stdout a variable (debugging)
