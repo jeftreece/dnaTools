@@ -390,7 +390,7 @@ class DB(object):
                        
         #}}}
 
-        #loop dict to create list
+        #loop dict to create list version of the data
         newV1 = []
         for key, value in KA.items():
             newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
@@ -404,10 +404,11 @@ class DB(object):
         #create a var for the sorted version (not necessary)
         newV2 = sorted(newV1, key=lambda k: (k['sort']))
 
+        #print to stdout so I can see what I'm doing
         print("---")
-        newV3 = {}
+        #newV3 = {}
         for d in newV2:
-            newV3[d['kit']] = d['variants']
+            #newV3[d['kit']] = d['variants']
             STR = d['kit']+':'+str(d['variants'])
             print(STR.replace("'",""))
 
@@ -439,6 +440,7 @@ class DB(object):
                     if chk2 is True and chk1 is False:
                         blocks[VX]['neg'].append(VY)
                     
+        #print to stdout so I can see what I'm doing
         for key, value in blocks.items():
             print(key+'|'+str(value))
             
