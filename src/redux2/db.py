@@ -450,7 +450,26 @@ class DB(object):
             
         #---
 
-        # example raw results:
+        # sample data
+
+        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
+        # A,M343,1,1,Null,1,1,1,1,1,1,1
+        # B,Z9,0,0,0,1,0,0,0,0,1,0
+        # C,Z381,0,1,1,Null,0,0,1,1,1,0
+        # D,U106,1,1,1,1,0,1,1,1,1,0
+        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
+        # F,Z18,1,0,0,0,0,1,0,0,0,0
+        # G,Z156,0,1,0,0,0,0,1,0,0,0
+        # H,L11,1,1,1,1,1,Null,1,1,1,1
+        # I,Z28,0,0,0,1,0,Null,0,0,1,0
+        # J,P312,0,0,0,0,1,0,0,0,0,1
+        # K,Z8,0,0,0,1,0,0,0,0,0,0
+        # L,A297,0,Null,0,1,0,0,1,0,Null,0
+        # M,M269,1,1,1,1,1,1,1,1,1,1
+        # N,Z306,0,1,0,0,0,0,0,0,0,0
+        # O,L48,0,0,1,1,0,0,0,1,1,0
+
+        # processed raw results:
 
         # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
         # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
