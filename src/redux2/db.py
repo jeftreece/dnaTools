@@ -447,80 +447,59 @@ class DB(object):
                     
         for key, value in blocks.items():
             print(key+'|'+str(value))
-            #print(value)
-            #sys.exit()
-            #print(mix+':'+str(value['mix']))
-            #print(pos+':'+str(value['pos']))
-            #print(neg+':'+str(value['neg']))
             
-        #k4:[+A, +B, +D, +H, +I, +K, +L, +M, +O, -F, -G, -J, -N]
-        #k9:[+A, +B, +C, +D, +H, +I, +M, +O, -F, -G, -J, -K, -N]
-        #k8:[+A, +C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
-        #k7:[+A, +C, +D, +G, +H, +L, +M, -B, -F, -I, -J, -K, -N, -O]
-        #k2:[+A, +C, +D, +G, +H, +M, +N, -B, -F, -I, -J, -K, -O]
-        #k3:[+C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
-        #k1:[+A, +D, +F, +H, +M, -B, -C, -G, -I, -J, -K, -L, -N, -O]
-        #k10:[+A, +H, +J, +M, -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
-        #k5:[+A, +H, +J, +M, -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
-        #k6:[+A, +D, +F, +M, -B, -C, -E, -G, -J, -K, -L, -N, -O]
-
         #---
 
-        #A:['B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O']
-        #M:['B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O']
-        #H:['B', 'C', 'D', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O'] ... +E
-            #J:[]
-            #F:[]
-            #D:['B', 'C', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'O']
-                #E:[]
-                #C:['B', 'G', 'I', 'L', 'N', 'O']
-                    #G:['N']
-                        #N:[]
-                    #O:['B', 'I', 'K', 'L']
-                        #L:['B', 'G', 'I', 'K', 'O']
-                            #I:['K']
-                            #B:['K']
-                                #K:[]
+        # example raw results:
 
-        #---
-        #A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        #B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
-        #G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        #N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
+        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
 
-        #mix: (1|2) means 1 is above 2
-        #pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a cousin, uncle, or sibling. (differ dupe)
-        #neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+        # rules:
 
-        # #A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # =#M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # =#H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #     1#J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #     2#D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #         1#F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
-        #         2#C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #             1#E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #                 1#L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #                     1#G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #                         1#N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #                     2#O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-        #                         1#I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #                             1#B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #                                 1#K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
 
-        #dispute: L:mix-O vs. O:mix-L - winner: L:mix-O
-        # + reasons:
+        # results when applying these rules manually:
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        # disputes: 
+        # (1) L:mix-O vs. O:mix-L 
+        #
+        # resolutions: 
+        # (1) winning rule is L:mix-O
+        #
+        # reasons for (1) resolution:
         #   (1) L-mix-I
         #   (2) L-mix-B
         #   (3) L-mix-K
@@ -532,39 +511,6 @@ class DB(object):
 
         sys.exit()
 
-        #print(newV3)
-        
-        #k8:[+A, +C, +D, +E, +H, +M, +O,             -B, -F, -G, -I, -J, -K, -L, -N]
-        #k7:[+A, +C, +D, +G, +H, +L, +M,             -B, -F, -I, -J, -K, -N, -O]
-        #k2:[+A, +C, +D, +G, +H, +M, +N,             -B, -F, -I, -J, -K, -O]
-        #k4:[+A, +B, +D, +H, +I, +K, +L, +M, +O,     -F, -G, -J, -N]
-        #k1:[+A, +D, +F, +H, +M,                     -B, -C, -G, -I, -J, -K, -L, -N, -O]
-        #k6:[+A, +D, +F, +M,                         -B, -C, -E, -G, -J, -K, -L, -N, -O]
-        
-        #k9:[+A, +B, +C, +D, +H, +I, +M, +O,         -F, -G, -J, -K, -N]
-        #k5:[+A, +H, +J, +M,                         -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
-        #kX:[+A, +H, +J, +M,                         -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
-        
-        #k3:[+C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
-        
-        #blocks:
-        #    +A: { mix: [B,F]  }
-        #    +B: { mix: None  }
-        #    +C: { mix: [B,I,G,L,N,O]  }
-        #    ? +D: { mix: []  }
-        #    ? +E: { mix: []  }
-        #    +F: { mix: None  }
-        #    ? +G: { mix: []  }
-        #    ? +H: { mix: []  }
-        #    ? +I: { mix: [I]  }
-        #    ? +J: { mix: []  }
-        #    ? +K: { mix: []  }
-        #    ? +L: { mix: []  }
-        #    ? +M: { mix: []  }
-        #    ? +N: { mix: []  }
-        #    ? +O: { mix: []  }
-
-        sys.exit()
         #and print a json version nof it (debugging)
         print(json.dumps(newV2, indent=4, sort_keys=True))
         sys.exit()
