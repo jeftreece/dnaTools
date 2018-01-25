@@ -11,6 +11,8 @@
 # libs {{{
 
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
+from anytree import Node, RenderTree
+#import string
 
 # }}}
 
@@ -145,25 +147,27 @@ class DB(object):
         print("===")
         sql = "select distinct variant_loc from s_calls;"
         self.dc.execute(sql)
-        A = self.dc.fetchall()
+        A = [itm[0] for itm in self.dc.fetchall()]
         print("A - distinct variants")
         print(A) #A - distinct variants
         print("---")
         print('numA - num distinct variants')
         print(len(A)) #numA - num distinct variants
+        #sys.exit()
 
         print("===")
         print("FILTER - step: B")
         print("===")
         sql = "select distinct variant_loc from s_calls where assigned = 0;"
         self.dc.execute(sql)
-        B1 = self.dc.fetchall()
+        B1 = [itm[0] for itm in self.dc.fetchall()]
         B0 = list(set(A)-set(B1))
         print("B0 - variants that don't have negs")
         print(B0) #B0 - variants that don't have negs
         print("---")
         print("B1 - variants that have negs")
         print(B1) #B1 - variants that have negs 
+        #sys.exit()
 
         print("===")
         print("FILTER - step: C")
@@ -183,6 +187,7 @@ class DB(object):
         print("---")
         print("singletons") #C1 - singletons
         print(C1)
+        #sys.exit()
 
         print("===")
         print("FILTER - step: D")
@@ -200,6 +205,7 @@ class DB(object):
         print("---")
         print("calls of perfect share variants - these go through the next PROCESS, SORT")
         print(D1) #D1 - perfect share variants
+        #sys.exit()
 
         #NOTE: a type study {{{
         #------------------------------
@@ -253,61 +259,317 @@ class DB(object):
         print(Fb)
         print("---")
         
-        sets = {}
-        V={}
         print("===")
         print("SETS")
         print("===")
+
+        #all kits, variant, assignment mixes 
         sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
         self.dc.execute(sql)
         F = self.dc.fetchall()
-        #print(F)
+
+        #all unique kits
+        print("all unique kits")
+        KITS = sorted(list(set([itm[0] for itm in F])))
+        print(KITS)
+
+        #all unique variants
+        VARIANTS = sorted(list(set([itm[1] for itm in F])))
+        VARIANTSp = ['+'+itm[1] for itm in F]
+        VARIANTSn = ['-'+itm[1] for itm in F]
+        VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
+        print("all unique variants")
+        print(VARIANTS)
+        print("all unique variants - pos+neg")
+        print(VARIANTSa)
+        #sys.exit()
+        
+        #start tree
+        VA = {}
+        top = Node("top")
+        for v in VARIANTS:
+            VA[v] = {}
+            VA[v]['pos'] = Node('+'+v, parent=top)
+            VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
+        for pre, fill, node in RenderTree(top):
+            print("%s%s" % (pre, node.name))
+
+        ##loop kits looking for relations btw variants
+
+        #kits with positive assignments
         Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
+        print("kits with positive assignments")
         print(Fp)
+
+        #kits with negative assignments
         Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
+        print("kits with negative assignments")
         print(Fn)
         #sys.exit()
-        print("---")
-        for k in Fp:
-            Kp = sorted(list(set([i[1]+'+' for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
-            V[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
-            #Va = list(filter(lambda x: x[0]==k and x[2]==1, F))
-            #print(F) 
-            #print(k+':'+str(Vp))
-            #    sets[k]['pos'].append()
-            #if neg:
-            #    sets[k]['neg'].append()
-        print("---")
-        for k in Fn:
-            Kn = sorted(list(set([i[1]+'-' for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
-            if k in V.keys():
-                #foo = 1 
-                #V[k] = sorted(V[k]+Vn)
-                V[k]['len'] = len(V[k]['variants'])+len(Kn)
-                V[k]['variants'] = sorted(V[k]['variants']+Kn)
-            else:
-                #V[k] = Vn
-                V[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
-            #print(k+':'+str(V[k]))
-        #print(V)
-        newV = []
-        newV1 = []
-        for key, value in V.items():
-            newV.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
 
+        print("---")
+        KA={}
+
+        #per all the kits with positive variants (build new dict)
+        for k in Fp:
+            Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            #['A+', 'D+', 'F+', 'H+', 'M+']
+            print(Kp)
+            #sys.exit()
+            KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
+
+        #per all the kits with negative variants (build new dict)
+        for k in Fn:
+            Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
+            if k in KA.keys():
+                KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
+                KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
+            else:
+                KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
+
+        #loop dict's variant sets with unique variant types to find relations
+        #(step1) A+ {B:(B+,B-)} :: [(A+,B+),(A+,B-)]
+        #if x[0] == A+ && x[1] == B+ exists and if x[0] == A+ && x[1] == B- exists:
+        #    A+>B-
+
+        #--- so this:
+        #    A+>A-
+        #    B+>B-
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    unk-relations:
+        #    R1:{A1+,B+}
+
+        #(step2) A+ {C:(C+,C-)} :: [(A+,C+),(A+,C-)]
+        #if x[0] == A+ && x[1] == C+ exists and if x[0] == A+ && x[1] == C- exists:
+        #    A+>C-
+
+        #--- so this:
+        #    R1+>A-
+        #    R1+>B-
+        #    unk-relations:
+        #    R1:{A1+,B+}
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    R1+>C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+
+        #(step3a) B- {C:(C+,C-)} :: [(B-,C+),(B+,C-)]
+        #if x[0] == B- && x[1] == C+ exists and if x[0] == B- && x[1] == C- exists:
+        #    B+>C-
+
+        #--- so this:
+        #    R1+>A-
+        #    R1+>B-
+        #    R1+>C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    B->C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+
+        #for Vx in VARIANTSa:
+        #    for key, value in KA.items():
+        #        if key=='variants':
+        #            for Vy in value:
+                       
+
+
+        #loop dict to create list
+        newV1 = []
+        for key, value in KA.items():
+            newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
+
+        #sort this new list
         cnt = 0
-        for d in sorted(newV, key=lambda k: (k['plen'],k['len']), reverse=True):
+        for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
             d.update((k, cnt) for k, v in d.items() if k == "sort")
             cnt = cnt + 1
-            
-        newV1 = sorted(newV, key=lambda k: (k['sort']))
-        #VL = list(V.items())
-        #print(newV)
+        #create a var for the sorted version (not necessary)
+        newV2 = sorted(newV1, key=lambda k: (k['sort']))
 
-        #newlist = sorted(VL, key=lambda k: k['len'])
-        #import json
-        print(json.dumps(newV1, indent=4, sort_keys=True))
+        print("---")
+        newV3 = {}
+        for d in newV2:
+            newV3[d['kit']] = d['variants']
+            STR = d['kit']+':'+str(d['variants'])
+            print(STR.replace("'",""))
+
+        #blocks
+        print("---")
+        blocks = {}
+        #print("blocks")
+        for VX in VARIANTS:
+            blocks[VX] = {'mix':[],'pos':[],'neg':[]}
+            VXP = '+'+VX
+            #print(VXP)
+            for VY in VARIANTS:
+                VYP = '+'+VY
+                if VXP == VYP:
+                    foo=1
+                    #print("-VXP:"+VXP)
+                    #print("-VYP:"+VYP)
+                    #print("here")
+                    #sys.exit()
+                else:
+                    VYN = '-'+VY
+                    #print(VYP)
+                    #print(VYN)
+                    chk1 = False
+                    chk2 = False
+                    for d in newV2:
+                        if VXP in d['variants']:
+                            #print("VXP:"+VXP)
+                            #print("VYP:"+VYP)
+                            #print("VYN:"+VYN)
+                            #print("variants:"+str(d['variants']))
+                            if chk1 is False and VYP in d['variants']:
+                                #print("here1")
+                                chk1 = True
+                            if chk2 is False and VYN in d['variants']:
+                                #print("here2")
+                                chk2 = True
+                            #print("finish checks")
+                        if chk1 is True and chk2 is True:
+                            blocks[VX]['mix'].append(VY)
+                            break
+                            #return
+                    if chk1 is True and chk2 is False:
+                        blocks[VX]['pos'].append(VY)
+                    if chk2 is True and chk1 is False:
+                        blocks[VX]['neg'].append(VY)
+                    
+        for key, value in blocks.items():
+            print(key+'|'+str(value))
+            #print(value)
+            #sys.exit()
+            #print(mix+':'+str(value['mix']))
+            #print(pos+':'+str(value['pos']))
+            #print(neg+':'+str(value['neg']))
+            
+        #k4:[+A, +B, +D, +H, +I, +K, +L, +M, +O, -F, -G, -J, -N]
+        #k9:[+A, +B, +C, +D, +H, +I, +M, +O, -F, -G, -J, -K, -N]
+        #k8:[+A, +C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
+        #k7:[+A, +C, +D, +G, +H, +L, +M, -B, -F, -I, -J, -K, -N, -O]
+        #k2:[+A, +C, +D, +G, +H, +M, +N, -B, -F, -I, -J, -K, -O]
+        #k3:[+C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
+        #k1:[+A, +D, +F, +H, +M, -B, -C, -G, -I, -J, -K, -L, -N, -O]
+        #k10:[+A, +H, +J, +M, -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
+        #k5:[+A, +H, +J, +M, -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
+        #k6:[+A, +D, +F, +M, -B, -C, -E, -G, -J, -K, -L, -N, -O]
+
+        #---
+
+        #A:['B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O']
+        #M:['B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O']
+        #H:['B', 'C', 'D', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O'] ... +E
+            #J:[]
+            #F:[]
+            #D:['B', 'C', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'O']
+                #E:[]
+                #C:['B', 'G', 'I', 'L', 'N', 'O']
+                    #G:['N']
+                        #N:[]
+                    #O:['B', 'I', 'K', 'L']
+                        #L:['B', 'G', 'I', 'K', 'O']
+                            #I:['K']
+                            #B:['K']
+                                #K:[]
+
+        #---
+        #A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        #B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
+        #G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        #N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+
+        #mix: (1|2) means 1 is above 2
+        #pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a cousin, uncle, or sibling. (differ dupe)
+        #neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+
+        # #A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =#M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =#H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1#J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2#D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1#F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2#C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1#E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1#L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1#G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1#N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2#O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1#I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1#B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1#K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        #dispute: L:mix-O vs. O:mix-L - winner: L:mix-O
+        # + reasons:
+        #   (1) L-mix-I
+        #   (2) L-mix-B
+        #   (3) L-mix-K
+        #   (4) B-pos-L
+        #   (5) K-pos-L
+        #   (6) I-pos-L
+
+        #---
+
         sys.exit()
+
+        #print(newV3)
+        
+        #k8:[+A, +C, +D, +E, +H, +M, +O,             -B, -F, -G, -I, -J, -K, -L, -N]
+        #k7:[+A, +C, +D, +G, +H, +L, +M,             -B, -F, -I, -J, -K, -N, -O]
+        #k2:[+A, +C, +D, +G, +H, +M, +N,             -B, -F, -I, -J, -K, -O]
+        #k4:[+A, +B, +D, +H, +I, +K, +L, +M, +O,     -F, -G, -J, -N]
+        #k1:[+A, +D, +F, +H, +M,                     -B, -C, -G, -I, -J, -K, -L, -N, -O]
+        #k6:[+A, +D, +F, +M,                         -B, -C, -E, -G, -J, -K, -L, -N, -O]
+        
+        #k9:[+A, +B, +C, +D, +H, +I, +M, +O,         -F, -G, -J, -K, -N]
+        #k5:[+A, +H, +J, +M,                         -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
+        #kX:[+A, +H, +J, +M,                         -B, -C, -D, -F, -G, -I, -K, -L, -N, -O]
+        
+        #k3:[+C, +D, +E, +H, +M, +O, -B, -F, -G, -I, -J, -K, -L, -N]
+        
+        #blocks:
+        #    +A: { mix: [B,F]  }
+        #    +B: { mix: None  }
+        #    +C: { mix: [B,I,G,L,N,O]  }
+        #    ? +D: { mix: []  }
+        #    ? +E: { mix: []  }
+        #    +F: { mix: None  }
+        #    ? +G: { mix: []  }
+        #    ? +H: { mix: []  }
+        #    ? +I: { mix: [I]  }
+        #    ? +J: { mix: []  }
+        #    ? +K: { mix: []  }
+        #    ? +L: { mix: []  }
+        #    ? +M: { mix: []  }
+        #    ? +N: { mix: []  }
+        #    ? +O: { mix: []  }
+
+        sys.exit()
+        #and print a json version nof it (debugging)
+        print(json.dumps(newV2, indent=4, sort_keys=True))
+        sys.exit()
+
+        #{{{ 
 
         #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
         #self.dc.execute(sql_2b)
@@ -342,5 +604,5 @@ class DB(object):
         #    ...
         #   sort_positive_variants(kit_id)
 
-
+        #}}}
 
