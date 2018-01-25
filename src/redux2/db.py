@@ -269,7 +269,8 @@ class DB(object):
         #sys.exit()
         print("---")
         for k in Fp:
-            V[k] = sorted(list(set([i[1]+'+' for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            Kp = sorted(list(set([i[1]+'+' for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            V[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
             #Va = list(filter(lambda x: x[0]==k and x[2]==1, F))
             #print(F) 
             #print(k+':'+str(Vp))
@@ -278,13 +279,34 @@ class DB(object):
             #    sets[k]['neg'].append()
         print("---")
         for k in Fn:
-            Vn = sorted(list(set([i[1]+'-' for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
+            Kn = sorted(list(set([i[1]+'-' for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
             if k in V.keys():
-                V[k] = sorted(V[k]+Vn)
+                #foo = 1 
+                #V[k] = sorted(V[k]+Vn)
+                V[k]['len'] = len(V[k]['variants'])+len(Kn)
+                V[k]['variants'] = sorted(V[k]['variants']+Kn)
             else:
-                V[k] = Vn
+                #V[k] = Vn
+                V[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
             #print(k+':'+str(V[k]))
-        print(V)
+        #print(V)
+        newV = []
+        newV1 = []
+        for key, value in V.items():
+            newV.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
+
+        cnt = 0
+        for d in sorted(newV, key=lambda k: (k['plen'],k['len']), reverse=True):
+            d.update((k, cnt) for k, v in d.items() if k == "sort")
+            cnt = cnt + 1
+            
+        newV1 = sorted(newV, key=lambda k: (k['sort']))
+        #VL = list(V.items())
+        #print(newV)
+
+        #newlist = sorted(VL, key=lambda k: k['len'])
+        #import json
+        print(json.dumps(newV1, indent=4, sort_keys=True))
         sys.exit()
 
         #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
