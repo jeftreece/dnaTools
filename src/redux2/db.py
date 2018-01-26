@@ -37,6 +37,7 @@ class DB(object):
         #TODO: need to create a separate sort class for these sort thingees
         self.TREE = {}
         self.REF = None
+        self.DBG = 1 #>1 = means show don't stash msgs
         
     def db_init(self):
         #trace (1, "Initialising database...")
@@ -549,8 +550,9 @@ class DB(object):
                 for Vz in value['mix']:
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent:
-                        print("---")
-                        print("MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key)
+                        if self.DBG > 1:
+                            print("---")
+                            print("MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key)
                         #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
                         #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
@@ -565,16 +567,19 @@ class DB(object):
                             self.REF[Vz]['r_mix'].append(key)
                         #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
                         #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
-                        for pre, fill, node in RenderTree(self.TREE['top']):
-                            print("%s%s" % (pre, node.name))
+                        if self.DBG > 1:
+                            for pre, fill, node in RenderTree(self.TREE['top']):
+                                print("%s%s" % (pre, node.name))
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        print("MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key)
+                        if self.DBG > 1:
+                            print("MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key)
                         if key not in self.REF[Vz]['r_mix']:
                             self.REF[Vz]['r_mix'].append(key)
                     #chk3 - if anything else, then: STASH
                     else:
-                        print("---")
+                        if self.DBG > 1:
+                            print("---")
                         print("MIX-CHK3 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH")
                         STASH[key]['mix'].append(Vz)
                         #print(STASH)
@@ -593,13 +598,15 @@ class DB(object):
                 for Vz in value['pos']:
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
-                        print("---")
-                        print("POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found - put in STASH")
+                        if self.DBG > 1:
+                            print("---")
+                            print("POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found - put in STASH")
                         if key not in self.REF[Vz]['r_pos']:
                             self.REF[Vz]['r_pos'].append(key)
                     #chk2 - if anything else, then: STASH
                     else:
-                        print("---")
+                        if self.DBG > 1:
+                            print("---")
                         print("POS-CHK2 - "+key+"|"+Vz+" - no direct lineage found - put in STASH")
                         STASH[key]['pos'].append(Vz)
                         #print('key-desc: '+str(self.TREE[key].descendants))
@@ -620,19 +627,22 @@ class DB(object):
                 for Vz in value['neg']:
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
-                        print("---")
-                        print("NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found - put in STASH")
+                        if self.DBG > 1:
+                            print("---")
+                            print("NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found - put in STASH")
                         if key not in self.REF[Vz]['r_neg']:
                             self.REF[Vz]['r_neg'].append(key)
                     #chk2 - if the two nodes don't have direct line relation, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        print("---")
-                        print("NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found - put in STASH")
+                        if self.DBG > 1:
+                            print("---")
+                            print("NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found - put in STASH")
                         if key not in self.REF[Vz]['r_neg']:
                             self.REF[Vz]['r_neg'].append(key)
                     #chk3 - if anything else, then: STASH
                     else:
-                        print("---")
+                        if self.DBG > 1:
+                            print("---")
                         print("NEG-CHK3 - "+key+"|"+Vz+" - direct lineage found - put in STASH")
                         STASH[key]['neg'].append(Vz)
                         #print('key-desc: '+str(self.TREE[key].descendants))
