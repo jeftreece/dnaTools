@@ -290,16 +290,19 @@ class DB(object):
         print(VARIANTSa)
         #sys.exit()
         
+        #tree object
+
+        top = Node("top")
+
         #HIDE-ME: some code - start tree (prototype){{{
 
-        VA = {}
-        top = Node("top")
-        for v in VARIANTS:
-            VA[v] = {}
-            VA[v]['pos'] = Node('+'+v, parent=top)
-            VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
-        for pre, fill, node in RenderTree(top):
-            print("%s%s" % (pre, node.name))
+        #VA = {}
+        #for v in VARIANTS:
+        #    VA[v] = {}
+        #    VA[v]['pos'] = Node('+'+v, parent=top)
+        #    VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
+        #for pre, fill, node in RenderTree(top):
+        #    print("%s%s" % (pre, node.name))
 
         #}}}
 
@@ -443,7 +446,90 @@ class DB(object):
         #print to stdout so I can see what I'm doing
         for key, value in blocks.items():
             print(key+'|'+str(value))
-            
+
+        #build unsorted tree with all nodes
+        VA = {}
+        for key, value in blocks.items():
+            VA[key] = Node(key, parent=top)
+        #for pre, fill, node in RenderTree(top):
+        #    print("%s%s" % (pre, node.name))
+        #VA['A'].parent = None
+        #for pre, fill, node in RenderTree(top):
+        #    print("%s%s" % (pre, node.name))
+
+        print("---")
+        #sort variant tree
+        cnt = 0
+        for key, value in blocks.items():
+            #check mix options
+            if cnt == 1:
+                foo = 1
+                #print('key:'+key)
+            for Vz in value['mix']:
+                if cnt == 1:
+                    foo = 1 
+                    #print('Vz:'+Vz)
+                #print(VA[Vz].parent)
+                #sys.exit()
+                if VA[Vz].parent == VA[key].parent:
+                    #print(VA[Vz].parent.children)
+                    ch1 = list(VA[Vz].parent.children).remove(VA[Vz])
+                    ch2 = VA[Vz].children
+                    #print(ch1)
+                    #print(ch)
+                    if ch1 is None:
+                        #print("test1")
+                        #print("---")
+                        VA[Vz].parent = None
+                        #print("here3")
+                    else:
+                        #print("test2")
+                        #print("---")
+                        #print(ch)
+                        VA[Vz].parent.children = tuple(ch1)
+                    #sys.exit()
+                    #VA[Vz].parent.children = tuple(list(VA[Vz].parent.children).remove(VA[Vz]))
+                    #for pre, fill, node in RenderTree(top):
+                    #    print("%s%s" % (pre, node.name))
+                    VA[Vz] = Node(Vz, parent=VA[key])
+                    VA[Vz].children = ch2
+                    #for pre, fill, node in RenderTree(top):
+                    #    print("%s%s" % (pre, node.name))
+                    #sys.exit()
+                else:
+                    foo = 1
+                    #for pre, fill, node in RenderTree(top):
+                    #    print("%s%s" % (pre, node.name))
+                    #sys.exit()
+            #check pos options
+            #check neg options
+            #sys.exit()
+        cnt = cnt + 1        
+        for pre, fill, node in RenderTree(top):
+            print("%s%s" % (pre, node.name))
+
+        #key:A
+        #Vz:B
+
+        # rules:
+
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        #TODO: need to track +/- in the tree nodes
+
+        #VA = {}
+        #for v in VARIANTS:
+        #    VA[v] = {}
+        #    VA[v]['pos'] = Node('+'+v, parent=top)
+        #    VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
+        #for pre, fill, node in RenderTree(top):
+        #    print("%s%s" % (pre, node.name))
+
         #HIDE-ME: some sort rules and how to use them {{{
 
         # sample data
@@ -522,9 +608,24 @@ class DB(object):
         #   (5) K-pos-L
         #   (6) I-pos-L
 
-        #}}}
+        # top
+        # ├── A
+        # │   ├── D
+        # │   │   ├── C
+        # │   │   │   └── L
+        # │   │   │       ├── G
+        # │   │   │       │   └── N
+        # │   │   │       └── O
+        # │   │   │           ├── B
+        # │   │   │           │   └── K
+        # │   │   │           └── I
+        # │   │   ├── E
+        # │   │   └── F
+        # │   └── J
+        # ├── H
+        # └── M
 
-        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #}}}
 
         sys.exit()
 
@@ -568,4 +669,5 @@ class DB(object):
         #   sort_positive_variants(kit_id)
 
         #}}}
+
 
