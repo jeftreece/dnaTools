@@ -466,7 +466,7 @@ class DB(object):
         #   (6) I-pos-L
 
         #}}}
-        #sample tree {{{
+        #sample output (at the moment) {{{
 
         # top
         # ├── A
@@ -490,12 +490,14 @@ class DB(object):
         #}}}
 
         #the ones I missed:
+        #------------------------
         #F should be under D
         #E should be under C
         #L should be under E
         #B should be under I
+        #------------------------
 
-        #now sort it
+        #init sort logging and var prep
         STASH = {}
         print("===")
         print("variant tree sort start")
@@ -504,9 +506,9 @@ class DB(object):
         #show pre-proc default data 
         self.stdout_dump_variant_relations_data(DATA,'pre-proc',run)
 
-        #LOOP FOR MIX RULE
-        #beg collapse vim marker
-        print("mix-checks {"+"{{")
+        #LOOP FOR MIX RULE{{{
+
+        print("mix-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
             if key not in STASH:
                 STASH[key] = {'mix':[],'pos':[],'neg':[]}
@@ -515,7 +517,7 @@ class DB(object):
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent:
                         print("---")
-                        print("MIX-CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
+                        print("MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key)
                         #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
                         #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
@@ -532,34 +534,34 @@ class DB(object):
                             print("%s%s" % (pre, node.name))
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        print("MIX-CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
+                        print("MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key)
                     #chk3 - if anything else, then: STASH
                     else:
                         print("---")
-                        print("MIX-CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
+                        print("MIX-CHK3 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH")
                         STASH[key]['mix'].append(Vz)
                         #print(STASH)
                         #sys.exit()
             else:
                 #since we're skipping "mix" relations, they need to go to STASH
                 STASH[key]['mix'] = value['mix']
-        #end collapse vim marker
-        print("}"+"}}")
+        print("}"+"}}") #end collapse vim marker
 
-        #LOOP FOR POS RULE
-        #beg collapse vim marker
-        print("pos-checks {"+"{{")
+        #}}}
+        #LOOP FOR POS RULE {{{
+
+        print("pos-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
             if run_all or run_pos:
                 for Vz in value['pos']:
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
                         print("---")
-                        print("POS-CHK1 (1)key: "+key+" (2)pos-key: "+Vz+" direct lineage relation found - put in STASH")
+                        print("POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found - put in STASH")
                     #chk2 - if anything else, then: STASH
                     else:
                         print("---")
-                        print("POS-CHK2 (1)key: "+key+" (2)pos-key: "+Vz+" no direct lineage found - put in STASH")
+                        print("POS-CHK2 - "+key+"|"+Vz+" - no direct lineage found - put in STASH")
                         #print('key-desc: '+str(self.TREE[key].descendants))
                         #print('Vz-desz:'+str(self.TREE[Vz].descendants))
                         STASH[key]['pos'].append(Vz)
@@ -568,23 +570,23 @@ class DB(object):
             else:
                 #since we're skipping "pos" relations, they need to go to STASH
                 STASH[key]['pos'] = value['pos']
-        #end collapse vim marker
-        print("}"+"}}")
+        print("}"+"}}") #end collapse vim marker
 
-        #LOOP FOR NEG RULE
-        #beg collapse vim marker
-        print("neg-checks {"+"{{")
+        #}}}
+        #LOOP FOR NEG RULE {{{
+
+        print("neg-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
                         print("---")
-                        print("NEG-CHK1 (1)key: "+key+" (2)neg-key: "+Vz+" no direct lineage relation found - put in STASH")
+                        print("NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found - put in STASH")
                     #chk2 - if anything else, then: STASH
                     else:
                         print("---")
-                        print("NEG-CHK2 (1)key: "+key+" (2)neg-key: "+Vz+" direct lineage found - put in STASH")
+                        print("NEG-CHK2 - "+key+"|"+Vz+" - direct lineage found - put in STASH")
                         #print('key-desc: '+str(self.TREE[key].descendants))
                         #print('Vz-desz:'+str(self.TREE[Vz].descendants))
                         STASH[key]['neg'].append(Vz)
@@ -593,8 +595,9 @@ class DB(object):
             else:
                 #since we're skipping "neg" relations, they need to go to STASH
                 STASH[key]['neg'] = value['neg']
-        #end collapse vim marker
-        print("}"+"}}")
+        print("}"+"}}") #end collapse vim marker
+
+        #}}}
 
         #show the final tree diagram after run completion
         print("---")
