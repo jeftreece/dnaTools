@@ -29,11 +29,15 @@ REDUX_DATA = os.environ['REDUX_DATA']
 class DB(object):
     
     def __init__(self):
+
+        #proper db class attributes
         self.db = None
         self.dc = None
-        #TODO: need to create a separate class for sort
-        self.TREE = {}
 
+        #TODO: need to create a separate sort class for these sort thingees
+        self.TREE = {}
+        self.REF = None
+        
     def db_init(self):
         #trace (1, "Initialising database...")
         return sqlite3.connect('variant.db')
@@ -468,6 +472,28 @@ class DB(object):
         #}}}
         #sample output (at the moment) {{{
 
+        # PROBLEM 1:
+
+        # POS C|E
+        # POS O|E
+
+        # C,O have positive E values (and not seeing E in direct line when under D directly)
+        # the C could actually be ok, if it's a dupe. but the O -- no.
+
+        # how to come up with other ideas?
+
+        # chk is the last mix node for E (answer: D)
+        # (1) what are other desc of D that have direct lines (or are dupes # with) with C and O
+        #     A: C,L,O,B,I,K
+        #     Arch Need: keep ref of what's been processed like so:
+        #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
+        # (2) are there any neg for E in those results? (if so -- it can't be
+        #     one of them ... or any of their direct lines) -- A: No
+        # (3  what is the first possibility? ... use dupe options last
+        #     A: E is C's parent   
+        # (4) (ISSUE) what about E's children if it has any -- and their possible conflicts 
+        #     if move E?
+
         # top
         # ├── A
         # │   ├── D
@@ -489,13 +515,13 @@ class DB(object):
 
         #}}}
 
-        #the ones I missed:
-        #------------------------
-        #F should be under D
-        #E should be under C
-        #L should be under E
-        #B should be under I
-        #------------------------
+        # the ones I missed:
+        # ------------------------
+        # OK - F should be under D
+        # #1 - E should be under C like this D>C>E
+        # (fixed by #1) L should be under E like this D>C>E>L ...
+        # B should be under I (B and I should be dupes -- my manual work was wrong)
+        # ------------------------
 
         #init sort logging and var prep
         STASH = {}
@@ -505,13 +531,20 @@ class DB(object):
 
         #show pre-proc default data 
         self.stdout_dump_variant_relations_data(DATA,'pre-proc',run)
+        #prep stash
+        for key, value in DATA.items():
+            STASH[key] = {'mix':[],'pos':[],'neg':[]}
 
-        #LOOP FOR MIX RULE{{{
+        #prep ref
+        if self.REF is None:
+            self.REF = {}
+            for key, value in DATA.items():
+                self.REF[key] = {'r_mix':[],'r_pos':[],'r_neg':[]}
+
+        #MIX RULE CHKS{{{
 
         print("mix-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
-            if key not in STASH:
-                STASH[key] = {'mix':[],'pos':[],'neg':[]}
             if run_all or run_mix:
                 for Vz in value['mix']:
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
@@ -528,6 +561,8 @@ class DB(object):
                             self.TREE[Vz].parent.children = tuple(ch1)
                         self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
                         self.TREE[Vz].children = ch2
+                        if key not in self.REF[Vz]['r_mix']:
+                            self.REF[Vz]['r_mix'].append(key)
                         #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
                         #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
                         for pre, fill, node in RenderTree(self.TREE['top']):
@@ -535,6 +570,8 @@ class DB(object):
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         print("MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key)
+                        if key not in self.REF[Vz]['r_mix']:
+                            self.REF[Vz]['r_mix'].append(key)
                     #chk3 - if anything else, then: STASH
                     else:
                         print("---")
@@ -548,7 +585,7 @@ class DB(object):
         print("}"+"}}") #end collapse vim marker
 
         #}}}
-        #LOOP FOR POS RULE {{{
+        #POS RULE CHKS{{{
 
         print("pos-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
@@ -558,13 +595,15 @@ class DB(object):
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
                         print("---")
                         print("POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found - put in STASH")
+                        if key not in self.REF[Vz]['r_pos']:
+                            self.REF[Vz]['r_pos'].append(key)
                     #chk2 - if anything else, then: STASH
                     else:
                         print("---")
                         print("POS-CHK2 - "+key+"|"+Vz+" - no direct lineage found - put in STASH")
+                        STASH[key]['pos'].append(Vz)
                         #print('key-desc: '+str(self.TREE[key].descendants))
                         #print('Vz-desz:'+str(self.TREE[Vz].descendants))
-                        STASH[key]['pos'].append(Vz)
                         #print(STASH)
                         #sys.exit()
             else:
@@ -573,7 +612,7 @@ class DB(object):
         print("}"+"}}") #end collapse vim marker
 
         #}}}
-        #LOOP FOR NEG RULE {{{
+        #NEG RULE CHKS{{{
 
         print("neg-checks {"+"{{") #beg collapse vim marker
         for key, value in DATA.items():
@@ -583,13 +622,21 @@ class DB(object):
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
                         print("---")
                         print("NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found - put in STASH")
-                    #chk2 - if anything else, then: STASH
+                        if key not in self.REF[Vz]['r_neg']:
+                            self.REF[Vz]['r_neg'].append(key)
+                    #chk2 - if the two nodes don't have direct line relation, then: don't STASH
+                    elif self.TREE[Vz] in self.TREE[key].descendants:
+                        print("---")
+                        print("NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found - put in STASH")
+                        if key not in self.REF[Vz]['r_neg']:
+                            self.REF[Vz]['r_neg'].append(key)
+                    #chk3 - if anything else, then: STASH
                     else:
                         print("---")
-                        print("NEG-CHK2 - "+key+"|"+Vz+" - direct lineage found - put in STASH")
+                        print("NEG-CHK3 - "+key+"|"+Vz+" - direct lineage found - put in STASH")
+                        STASH[key]['neg'].append(Vz)
                         #print('key-desc: '+str(self.TREE[key].descendants))
                         #print('Vz-desz:'+str(self.TREE[Vz].descendants))
-                        STASH[key]['neg'].append(Vz)
                         #print(STASH)
                         #sys.exit()
             else:
@@ -754,25 +801,48 @@ class DB(object):
         self.stdout_dump_var(newV2)
         sys.exit()
         
-    def stdout_dump_variant_relations_data(self,data,dataStr,run=1):
-        dataPrint = copy.deepcopy(data)
+    def stdout_dump_variant_relations_data(self,DATA,dataStr,run=1):
+        dataPrint = copy.deepcopy(DATA)
+        refPrint = copy.deepcopy(self.REF)
         mixlen = 0
         poslen = 0
         neglen = 0
-        for key, value in data.items():
+        chkRef1 = False
+        if self.REF is not None:
+            r_mixlen = 0
+            r_poslen = 0
+            r_neglen = 0
+        for key, value in DATA.items():
             dataPrint[key]['mix'] = ','.join(map(str, value['mix']))
             dataPrint[key]['pos'] = ','.join(map(str, value['pos']))
             dataPrint[key]['neg'] = ','.join(map(str, value['neg']))
             mixlen = mixlen+len(value['mix'])
             poslen = poslen+len(value['pos'])
             neglen = neglen+len(value['neg'])
+            if self.REF is not None:
+                refPrint[key]['r_mix'] = ','.join(map(str, self.REF[key]['r_mix']))
+                refPrint[key]['r_pos'] = ','.join(map(str, self.REF[key]['r_pos']))
+                refPrint[key]['r_neg'] = ','.join(map(str, self.REF[key]['r_neg']))
+                r_mixlen = r_mixlen+len(self.REF[key]['r_mix'])
+                r_poslen = r_poslen+len(self.REF[key]['r_pos'])
+                r_neglen = r_neglen+len(self.REF[key]['r_neg'])
         print("RUN:"+str(run)+"("+dataStr+") mix cnt:"+str(mixlen))
         print("RUN:"+str(run)+"("+dataStr+") pos cnt:"+str(poslen))
         print("RUN:"+str(run)+"("+dataStr+") neg cnt:"+str(neglen))
+        if self.REF is not None:
+            print("RUN:"+str(run)+"("+dataStr+") r_mix cnt:"+str(r_mixlen))
+            print("RUN:"+str(run)+"("+dataStr+") r_pos cnt:"+str(r_poslen))
+            print("RUN:"+str(run)+"("+dataStr+") r_neg cnt:"+str(r_neglen))
         print("---")
         #beg collapse vim marker
-        print("RUN:"+str(run)+"("+dataStr+") dump {"+"{{")
+        print("RUN:"+str(run)+"("+dataStr+") DATA/STASH dump {"+"{{")
         self.stdout_dump_var(dataPrint)
+        #end collapse vim marker
+        #beg collapse vim marker
+        if self.REF is not None:
+            print("}"+"}}")
+            print("RUN:"+str(run)+"("+dataStr+") REF dump {"+"{{")
+            self.stdout_dump_var(refPrint)
         #end collapse vim marker
         print("}"+"}}")
         
