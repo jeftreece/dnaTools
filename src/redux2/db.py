@@ -495,19 +495,25 @@ class DB(object):
         #L should be under E
         #B should be under I
 
+
         #now sort it
         STASH = {}
         print("===")
         print("variant tree sort start")
+        print("---")
+        self.stdout_dump_variant_relations_data(DATA,'INIT-DATA')
+        #print("---")
+
+        #LOOP FOR MIX RULE
         for key, value in DATA.items():
             if key not in STASH:
                 STASH[key] = {'mix':[],'pos':[],'neg':[]}
-            #MIX RULE
             if run_all or run_mix:
                 for Vz in value['mix']:
+                    #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent:
                         print("---")
-                        print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
+                        print("MIX-CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
                         #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
                         #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
@@ -522,25 +528,43 @@ class DB(object):
                         #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
                         for pre, fill, node in RenderTree(self.TREE['top']):
                             print("%s%s" % (pre, node.name))
+                    #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
+                        print("MIX-CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
+                    #chk3 - if anything else, then: STASH
                     else:
                         print("---")
-                        print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
+                        print("MIX-CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
                         STASH[key]['mix'].append(Vz)
                         #print(STASH)
                         #sys.exit()
             else:
                 #since we're skipping "mix" relations, they need to go to STASH
                 STASH[key]['mix'] = value['mix']
-            #POS RULE
+
+        #LOOP FOR POS RULE
+        for key, value in DATA.items():
             if run_all or run_pos:
                 for Vz in value['pos']:
-                    foo = 1
+                    #chk1 - if the two nodes have direct line relation, then: don't STASH
+                    if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
+                        print("---")
+                        print("POS-CHK1 (1)key: "+key+" (2)pos-key: "+Vz+" direct lineage relation found - put in STASH")
+                    #chk2 - if anything else, then: STASH
+                    else:
+                        print("---")
+                        print("POS-CHK2 (1)key: "+key+" (2)pos-key: "+Vz+" no direct lineage found - put in STASH")
+                        #print('key-desc: '+str(self.TREE[key].descendants))
+                        #print('Vz-desz:'+str(self.TREE[Vz].descendants))
+                        STASH[key]['pos'].append(Vz)
+                        #print(STASH)
+                        #sys.exit()
             else:
                 #since we're skipping "pos" relations, they need to go to STASH
                 STASH[key]['pos'] = value['pos']
-            #NEG RULE
+
+        #LOOP FOR NEG RULE
+        for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
                     foo = 1
@@ -553,29 +577,16 @@ class DB(object):
         for pre, fill, node in RenderTree(self.TREE['top']):
             print("%s%s" % (pre, node.name))
         
-        #self.stdout_dump_var(STASH)
-        #sys.exit()
-        STASHprint = copy.deepcopy(STASH)
-        mixlen = 0
-        poslen = 0
-        neglen = 0
-        for key, value in STASH.items():
-            STASHprint[key]['mix'] = ','.join(map(str, value['mix']))
-            STASHprint[key]['pos'] = ','.join(map(str, value['pos']))
-            STASHprint[key]['neg'] = ','.join(map(str, value['neg']))
-            mixlen = mixlen+len(value['mix'])
-            poslen = poslen+len(value['pos'])
-            neglen = neglen+len(value['neg'])
         print("---")
-        print("STASH mix cnt: "+str(mixlen))
-        print("STASH pos cnt: "+str(poslen))
-        print("STASH neg cnt: "+str(neglen))
-        self.stdout_dump_var(STASHprint)
+        self.stdout_dump_variant_relations_data(STASH,'STASH')
         print("---")
 
         return STASH
         
     def sort_data(self):
+
+        #beg collapse vim marker
+        print("PREP {"+"{{")
 
         #all kits, variant, assignment mixes 
         sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
@@ -693,6 +704,9 @@ class DB(object):
         for key, value in DATA.items():
             print(key+'|'+str(value))
 
+        #end collapse vim marker
+        print("}"+"}}")
+
         #build unsorted tree with all nodes under top
         self.TREE = {}
         self.TREE['top'] = Node("top")
@@ -701,8 +715,8 @@ class DB(object):
             self.TREE[key] = Node(key, parent=self.TREE['top'])
 
         #sort it
-        STASH = self.sort_variant_tree(DATA,run_mix=True)
-        STASH = self.sort_variant_tree(STASH,run_mix=True)
+        STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True)
+        #STASH = self.sort_variant_tree(STASH,run_mix=True)
 
         sys.exit()
 
@@ -710,9 +724,31 @@ class DB(object):
         self.stdout_dump_var(newV2)
         sys.exit()
         
+    def stdout_dump_variant_relations_data(self,data,dataStr):
+        dataPrint = copy.deepcopy(data)
+        mixlen = 0
+        poslen = 0
+        neglen = 0
+        for key, value in data.items():
+            dataPrint[key]['mix'] = ','.join(map(str, value['mix']))
+            dataPrint[key]['pos'] = ','.join(map(str, value['pos']))
+            dataPrint[key]['neg'] = ','.join(map(str, value['neg']))
+            mixlen = mixlen+len(value['mix'])
+            poslen = poslen+len(value['pos'])
+            neglen = neglen+len(value['neg'])
+        print(dataStr+" mix cnt: "+str(mixlen))
+        print(dataStr+" pos cnt: "+str(poslen))
+        print(dataStr+" neg cnt: "+str(neglen))
+        print("---")
+        #beg collapse vim marker
+        print(dataStr+" dump {"+"{{")
+        self.stdout_dump_var(dataPrint)
+        #end collapse vim marker
+        print("}"+"}}")
+        
     def stdout_dump_var(self,var):
         #TODO: put this somewhere else
         print(json.dumps(var, indent=4, sort_keys=True))
-        sys.exit()
+        #sys.exit()
 
 
