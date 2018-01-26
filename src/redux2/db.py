@@ -371,7 +371,7 @@ class DB(object):
 
         #}}}
         
-    def sort_variant_tree (self,DATA):
+    def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None):
 
         # HIDE-ME: rules {{{
         # -----------------------------------
@@ -489,54 +489,87 @@ class DB(object):
 
         #}}}
 
+        #the ones I missed:
+        #F should be under D
+        #E should be under C
+        #L should be under E
+        #B should be under I
+
         #now sort it
         STASH = {}
         print("===")
         print("variant tree sort start")
         for key, value in DATA.items():
-            #print("key: "+key)
-            for Vz in value['mix']:
-                if self.TREE[Vz].parent == self.TREE[key].parent:
-                    print("---")
-                    print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
-                    #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
-                    #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
-                    ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
-                    ch2 = self.TREE[Vz].children
-                    if ch1 is None:
-                        self.TREE[Vz].parent = None
+            if key not in STASH:
+                STASH[key] = {'mix':[],'pos':[],'neg':[]}
+            #MIX RULE
+            if run_all or run_mix:
+                for Vz in value['mix']:
+                    if self.TREE[Vz].parent == self.TREE[key].parent:
+                        print("---")
+                        print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
+                        #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
+                        #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
+                        ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
+                        ch2 = self.TREE[Vz].children
+                        if ch1 is None:
+                            self.TREE[Vz].parent = None
+                        else:
+                            self.TREE[Vz].parent.children = tuple(ch1)
+                        self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
+                        self.TREE[Vz].children = ch2
+                        #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
+                        #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
+                        for pre, fill, node in RenderTree(self.TREE['top']):
+                            print("%s%s" % (pre, node.name))
+                    elif self.TREE[Vz] in self.TREE[key].descendants:
+                        print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
                     else:
-                        self.TREE[Vz].parent.children = tuple(ch1)
-                    self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
-                    self.TREE[Vz].children = ch2
-                    #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
-                    #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
-                    for pre, fill, node in RenderTree(self.TREE['top']):
-                        print("%s%s" % (pre, node.name))
-                elif self.TREE[Vz] in self.TREE[key].descendants:
-                    print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
-                else:
-                    print("---")
-                    print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
-                    if key not in STASH:
-                        STASH[key] = {'mix':[],'pos':[],'neg':[]}
-                    STASH[key]['mix'].append(Vz)
-                    #print(STASH)
-                    #sys.exit()
+                        print("---")
+                        print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
+                        STASH[key]['mix'].append(Vz)
+                        #print(STASH)
+                        #sys.exit()
+            else:
+                #since we're skipping "mix" relations, they need to go to STASH
+                STASH[key]['mix'] = value['mix']
+            #POS RULE
+            if run_all or run_pos:
+                for Vz in value['pos']:
+                    foo = 1
+            else:
+                #since we're skipping "pos" relations, they need to go to STASH
+                STASH[key]['pos'] = value['pos']
+            #NEG RULE
+            if run_all or run_neg:
+                for Vz in value['neg']:
+                    foo = 1
+            else:
+                #since we're skipping "neg" relations, they need to go to STASH
+                STASH[key]['neg'] = value['neg']
+
         print("---")
         print("DONE")
         for pre, fill, node in RenderTree(self.TREE['top']):
             print("%s%s" % (pre, node.name))
         
+        #self.stdout_dump_var(STASH)
+        #sys.exit()
         STASHprint = copy.deepcopy(STASH)
-        slen = 0
+        mixlen = 0
+        poslen = 0
+        neglen = 0
         for key, value in STASH.items():
             STASHprint[key]['mix'] = ','.join(map(str, value['mix']))
-            STASHprint[key]['pos'] = ','.join(map(str, value['neg']))
+            STASHprint[key]['pos'] = ','.join(map(str, value['pos']))
             STASHprint[key]['neg'] = ','.join(map(str, value['neg']))
-            slen = slen+len(value['mix'])
+            mixlen = mixlen+len(value['mix'])
+            poslen = poslen+len(value['pos'])
+            neglen = neglen+len(value['neg'])
         print("---")
-        print("STASH cnt: "+str(slen))
+        print("STASH mix cnt: "+str(mixlen))
+        print("STASH pos cnt: "+str(poslen))
+        print("STASH neg cnt: "+str(neglen))
         self.stdout_dump_var(STASHprint)
         print("---")
 
@@ -668,8 +701,8 @@ class DB(object):
             self.TREE[key] = Node(key, parent=self.TREE['top'])
 
         #sort it
-        STASH = self.sort_variant_tree(DATA)
-        STASH = self.sort_variant_tree(STASH)
+        STASH = self.sort_variant_tree(DATA,run_mix=True)
+        STASH = self.sort_variant_tree(STASH,run_mix=True)
 
         sys.exit()
 
