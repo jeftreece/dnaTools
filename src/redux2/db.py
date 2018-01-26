@@ -496,21 +496,29 @@ class DB(object):
         #     if move E?
 
         # top
-        # ├── A
-        # │   ├── D
-        # │   │   ├── C
-        # │   │   │   └── L
-        # │   │   │       ├── G
-        # │   │   │       │   └── N
-        # │   │   │       └── O
-        # │   │   │           ├── B
-        # │   │   │           │   └── K
-        # │   │   │           └── I
-        # │   │   ├── E
-        # │   │   └── F
-        # │   └── J
-        # ├── H
-        # └── M
+        # ├── (A) M343(=)
+        # │   ├── (D) U106 (ok)
+        # │   │   ├── (C) Z381 (ok)
+        # │   │   │   └── (L) A297 (!!!) <--- recurrent rule (see Iain notes)
+        # │   │   │       ├── (G) Z156 (ok)
+        # │   │   │       │   └── (N) Z306 (ok)
+        # │   │   │       └── (O) L48 (ok)
+        # │   │   │           ├── (B) Z9 (ok)
+        # │   │   │           │   └── (K) Z8 (ok)
+        # │   │   │           └── (I) Z28 (!!!) <-- Iain says this is equiv to Z9
+        # │   │   ├── (E) Z301 (!!!) <-- should be under (C) Z381 (known Problem#1)
+        # │   │   └── (F) Z18 (ok)
+        # │   └── (J) P312 (ok)
+        # ├── (H) L11 (=)
+        # └── (M) M269 (=)
+
+        # TODO: Z301+ exists, but you don't have any Z381+ Z301- tests in the example, 
+        # so you have to treat Z381 and Z301 as equivalent]
+
+        # TODO: A297 is a recurrent SNP that doesn't fit into the phylogeny, so
+        # could either be dumped or listed as recurrent.
+
+        # TODO: Z28 is equivalent to Z9
 
         #}}}
 
@@ -675,9 +683,19 @@ class DB(object):
         print("PREP {"+"{{")
 
         #all kits, variant, assignment mixes 
-        sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
+        self.commit()
+
+        #Names
+        sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #Letters 
+        sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #Combo - Names+Letters
+        sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+
         self.dc.execute(sql)
         F = self.dc.fetchall()
+        #print(F)
+        #sys.exit()
 
         #all unique kits
         #print("---")
@@ -693,6 +711,7 @@ class DB(object):
         print("---")
         print("all unique variants")
         print(VARIANTS)
+        #sys.exit()
         #print("---")
         #print("all unique variants - pos+neg")
         #print(VARIANTSa)
