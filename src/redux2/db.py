@@ -13,6 +13,7 @@
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
 from anytree import Node, RenderTree
 #import string
+import copy #only used for STASHprint (debugging)
 
 # }}}
 
@@ -30,7 +31,9 @@ class DB(object):
     def __init__(self):
         self.db = None
         self.dc = None
-        
+        #TODO: need to create a separate class for sort
+        self.TREE = {}
+
     def db_init(self):
         #trace (1, "Initialising database...")
         return sqlite3.connect('variant.db')
@@ -84,6 +87,7 @@ class DB(object):
         self.run_sql_file('clades-schema.sql')
 
     #tree sort prototype ddl+dml
+    #TODO: need to create a separate class for sort
     
     def sort_schema(self):
         self.run_sql_file('sort-schema.sql')
@@ -140,7 +144,170 @@ class DB(object):
             #con.close()
         self.commit()
         
-    def sort_data(self):
+    def sort_variant_tree (self,DATA):
+
+        # HIDE-ME: rules {{{
+        # -----------------------------------
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+        # -----------------------------------
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # -----------------------------------
+        #TODO: need to track +/- in the tree nodes???
+        # ----------------------------------- }}}
+        #HIDE-ME: notes {{{
+
+        # sample data
+
+        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
+        # A,M343,1,1,Null,1,1,1,1,1,1,1
+        # B,Z9,0,0,0,1,0,0,0,0,1,0
+        # C,Z381,0,1,1,Null,0,0,1,1,1,0
+        # D,U106,1,1,1,1,0,1,1,1,1,0
+        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
+        # F,Z18,1,0,0,0,0,1,0,0,0,0
+        # G,Z156,0,1,0,0,0,0,1,0,0,0
+        # H,L11,1,1,1,1,1,Null,1,1,1,1
+        # I,Z28,0,0,0,1,0,Null,0,0,1,0
+        # J,P312,0,0,0,0,1,0,0,0,0,1
+        # K,Z8,0,0,0,1,0,0,0,0,0,0
+        # L,A297,0,Null,0,1,0,0,1,0,Null,0
+        # M,M269,1,1,1,1,1,1,1,1,1,1
+        # N,Z306,0,1,0,0,0,0,0,0,0,0
+        # O,L48,0,0,1,1,0,0,0,1,1,0
+
+        # processed raw results:
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
+        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+
+        # rules:
+
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+
+        # results when applying these rules manually:
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        # disputes: 
+        # (1) L:mix-O vs. O:mix-L 
+        #
+        # resolutions: 
+        # (1) winning rule is L:mix-O
+        #
+        # reasons for (1) resolution:
+        #   (1) L-mix-I
+        #   (2) L-mix-B
+        #   (3) L-mix-K
+        #   (4) B-pos-L
+        #   (5) K-pos-L
+        #   (6) I-pos-L
+
+        # top
+        # ├── A
+        # │   ├── D
+        # │   │   ├── C
+        # │   │   │   └── L
+        # │   │   │       ├── G
+        # │   │   │       │   └── N
+        # │   │   │       └── O
+        # │   │   │           ├── B
+        # │   │   │           │   └── K
+        # │   │   │           └── I
+        # │   │   ├── E
+        # │   │   └── F
+        # │   └── J
+        # ├── H
+        # └── M
+
+        #}}}
+
+        #now sort it
+        STASH = {}
+        print("===")
+        print("variant tree sort start")
+        for key, value in DATA.items():
+            #print("key: "+key)
+            for Vz in value['mix']:
+                if self.TREE[Vz].parent == self.TREE[key].parent:
+                    print("---")
+                    print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
+                    #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
+                    #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
+                    ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
+                    ch2 = self.TREE[Vz].children
+                    if ch1 is None:
+                        self.TREE[Vz].parent = None
+                    else:
+                        self.TREE[Vz].parent.children = tuple(ch1)
+                    self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
+                    self.TREE[Vz].children = ch2
+                    #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
+                    #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
+                    for pre, fill, node in RenderTree(self.TREE['top']):
+                        print("%s%s" % (pre, node.name))
+                elif self.TREE[Vz] in self.TREE[key].descendants:
+                    print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
+                else:
+                    print("---")
+                    print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
+                    if key not in STASH:
+                        STASH[key] = {'mix':[],'pos':[],'neg':[]}
+                    STASH[key]['mix'].append(Vz)
+                    #print(STASH)
+                    #sys.exit()
+        print("---")
+        print("DONE")
+        for pre, fill, node in RenderTree(self.TREE['top']):
+            print("%s%s" % (pre, node.name))
+        
+        STASHprint = copy.deepcopy(STASH)
+        slen = 0
+        for key, value in STASH.items():
+            STASHprint[key]['mix'] = ','.join(map(str, value['mix']))
+            STASHprint[key]['pos'] = ','.join(map(str, value['neg']))
+            STASHprint[key]['neg'] = ','.join(map(str, value['neg']))
+            slen = slen+len(value['mix'])
+        print("---")
+        print("STASH cnt: "+str(slen))
+        self.stdout_dump_var(STASHprint)
+        print("---")
+
+        return STASH
+        
+    def sort_data_old(self):
 
         #HIDE-ME: old stuff based on Iain's PDF - to redo {{{
 
@@ -268,76 +435,7 @@ class DB(object):
         print("===")
 
         # }}}
-
-        #all kits, variant, assignment mixes 
-        sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
-        self.dc.execute(sql)
-        F = self.dc.fetchall()
-
-        #all unique kits
-        print("all unique kits")
-        KITS = sorted(list(set([itm[0] for itm in F])))
-        print(KITS)
-
-        #all unique variants
-        VARIANTS = sorted(list(set([itm[1] for itm in F])))
-        VARIANTSp = ['+'+itm[1] for itm in F]
-        VARIANTSn = ['-'+itm[1] for itm in F]
-        VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
-        print("all unique variants")
-        print(VARIANTS)
-        print("all unique variants - pos+neg")
-        print(VARIANTSa)
-        #sys.exit()
-        
-        #tree object
-
-        top = Node("top")
-
-        #HIDE-ME: some code - start tree (prototype){{{
-
-        #VA = {}
-        #for v in VARIANTS:
-        #    VA[v] = {}
-        #    VA[v]['pos'] = Node('+'+v, parent=top)
-        #    VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
-        #for pre, fill, node in RenderTree(top):
-        #    print("%s%s" % (pre, node.name))
-
-        #}}}
-
-        #kits with positive assignments
-        Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
-        print("kits with positive assignments")
-        print(Fp)
-
-        #kits with negative assignments
-        Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
-        print("kits with negative assignments")
-        print(Fn)
-        #sys.exit()
-
-        print("---")
-        KA={}
-
-        #per all the kits with positive variants (build new dict)
-        for k in Fp:
-            Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
-            #['A+', 'D+', 'F+', 'H+', 'M+']
-            print(Kp)
-            #sys.exit()
-            KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
-
-        #per all the kits with negative variants (build new dict)
-        for k in Fn:
-            Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
-            if k in KA.keys():
-                KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
-                KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
-            else:
-                KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
-
-        # HIDE-ME - these notes may not be useful {{{
+        # HIDE-ME: these notes may not be useful {{{
 
         #loop dict's variant sets with unique variant types to find relations
         #(step1) A+ {B:(B+,B-)} :: [(A+,B+),(A+,B-)]
@@ -393,244 +491,10 @@ class DB(object):
                        
         #}}}
 
-        #loop dict to create list version of the data
-        newV1 = []
-        for key, value in KA.items():
-            newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
-
-        #sort this new list
-        cnt = 0
-        for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
-            d.update((k, cnt) for k, v in d.items() if k == "sort")
-            cnt = cnt + 1
-
-        #create a var for the sorted version (not necessary)
-        newV2 = sorted(newV1, key=lambda k: (k['sort']))
-
-        #print to stdout so I can see what I'm doing
-        print("---")
-        #newV3 = {}
-        for d in newV2:
-            #newV3[d['kit']] = d['variants']
-            STR = d['kit']+':'+str(d['variants'])
-            print(STR.replace("'",""))
-
-        #blocks - perhaps a better term might be applicable?
-        print("---")
-        blocks = {}
-        for VX in VARIANTS:
-            blocks[VX] = {'mix':[],'pos':[],'neg':[]}
-            VXP = '+'+VX
-            for VY in VARIANTS:
-                VYP = '+'+VY
-                if VXP == VYP:
-                    foo=1
-                else:
-                    VYN = '-'+VY
-                    chk1 = False
-                    chk2 = False
-                    for d in newV2:
-                        if VXP in d['variants']:
-                            if chk1 is False and VYP in d['variants']:
-                                chk1 = True
-                            if chk2 is False and VYN in d['variants']:
-                                chk2 = True
-                        if chk1 is True and chk2 is True:
-                            blocks[VX]['mix'].append(VY)
-                            break
-                    if chk1 is True and chk2 is False:
-                        blocks[VX]['pos'].append(VY)
-                    if chk2 is True and chk1 is False:
-                        blocks[VX]['neg'].append(VY)
-                    
-        #print to stdout so I can see what I'm doing
-        for key, value in blocks.items():
-            print(key+'|'+str(value))
-
-        #build unsorted tree with all nodes
-        VA = {}
-        for key, value in blocks.items():
-            VA[key] = Node(key, parent=top)
-        #for pre, fill, node in RenderTree(top):
-        #    print("%s%s" % (pre, node.name))
-        #VA['A'].parent = None
-        #for pre, fill, node in RenderTree(top):
-        #    print("%s%s" % (pre, node.name))
-
-        print("---")
-        #sort variant tree
-        cnt = 0
-        for key, value in blocks.items():
-            #check mix options
-            if cnt == 1:
-                foo = 1
-                #print('key:'+key)
-            for Vz in value['mix']:
-                if cnt == 1:
-                    foo = 1 
-                    #print('Vz:'+Vz)
-                #print(VA[Vz].parent)
-                #sys.exit()
-                if VA[Vz].parent == VA[key].parent:
-                    #print(VA[Vz].parent.children)
-                    ch1 = list(VA[Vz].parent.children).remove(VA[Vz])
-                    ch2 = VA[Vz].children
-                    #print(ch1)
-                    #print(ch)
-                    if ch1 is None:
-                        #print("test1")
-                        #print("---")
-                        VA[Vz].parent = None
-                        #print("here3")
-                    else:
-                        #print("test2")
-                        #print("---")
-                        #print(ch)
-                        VA[Vz].parent.children = tuple(ch1)
-                    #sys.exit()
-                    #VA[Vz].parent.children = tuple(list(VA[Vz].parent.children).remove(VA[Vz]))
-                    #for pre, fill, node in RenderTree(top):
-                    #    print("%s%s" % (pre, node.name))
-                    VA[Vz] = Node(Vz, parent=VA[key])
-                    VA[Vz].children = ch2
-                    #for pre, fill, node in RenderTree(top):
-                    #    print("%s%s" % (pre, node.name))
-                    #sys.exit()
-                else:
-                    foo = 1
-                    #for pre, fill, node in RenderTree(top):
-                    #    print("%s%s" % (pre, node.name))
-                    #sys.exit()
-            #check pos options
-            #check neg options
-            #sys.exit()
-        cnt = cnt + 1        
-        for pre, fill, node in RenderTree(top):
-            print("%s%s" % (pre, node.name))
-
-        #key:A
-        #Vz:B
-
-        # rules:
-
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-
-        #note: next -- attempt to automate the "rules" to sort the "blocks" data
-        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        #TODO: need to track +/- in the tree nodes
-
-        #VA = {}
-        #for v in VARIANTS:
-        #    VA[v] = {}
-        #    VA[v]['pos'] = Node('+'+v, parent=top)
-        #    VA[v]['neg'] = Node('-'+v, parent=VA[v]['pos'])
-        #for pre, fill, node in RenderTree(top):
-        #    print("%s%s" % (pre, node.name))
-
-        #HIDE-ME: some sort rules and how to use them {{{
-
-        # sample data
-
-        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
-        # A,M343,1,1,Null,1,1,1,1,1,1,1
-        # B,Z9,0,0,0,1,0,0,0,0,1,0
-        # C,Z381,0,1,1,Null,0,0,1,1,1,0
-        # D,U106,1,1,1,1,0,1,1,1,1,0
-        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
-        # F,Z18,1,0,0,0,0,1,0,0,0,0
-        # G,Z156,0,1,0,0,0,0,1,0,0,0
-        # H,L11,1,1,1,1,1,Null,1,1,1,1
-        # I,Z28,0,0,0,1,0,Null,0,0,1,0
-        # J,P312,0,0,0,0,1,0,0,0,0,1
-        # K,Z8,0,0,0,1,0,0,0,0,0,0
-        # L,A297,0,Null,0,1,0,0,1,0,Null,0
-        # M,M269,1,1,1,1,1,1,1,1,1,1
-        # N,Z306,0,1,0,0,0,0,0,0,0,0
-        # O,L48,0,0,1,1,0,0,0,1,1,0
-
-        # processed raw results:
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
-        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-
-        # rules:
-
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-
-        # results when applying these rules manually:
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
-        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-
-        # disputes: 
-        # (1) L:mix-O vs. O:mix-L 
-        #
-        # resolutions: 
-        # (1) winning rule is L:mix-O
-        #
-        # reasons for (1) resolution:
-        #   (1) L-mix-I
-        #   (2) L-mix-B
-        #   (3) L-mix-K
-        #   (4) B-pos-L
-        #   (5) K-pos-L
-        #   (6) I-pos-L
-
-        # top
-        # ├── A
-        # │   ├── D
-        # │   │   ├── C
-        # │   │   │   └── L
-        # │   │   │       ├── G
-        # │   │   │       │   └── N
-        # │   │   │       └── O
-        # │   │   │           ├── B
-        # │   │   │           │   └── K
-        # │   │   │           └── I
-        # │   │   ├── E
-        # │   │   └── F
-        # │   └── J
-        # ├── H
-        # └── M
-
-        #}}}
-
         sys.exit()
 
         #json/stdout a variable (debugging)
-        print(json.dumps(newV2, indent=4, sort_keys=True))
+        self.stdout_dump_var(newV2)
         sys.exit()
 
         #HIDE-ME: some code (may not be useful){{{ 
@@ -669,5 +533,145 @@ class DB(object):
         #   sort_positive_variants(kit_id)
 
         #}}}
+        
+    def sort_data(self):
+
+        #all kits, variant, assignment mixes 
+        sql = "select kit_id,variant_loc,assigned from s_calls order by kit_id, variant_loc,assigned;"
+        self.dc.execute(sql)
+        F = self.dc.fetchall()
+
+        #all unique kits
+        #print("---")
+        #print("all unique kits")
+        #KITS = sorted(list(set([itm[0] for itm in F])))
+        #print(KITS)
+
+        #all unique variants
+        VARIANTS = sorted(list(set([itm[1] for itm in F])))
+        #VARIANTSp = ['+'+itm[1] for itm in F]
+        #VARIANTSn = ['-'+itm[1] for itm in F]
+        #VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
+        print("---")
+        print("all unique variants")
+        print(VARIANTS)
+        #print("---")
+        #print("all unique variants - pos+neg")
+        #print(VARIANTSa)
+        #sys.exit()
+        
+        #kits with positive assignments
+        Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
+        print("---")
+        print("kits with positive assignment variant calls")
+        print(Fp)
+
+        #kits with negative assignments
+        Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
+        print("---")
+        print("kits with negative assignment variant calls")
+        print(Fn)
+        #sys.exit()
+
+        #per all the kits with positive variants (build new dict)
+        print("---")
+        print("dict of kits with their positive assignment variant calls")
+        KA={}
+        for k in Fp:
+            Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            #['A+', 'D+', 'F+', 'H+', 'M+']
+            print(k+" "+str(Kp))
+            #sys.exit()
+            KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
+
+        #per all the kits with negative variants (build new dict)
+        print("---")
+        print("dict of kits with their negative assignment variant calls")
+        for k in Fn:
+            Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
+            print(k+" "+str(Kn))
+            if k in KA.keys():
+                KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
+                KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
+            else:
+                KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
+
+        #loop dict to create list version of the data
+        newV1 = []
+        for key, value in KA.items():
+            newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
+
+        #sort this new list
+        cnt = 0
+        for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
+            d.update((k, cnt) for k, v in d.items() if k == "sort")
+            cnt = cnt + 1
+
+        #create a var for the sorted version (not necessary)
+        newV2 = sorted(newV1, key=lambda k: (k['sort']))
+
+        #print to stdout so I can see what I'm doing
+        print("---")
+        print("combined dict of kits with pos+neg variant calls - sorted")
+        #newV3 = {}
+        for d in newV2:
+            #newV3[d['kit']] = d['variants']
+            STR = d['kit']+':'+str(d['variants'])
+            print(STR.replace("'",""))
+
+        #build variant relationship data that we need for sorting
+        print("---")
+        DATA = {}
+        for VX in VARIANTS:
+            DATA[VX] = {'mix':[],'pos':[],'neg':[]}
+            VXP = '+'+VX
+            for VY in VARIANTS:
+                VYP = '+'+VY
+                if VXP == VYP:
+                    foo=1
+                else:
+                    VYN = '-'+VY
+                    chk1 = False
+                    chk2 = False
+                    for d in newV2:
+                        if VXP in d['variants']:
+                            if chk1 is False and VYP in d['variants']:
+                                chk1 = True
+                            if chk2 is False and VYN in d['variants']:
+                                chk2 = True
+                        if chk1 is True and chk2 is True:
+                            DATA[VX]['mix'].append(VY)
+                            break
+                    if chk1 is True and chk2 is False:
+                        DATA[VX]['pos'].append(VY)
+                    if chk2 is True and chk1 is False:
+                        DATA[VX]['neg'].append(VY)
+                    
+        #print to stdout so I can see what I'm doing
+        print("variant relationship data needed for sorting")
+        for key, value in DATA.items():
+            print(key+'|'+str(value))
+
+        #build unsorted tree with all nodes under top
+        self.TREE = {}
+        self.TREE['top'] = Node("top")
+        #STASH = {}
+        for key, value in DATA.items():
+            self.TREE[key] = Node(key, parent=self.TREE['top'])
+
+        #sort it
+        STASH = self.sort_variant_tree(DATA)
+        STASH = self.sort_variant_tree(STASH)
+
+        sys.exit()
+
+        #json/stdout a variable (debugging)
+        self.stdout_dump_var(newV2)
+        sys.exit()
+        
+    def stdout_dump_var(self,var):
+        #TODO: put this somewhere else
+        print(json.dumps(var, indent=4, sort_keys=True))
+        sys.exit()
 
 
