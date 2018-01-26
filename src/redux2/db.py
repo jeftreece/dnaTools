@@ -371,7 +371,7 @@ class DB(object):
 
         #}}}
         
-    def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None):
+    def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None,run=1):
 
         # HIDE-ME: rules {{{
         # -----------------------------------
@@ -495,13 +495,12 @@ class DB(object):
         #L should be under E
         #B should be under I
 
-
         #now sort it
         STASH = {}
         print("===")
         print("variant tree sort start")
         print("---")
-        self.stdout_dump_variant_relations_data(DATA,'INIT-DATA')
+        self.stdout_dump_variant_relations_data(DATA,'pre-proc',run)
         #print("---")
 
         #LOOP FOR MIX RULE
@@ -567,7 +566,19 @@ class DB(object):
         for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
-                    foo = 1
+                    #chk1 - if the two nodes don't have direct line relation, then: don't STASH
+                    if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
+                        print("---")
+                        print("NEG-CHK1 (1)key: "+key+" (2)neg-key: "+Vz+" no direct lineage relation found - put in STASH")
+                    #chk2 - if anything else, then: STASH
+                    else:
+                        print("---")
+                        print("NEG-CHK2 (1)key: "+key+" (2)neg-key: "+Vz+" direct lineage found - put in STASH")
+                        #print('key-desc: '+str(self.TREE[key].descendants))
+                        #print('Vz-desz:'+str(self.TREE[Vz].descendants))
+                        STASH[key]['neg'].append(Vz)
+                        #print(STASH)
+                        #sys.exit()
             else:
                 #since we're skipping "neg" relations, they need to go to STASH
                 STASH[key]['neg'] = value['neg']
@@ -578,7 +589,7 @@ class DB(object):
             print("%s%s" % (pre, node.name))
         
         print("---")
-        self.stdout_dump_variant_relations_data(STASH,'STASH')
+        self.stdout_dump_variant_relations_data(STASH,'post-proc',run)
         print("---")
 
         return STASH
@@ -715,8 +726,9 @@ class DB(object):
             self.TREE[key] = Node(key, parent=self.TREE['top'])
 
         #sort it
-        STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True)
-        #STASH = self.sort_variant_tree(STASH,run_mix=True)
+        STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
+        #STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
+        #STASH = self.sort_variant_tree(STASH,run_mix=True,run=2)
 
         sys.exit()
 
@@ -724,7 +736,7 @@ class DB(object):
         self.stdout_dump_var(newV2)
         sys.exit()
         
-    def stdout_dump_variant_relations_data(self,data,dataStr):
+    def stdout_dump_variant_relations_data(self,data,dataStr,run=1):
         dataPrint = copy.deepcopy(data)
         mixlen = 0
         poslen = 0
@@ -736,12 +748,12 @@ class DB(object):
             mixlen = mixlen+len(value['mix'])
             poslen = poslen+len(value['pos'])
             neglen = neglen+len(value['neg'])
-        print(dataStr+" mix cnt: "+str(mixlen))
-        print(dataStr+" pos cnt: "+str(poslen))
-        print(dataStr+" neg cnt: "+str(neglen))
+        print("RUN:"+str(run)+"("+dataStr+") mix cnt:"+str(mixlen))
+        print("RUN:"+str(run)+"("+dataStr+") pos cnt:"+str(poslen))
+        print("RUN:"+str(run)+"("+dataStr+") neg cnt:"+str(neglen))
         print("---")
         #beg collapse vim marker
-        print(dataStr+" dump {"+"{{")
+        print("RUN:"+str(run)+"("+dataStr+") dump {"+"{{")
         self.stdout_dump_var(dataPrint)
         #end collapse vim marker
         print("}"+"}}")
