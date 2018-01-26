@@ -500,10 +500,13 @@ class DB(object):
         print("===")
         print("variant tree sort start")
         print("---")
+
+        #show pre-proc default data 
         self.stdout_dump_variant_relations_data(DATA,'pre-proc',run)
-        #print("---")
 
         #LOOP FOR MIX RULE
+        #beg collapse vim marker
+        print("mix-checks {"+"{{")
         for key, value in DATA.items():
             if key not in STASH:
                 STASH[key] = {'mix':[],'pos':[],'neg':[]}
@@ -540,8 +543,12 @@ class DB(object):
             else:
                 #since we're skipping "mix" relations, they need to go to STASH
                 STASH[key]['mix'] = value['mix']
+        #end collapse vim marker
+        print("}"+"}}")
 
         #LOOP FOR POS RULE
+        #beg collapse vim marker
+        print("pos-checks {"+"{{")
         for key, value in DATA.items():
             if run_all or run_pos:
                 for Vz in value['pos']:
@@ -561,8 +568,12 @@ class DB(object):
             else:
                 #since we're skipping "pos" relations, they need to go to STASH
                 STASH[key]['pos'] = value['pos']
+        #end collapse vim marker
+        print("}"+"}}")
 
         #LOOP FOR NEG RULE
+        #beg collapse vim marker
+        print("neg-checks {"+"{{")
         for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
@@ -582,12 +593,16 @@ class DB(object):
             else:
                 #since we're skipping "neg" relations, they need to go to STASH
                 STASH[key]['neg'] = value['neg']
+        #end collapse vim marker
+        print("}"+"}}")
 
+        #show the final tree diagram after run completion
         print("---")
-        print("DONE")
+        print("RUN:"+str(run)+" DONE")
         for pre, fill, node in RenderTree(self.TREE['top']):
             print("%s%s" % (pre, node.name))
         
+        #show post-proc remaining data that didn't get complete (now in STASH)
         print("---")
         self.stdout_dump_variant_relations_data(STASH,'post-proc',run)
         print("---")
@@ -726,9 +741,9 @@ class DB(object):
             self.TREE[key] = Node(key, parent=self.TREE['top'])
 
         #sort it
-        STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
-        #STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
-        #STASH = self.sort_variant_tree(STASH,run_mix=True,run=2)
+        #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
+        STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
+        STASH = self.sort_variant_tree(STASH,run_all=True,run=2)
 
         sys.exit()
 
