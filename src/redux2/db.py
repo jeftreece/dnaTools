@@ -26,6 +26,10 @@ REDUX_ENV = os.environ['REDUX_ENV']
 REDUX_SQL = os.environ['REDUX_SQL']
 REDUX_DATA = os.environ['REDUX_DATA']
 
+#TODO:
+#(1)separate this class from sort
+#(2)set up a random approach to pushing data into the sort. troubleshoot results
+
 class DB(object):
     
     def __init__(self):
