@@ -87,7 +87,7 @@ class DB(object):
         self.run_sql_file('clades-schema.sql')
 
     #tree sort prototype ddl+dml
-    #TODO: need to create a separate class for sort
+    #TODO: need to create a separate class for sort (keeping here temporarily)
     
     def sort_schema(self):
         self.run_sql_file('sort-schema.sql')
@@ -143,169 +143,6 @@ class DB(object):
             #con.commit()
             #con.close()
         self.commit()
-        
-    def sort_variant_tree (self,DATA):
-
-        # HIDE-ME: rules {{{
-        # -----------------------------------
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-        # -----------------------------------
-        #note: next -- attempt to automate the "rules" to sort the "blocks" data
-        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # -----------------------------------
-        #TODO: need to track +/- in the tree nodes???
-        # ----------------------------------- }}}
-        #HIDE-ME: notes {{{
-
-        # sample data
-
-        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
-        # A,M343,1,1,Null,1,1,1,1,1,1,1
-        # B,Z9,0,0,0,1,0,0,0,0,1,0
-        # C,Z381,0,1,1,Null,0,0,1,1,1,0
-        # D,U106,1,1,1,1,0,1,1,1,1,0
-        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
-        # F,Z18,1,0,0,0,0,1,0,0,0,0
-        # G,Z156,0,1,0,0,0,0,1,0,0,0
-        # H,L11,1,1,1,1,1,Null,1,1,1,1
-        # I,Z28,0,0,0,1,0,Null,0,0,1,0
-        # J,P312,0,0,0,0,1,0,0,0,0,1
-        # K,Z8,0,0,0,1,0,0,0,0,0,0
-        # L,A297,0,Null,0,1,0,0,1,0,Null,0
-        # M,M269,1,1,1,1,1,1,1,1,1,1
-        # N,Z306,0,1,0,0,0,0,0,0,0,0
-        # O,L48,0,0,1,1,0,0,0,1,1,0
-
-        # processed raw results:
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
-        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-
-        # rules:
-
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-
-        # results when applying these rules manually:
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
-        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-
-        # disputes: 
-        # (1) L:mix-O vs. O:mix-L 
-        #
-        # resolutions: 
-        # (1) winning rule is L:mix-O
-        #
-        # reasons for (1) resolution:
-        #   (1) L-mix-I
-        #   (2) L-mix-B
-        #   (3) L-mix-K
-        #   (4) B-pos-L
-        #   (5) K-pos-L
-        #   (6) I-pos-L
-
-        # top
-        # ├── A
-        # │   ├── D
-        # │   │   ├── C
-        # │   │   │   └── L
-        # │   │   │       ├── G
-        # │   │   │       │   └── N
-        # │   │   │       └── O
-        # │   │   │           ├── B
-        # │   │   │           │   └── K
-        # │   │   │           └── I
-        # │   │   ├── E
-        # │   │   └── F
-        # │   └── J
-        # ├── H
-        # └── M
-
-        #}}}
-
-        #now sort it
-        STASH = {}
-        print("===")
-        print("variant tree sort start")
-        for key, value in DATA.items():
-            #print("key: "+key)
-            for Vz in value['mix']:
-                if self.TREE[Vz].parent == self.TREE[key].parent:
-                    print("---")
-                    print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
-                    #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
-                    #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
-                    ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
-                    ch2 = self.TREE[Vz].children
-                    if ch1 is None:
-                        self.TREE[Vz].parent = None
-                    else:
-                        self.TREE[Vz].parent.children = tuple(ch1)
-                    self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
-                    self.TREE[Vz].children = ch2
-                    #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
-                    #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
-                    for pre, fill, node in RenderTree(self.TREE['top']):
-                        print("%s%s" % (pre, node.name))
-                elif self.TREE[Vz] in self.TREE[key].descendants:
-                    print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
-                else:
-                    print("---")
-                    print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
-                    if key not in STASH:
-                        STASH[key] = {'mix':[],'pos':[],'neg':[]}
-                    STASH[key]['mix'].append(Vz)
-                    #print(STASH)
-                    #sys.exit()
-        print("---")
-        print("DONE")
-        for pre, fill, node in RenderTree(self.TREE['top']):
-            print("%s%s" % (pre, node.name))
-        
-        STASHprint = copy.deepcopy(STASH)
-        slen = 0
-        for key, value in STASH.items():
-            STASHprint[key]['mix'] = ','.join(map(str, value['mix']))
-            STASHprint[key]['pos'] = ','.join(map(str, value['neg']))
-            STASHprint[key]['neg'] = ','.join(map(str, value['neg']))
-            slen = slen+len(value['mix'])
-        print("---")
-        print("STASH cnt: "+str(slen))
-        self.stdout_dump_var(STASHprint)
-        print("---")
-
-        return STASH
         
     def sort_data_old(self):
 
@@ -533,6 +370,177 @@ class DB(object):
         #   sort_positive_variants(kit_id)
 
         #}}}
+        
+    def sort_variant_tree (self,DATA):
+
+        # HIDE-ME: rules {{{
+        # -----------------------------------
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+        # -----------------------------------
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # -----------------------------------
+        #TODO: need to track +/- in the tree nodes???
+        # ----------------------------------- }}}
+        #HIDE-ME: notes {{{
+
+        # sample data{{{
+
+        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
+        # A,M343,1,1,Null,1,1,1,1,1,1,1
+        # B,Z9,0,0,0,1,0,0,0,0,1,0
+        # C,Z381,0,1,1,Null,0,0,1,1,1,0
+        # D,U106,1,1,1,1,0,1,1,1,1,0
+        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
+        # F,Z18,1,0,0,0,0,1,0,0,0,0
+        # G,Z156,0,1,0,0,0,0,1,0,0,0
+        # H,L11,1,1,1,1,1,Null,1,1,1,1
+        # I,Z28,0,0,0,1,0,Null,0,0,1,0
+        # J,P312,0,0,0,0,1,0,0,0,0,1
+        # K,Z8,0,0,0,1,0,0,0,0,0,0
+        # L,A297,0,Null,0,1,0,0,1,0,Null,0
+        # M,M269,1,1,1,1,1,1,1,1,1,1
+        # N,Z306,0,1,0,0,0,0,0,0,0,0
+        # O,L48,0,0,1,1,0,0,0,1,1,0
+
+        #}}}
+        # processed raw results: {{{
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
+        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+
+        #}}}
+        # rules: {{{
+
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+
+        # }}}
+        # results when applying these rules manually:
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        # disputes: {{{
+        # (1) L:mix-O vs. O:mix-L 
+        #
+        # resolutions: 
+        # (1) winning rule is L:mix-O
+        #
+        # reasons for (1) resolution:
+        #   (1) L-mix-I
+        #   (2) L-mix-B
+        #   (3) L-mix-K
+        #   (4) B-pos-L
+        #   (5) K-pos-L
+        #   (6) I-pos-L
+
+        #}}}
+        #sample tree {{{
+
+        # top
+        # ├── A
+        # │   ├── D
+        # │   │   ├── C
+        # │   │   │   └── L
+        # │   │   │       ├── G
+        # │   │   │       │   └── N
+        # │   │   │       └── O
+        # │   │   │           ├── B
+        # │   │   │           │   └── K
+        # │   │   │           └── I
+        # │   │   ├── E
+        # │   │   └── F
+        # │   └── J
+        # ├── H
+        # └── M
+
+        #}}}
+
+        #}}}
+
+        #now sort it
+        STASH = {}
+        print("===")
+        print("variant tree sort start")
+        for key, value in DATA.items():
+            #print("key: "+key)
+            for Vz in value['mix']:
+                if self.TREE[Vz].parent == self.TREE[key].parent:
+                    print("---")
+                    print("CHK1 (1)key: "+key+" (2)mix-key: "+Vz+" parents are same level - so put "+Vz+" under "+key)
+                    #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
+                    #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
+                    ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
+                    ch2 = self.TREE[Vz].children
+                    if ch1 is None:
+                        self.TREE[Vz].parent = None
+                    else:
+                        self.TREE[Vz].parent.children = tuple(ch1)
+                    self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
+                    self.TREE[Vz].children = ch2
+                    #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
+                    #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
+                    for pre, fill, node in RenderTree(self.TREE['top']):
+                        print("%s%s" % (pre, node.name))
+                elif self.TREE[Vz] in self.TREE[key].descendants:
+                    print("CHK2 (1)key: "+key+" (2)mix-key: "+Vz+" condition satisfied - "+Vz+" already under "+key)
+                else:
+                    print("---")
+                    print("CHK3 (1)key: "+key+" (2)mix-key: "+Vz+" parents not same level and not direct lineage - put in STASH")
+                    if key not in STASH:
+                        STASH[key] = {'mix':[],'pos':[],'neg':[]}
+                    STASH[key]['mix'].append(Vz)
+                    #print(STASH)
+                    #sys.exit()
+        print("---")
+        print("DONE")
+        for pre, fill, node in RenderTree(self.TREE['top']):
+            print("%s%s" % (pre, node.name))
+        
+        STASHprint = copy.deepcopy(STASH)
+        slen = 0
+        for key, value in STASH.items():
+            STASHprint[key]['mix'] = ','.join(map(str, value['mix']))
+            STASHprint[key]['pos'] = ','.join(map(str, value['neg']))
+            STASHprint[key]['neg'] = ','.join(map(str, value['neg']))
+            slen = slen+len(value['mix'])
+        print("---")
+        print("STASH cnt: "+str(slen))
+        self.stdout_dump_var(STASHprint)
+        print("---")
+
+        return STASH
         
     def sort_data(self):
 
