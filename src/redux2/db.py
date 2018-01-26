@@ -38,6 +38,7 @@ class DB(object):
         self.TREE = {}
         self.REF = None
         self.DBG = 1 #>1 = means show don't stash msgs
+        self.MODE = 1 #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
         
     def db_init(self):
         #trace (1, "Initialising database...")
@@ -685,12 +686,15 @@ class DB(object):
         #all kits, variant, assignment mixes 
         self.commit()
 
-        #Names
-        sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
         #Letters 
-        sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        if self.MODE == 1:
+            sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #Names
+        if self.MODE == 2:
+            sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
         #Combo - Names+Letters
-        sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        if self.MODE == 3:
+            sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
 
         self.dc.execute(sql)
         F = self.dc.fetchall()
