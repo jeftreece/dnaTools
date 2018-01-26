@@ -246,7 +246,7 @@ class DB(object):
         #    ]
             
         #------------------------------ }}}
-        HIDE-ME: some code - may no longer be useful {{{
+        #HIDE-ME: some code - may no longer be useful {{{
 
         print("===")
         print("SORT")
