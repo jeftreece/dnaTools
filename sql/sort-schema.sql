@@ -14,7 +14,7 @@ drop table if exists s_kits;
 
 create table s_variants (
  -- variant_id int, -- not needed for prototype
- -- variant_loc int,  -- PK
+ variant_id int,  -- PK
  variant_loc varchar(10),
  name varchar(20),
  -- old_reference varchar(2), -- commenting out right now cuz not part of ian's doc

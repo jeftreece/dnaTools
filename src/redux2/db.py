@@ -134,9 +134,9 @@ class DB(object):
 
         with open(REDUX_DATA+'/sample-sort-data.csv','r') as FILE:
             #for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
-            for row in csv.DictReader(FILE,'v n A B C D E F G H I J'.split()):
+            for row in csv.DictReader(FILE,'vi v n A B C D E F G H I J'.split()):
                 row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
-                self.dc.execute("insert into s_variants (variant_loc,name) values ('"+row['v']+"','"+row['n']+"');")
+                self.dc.execute("insert into s_variants (variant_id,variant_loc,name) values ("+row['vi']+",'"+row['v']+"','"+row['n']+"');")
                 #print(' - inserting sample variant data: '+str(row['v']))
                 #for k in range(1,cols+1):
                 for k in kits.split():
@@ -403,18 +403,25 @@ class DB(object):
             sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
         #Names
         if self.MODE == 2:
-            sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+            sql = "select C.kit_id,V.name,C.assigned,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 4"
+            sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
         #Combo - Names+Letters
         if self.MODE == 3:
             sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
 
+        #all unique variants
+        self.dc.execute(sql1)
+        F = self.dc.fetchall()
+        VARIANTS = []
+        for itm in F:
+            VARIANTS.append(itm[0])
+        print(VARIANTS)
+
         self.dc.execute(sql)
         F = self.dc.fetchall()
-
-        #all unique variants
-        VARIANTS = list(set([itm[1] for itm in F]))
+        
         #all unique kits
-        KITS = list(set([itm[0] for itm in F]))
+        KITS = sorted(list(set([itm[0] for itm in F])))
 
         #kits = "A B C D E F G H I J"
         #kitsA = kits.split()
