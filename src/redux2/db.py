@@ -415,7 +415,6 @@ class DB(object):
         VARIANTS = []
         for itm in F:
             VARIANTS.append(itm[0])
-        print(VARIANTS)
 
         self.dc.execute(sql)
         F = self.dc.fetchall()
@@ -442,11 +441,13 @@ class DB(object):
             for k in KITS:
                 DATA1[v] = DATA1[v] + DATA[v][k]
 
+        print("")
         table = BeautifulTable()
         table.column_headers = ['top']+DATA1['top']
         for v in VARIANTS:
             table.append_row([v]+['None' if v is None else v for v in DATA1[v]])
         print(table)
+        print("")
 
         #print(DATA1)
         sys.exit()
