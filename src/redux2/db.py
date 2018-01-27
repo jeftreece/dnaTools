@@ -126,16 +126,21 @@ class DB(object):
         #);
 
         cols=10
-        for k in range(1,cols+1):
-            self.dc.execute("insert into s_kits (kit_id) values ("+str(k)+");")
+        #for k in range(1,cols+1):
+        kits = "A B C D E F G H I J"
+        for k in kits.split():
+            self.dc.execute("insert into s_kits (kit_id) values ('"+str(k)+"');")
 
         with open(REDUX_DATA+'/sample-sort-data.csv','r') as FILE:
-            for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
+            #for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
+            for row in csv.DictReader(FILE,'v n A B C D E F G H I J'.split()):
                 row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
                 self.dc.execute("insert into s_variants (variant_loc,name) values ('"+row['v']+"','"+row['n']+"');")
                 #print(' - inserting sample variant data: '+str(row['v']))
-                for k in range(1,cols+1):
-                    kv = str(row['k'+str(k)])
+                #for k in range(1,cols+1):
+                for k in kits.split():
+                    #kv = str(row['k'+str(k)])
+                    kv = str(row[str(k)])
                     #'null' if kv == "None" else kv
                     vv = str(row['v'])
                     #print (kv)
@@ -488,16 +493,18 @@ class DB(object):
 
         # how to come up with other ideas?
 
-        # chk is the last mix node for E (answer: D)
-        # (1) what are other desc of D that have direct lines (or are dupes # with) with C and O
-        #     A: C,L,O,B,I,K
+        # (1) what is the last mix node for E 
+        #     (answer: D)
+        # (2) what are other desc of D that have direct lines (or are dupes # with) with C and O
+        #     (answer: C,L,O,B,I,K)
         #     Arch Need: keep ref of what's been processed like so:
         #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
-        # (2) are there any neg for E in those results? (if so -- it can't be
-        #     one of them ... or any of their direct lines) -- A: No
-        # (3  what is the first possibility? ... use dupe options last
-        #     A: E is C's parent   
-        # (4) (ISSUE) what about E's children if it has any -- and their possible conflicts 
+        # (3) are there any neg for E in those results? (if so -- it can't be
+        #     one of them ... or any of their direct lines)
+        #     (answer: No)
+        # (4  what is the first possibility? ... use dupe options last
+        #     (answer: E is C's parent)
+        # (5) (ISSUE) what about E's children if it has any -- and their possible conflicts 
         #     if move E?
 
         # top
