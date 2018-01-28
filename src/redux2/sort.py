@@ -28,12 +28,6 @@ REDUX_ENV = os.environ['REDUX_ENV']
 REDUX_SQL = os.environ['REDUX_SQL']
 REDUX_DATA = os.environ['REDUX_DATA']
 
-#TODO:
-#(2)set up a random approach to pushing data into the sort. troubleshoot results
-
-KVIEW = True
-VVIEW = False
-
 class Sort(object):
     
     def __init__(self):
@@ -48,7 +42,6 @@ class Sort(object):
         self.VDATA = None
         self.CNTS = {}
         self.NP = None
-        self.MATRIXMODE = KVIEW
         self.db = None #db init
         self.dc = None #db cursor
 
@@ -99,6 +92,7 @@ class Sort(object):
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
 
+        print ""
         print("data - default")
 
         #1st tbl out
@@ -237,6 +231,7 @@ class Sort(object):
             self.VARIANTS[val][1] = cnt
         
     def stdout_tbl_matrix(self):
+        print("")
         table = BeautifulTable()
         table.column_headers = ['top']+self.get_cur_kit_list()
         for K,V in self.get_axis('variants'):
@@ -246,6 +241,8 @@ class Sort(object):
         
 
     #SORT - TREE FORMAT
+
+    #TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
     def sort_data_tree(self):
 

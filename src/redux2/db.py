@@ -28,10 +28,6 @@ REDUX_ENV = os.environ['REDUX_ENV']
 REDUX_SQL = os.environ['REDUX_SQL']
 REDUX_DATA = os.environ['REDUX_DATA']
 
-#sort data import stuff 
-KVIEW = True
-VVIEW = False
-
 class DB(object):
     
     def __init__(self):
@@ -39,20 +35,6 @@ class DB(object):
         #proper db class attributes
         self.db = None
         self.dc = None
-
-        #TODO: need to create a separate sort class for these sort thingees
-        self.TREE = {}
-        self.REF = None
-        self.DBG = 1 #>1 = means show don't stash msgs
-        self.MODE = 1 #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
-        self.KITS = None
-        self.VARIANTS = None
-        self.DATA = None
-        self.KDATA = None
-        self.VDATA = None
-        self.CNTS = {}
-        self.NP = None
-        self.MATRIXMODE = KVIEW
 
     def db_init(self):
         #trace (1, "Initialising database...")
