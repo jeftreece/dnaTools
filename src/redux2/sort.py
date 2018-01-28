@@ -81,7 +81,7 @@ class Sort(object):
             self.KITS[k]=[cnt,cnt] #default sort,custom sort 
             cnt = cnt + 1
 
-        #1st tbl prep (1) - due to order, this is building like so: [V][K][x,x,x,x,x,x]
+        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
         DATA = OrderedDict()
         for row in F:
             if row[1] not in DATA:
@@ -98,7 +98,7 @@ class Sort(object):
         #1st tbl out
         self.stdout_tbl_matrix()
 
-        #2nd tbl prep (no negs)
+        #2nd tbl prep 
         self.sort_step1()
 
         print("data - step 1")
@@ -108,7 +108,7 @@ class Sort(object):
 
         print("data - step 2")
 
-        #2nd tbl prep (no negs)
+        #2nd tbl prep
         self.sort_step2()
 
         #2nd tbl out
@@ -165,34 +165,15 @@ class Sort(object):
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
-        #print("bef:1")
-        #print(self.NP)
-        #print("bef:2")
         self.NP = np.transpose(self.NP)
-        #print(self.NP)
-        #print(self.NP)
-        #sys.exit()
-        #print (self.get_axis('kp'))
-        #sys.exit()
-        #sort by most positives
         for K,V in self.get_axis('kp'):
             new_orders.append([K,cnt])
             DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-            #print(DATA[K])
-            #sys.exit()
             cnt = cnt + 1
         for NO in new_orders:
             self.set_new_order(NO[0],NO[1],kitType=True)
-        #print("here1")
-        #print(DATA.values())
-        #print("here2")
-        #sys.exit()
         self.NP = np.matrix(list(DATA.values()))
-        #print("bef:3")
         self.NP = np.transpose(self.NP)
-        #print("bef:3")
-        #print(self.NP)
-        #sys.exit()
         
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
