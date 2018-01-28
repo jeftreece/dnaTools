@@ -12,6 +12,7 @@
 
 import os,yaml,shutil,glob,re,csv,zipfile,subprocess
 from db import *
+from sort import *
 from collections import defaultdict
 
 # }}}
@@ -707,7 +708,10 @@ def go_sort_db():
     dbo.sort_schema()
     dbo.insert_sample_sort_data()
     #dbo.commit()
-    dbo.sort_data()
+    sort = Sort()
+    sort.db = dbo.db
+    sort.dc = dbo.dc
+    sort.sort_data()
     #trace(0,"** + SNP processing done.")
 
 #routines - "arghandler" (new v2 schema)- Jef/Zak
