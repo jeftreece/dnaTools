@@ -36,6 +36,9 @@ REDUX_DATA = os.environ['REDUX_DATA']
 # Old DB Class stuff starts here
 #--------------------------------------------------------------------------------------------
 
+KVIEW = True
+VVIEW = False
+
 class DB(object):
     
     def __init__(self):
@@ -51,9 +54,12 @@ class DB(object):
         self.MODE = 1 #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
         self.KITS = None
         self.VARIANTS = None
+        self.DATA = None
         self.KDATA = None
         self.VDATA = None
         self.CNTS = {}
+        self.NP = None
+        self.MATRIXMODE = KVIEW
 
     def db_init(self):
         #trace (1, "Initialising database...")
@@ -194,67 +200,66 @@ class DB(object):
         #all unique variants
         self.dc.execute(sql1)
         F = self.dc.fetchall()
-        self.VARIANTS = []
+        self.VARIANTS = {}
+        cnt=0
         for itm in F:
-            self.VARIANTS.append(itm[0])
+            self.VARIANTS[itm[0]]=[cnt,cnt] #default sort,custom sort 
+            cnt = cnt + 1
 
         #get data
         self.dc.execute(sql)
         F = self.dc.fetchall()
         
         #all unique kits
-        self.KITS = sorted(list(set([itm[0] for itm in F])))
+        self.KITS = {}
+        cnt=0
+        for k in sorted(list(set([itm[0] for itm in F]))):
+            self.KITS[k]=[cnt,cnt] #default sort,custom sort 
+            cnt = cnt + 1
 
-        #1st tbl prep (1)
+        #1st tbl prep (1) - due to order, this is building like so: [V][K][x,x,x,x,x,x]
         DATA = OrderedDict()
         for row in F:
             if row[1] not in DATA:
-                DATA[row[1]] = {}
-            if row[0] not in DATA[row[1]]:
-                DATA[row[1]][row[0]] = []
-            DATA[row[1]][row[0]].append(row[2])
+                DATA[row[1]] = []
+            DATA[row[1]].append(row[2])
 
-        #kit data prep 
-        self.KDATA = OrderedDict()
-        self.KDATA['top'] = self.KITS
-        for v in self.VARIANTS:
-            self.KDATA[v] = []
-            for k in self.KITS:
-                self.KDATA[v] = self.KDATA[v] + DATA[v][k]
+        #numpy version of data
+        for key,value in DATA.items():
+            self.NP = np.matrix(list(DATA.values()))
 
-        #variant data prep 
-        self.VDATA = OrderedDict()
-        self.VDATA['top'] = self.VARIANTS
-        for k in self.KITS:
-            self.VDATA[k] = []
-            for v in self.VARIANTS:
-                self.VDATA[k] = self.VDATA[k] + DATA[v][k]
-
-        print("")
         print("data - default")
 
         #1st tbl out
         self.stdout_tbl_matrix()
 
         #2nd tbl prep (no negs)
-        self.sort_notneg_perf_imperf_variants()
+        self.sort_step1()
 
         print("data - separate not-neg, perfect, + imperfect ")
 
         #2nd tbl out
         self.stdout_tbl_matrix()
+        sys.exit()
         
-    def sort_get_cnt(self,TYPE,noNums=False,reverse=False):
-        #--------------------
-        #sample useage:
-        #--------------------
-        #print(self.sort_get_cnt('vp',reverse=True))
-        #print(self.sort_get_cnt('vp',noNums=True,reverse=True))
-        #--------------------
-        if noNums: #returns OrderedDict
-            return list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys())
-        else: #retuns List
-            return OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse))
+    def sort_get_cnt(self,TYPE,noNums=False,orderInfo=False,reverse=False):
+        if orderInfo and TYPE in ['vp','vn','vx']:
+            cnt=0
+            for V in list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys()):
+                self.set_new_order(V,cnt,variantType=True)
+                cnt = cnt + 1
+                return self.get_axis('variants')
+        elif orderInfo and TYPE in ['kp','kn','kx']:
+            cnt=0
+            for K in list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys()):
+                self.set_new_order(K,cnt,kitType=True)
+                cnt = cnt + 1
+                return self.get_axis('kits')
+        else:
+            if noNums: #returns List
+                return list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys())
+            else: #returns OrderedDict
+                return OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse))
         
     def sort_cnts(self):
         #vars
@@ -277,38 +282,108 @@ class DB(object):
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
         
-    def sort_notneg_perf_imperf_variants(self):
-        #vars
-        KDATA = OrderedDict()
-        VARIANTS = []
-        #not negatives
-        for v in self.VARIANTS:
-            if 0 not in self.KDATA[v]:
-                VARIANTS.append(v)
-                KDATA[v] = self.KDATA[v]
+    def sort_step1(self):
+        cnt = 0 
+        #for v in self.get_cur_variant_list():
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            if K=='M269':
+                print (self.get_numpy_matrix_row_as_list(V[1]))
+            #if 0 not in self.KDATA[v]:
+            if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
+                #VARIANTS.append(v)
+                new_orders.append([K,cnt])
+                #KDATA[v] = self.KDATA[v]
+                cnt = cnt + 1
+                print("1."+str(cnt)+"."+K)
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
         #perfects - use a count sort here
-        for v in self.sort_get_cnt('vp',noNums=True,reverse=True):
-            if 0 in self.KDATA[v] and None not in self.KDATA[v]:
-                VARIANTS.append(v)
-                KDATA[v] = self.KDATA[v]
+        #for K,V in self.sort_get_cnt('vp',noNums=True,orderInfo=True,reverse=True):
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            #if 0 in self.KDATA[v] and None not in self.KDATA[v]:
+            if K=='M269':
+                print (self.get_numpy_matrix_row_as_list(V[1]))
+                #sys.exit()
+            if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
+                #VARIANTS.append(v)
+                new_orders.append([K,cnt])
+                #self.set_new_order(K,cnt,variantType=True)
+                #KDATA[v] = self.KDATA[v]
+                cnt = cnt + 1
+                print("2."+str(cnt)+"."+K)
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
         #imperfects
-        for v in self.VARIANTS:
-            if 0 in self.KDATA[v] and None in self.KDATA[v]:
-                VARIANTS.append(v)
-                KDATA[v] = self.KDATA[v]
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            if K=='M269':
+                print (self.get_numpy_matrix_row_as_list(V[1]))
+            #if 0 in self.KDATA[v] and None in self.KDATA[v]:
+            #if all(x in self.get_numpy_matrix_row_as_list(V[1]) for x in [0, None]):
+            if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
+                #VARIANTS.append(v)
+                #self.set_new_order(K,cnt,variantType=True)
+                new_orders.append([K,cnt])
+                #KDATA[v] = self.KDATA[v]
+                cnt = cnt + 1
+                print("3."+str(cnt)+"."+K)
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
         #reset obj vars
-        self.VARIANTS = VARIANTS
-        self.KDATA = KDATA
+        #self.VARIANTS = VARIANTS
+        #self.KDATA = KDATA
         
+    def sort_step2(self):
+        #vars
+        VDATA = OrderedDict()
+        KITS = []
+        #not negatives
+        for k in self.sort_get_cnt('kp',noNums=True,reverse=True):
+            if 0 not in self.VDATA[k]:
+                KITS.append(k)
+                VDATA[k] = self.VDATA[k]
+        #reset obj vars
+        self.KITS = KITS
+        self.VDATA = VDATA
+        
+    def get_cur_kit_list(self):
+        return self.get_axis('kits',keyOnly=True)
+        
+    def get_cur_variant_list(self):
+        return self.get_axis('variants',keyOnly=True)
+        
+    def get_numpy_matrix_row_as_list(self,rownum):
+        return ['None' if v is None else v for v in self.NP[rownum,:].tolist()[0]]
+        
+    def get_axis(self,scheme,curOrder=True,keyOnly=False):
+        if scheme == 'variants' : SCH = self.VARIANTS
+        if scheme == 'kits' : SCH = self.KITS
+        if keyOnly:
+            RET = SCH.keys()
+        else: #default: items()
+            RET = SCH.items()
+        return sorted(RET, key=lambda e: e[1][0])
+        
+    def set_new_order(self,val,cnt,kitType=False,variantType=False):
+        if kitType:
+            self.KITS[val][1] = cnt
+            sys.exit()
+        if variantType:
+            self.VARIANTS[val][1] = cnt
     def stdout_tbl_matrix(self):
+        #print(self.VARIANTS.items())
         #stdout for debugging
         print("")
         table = BeautifulTable()
-        table.column_headers = ['top']+self.KITS
-        for v in self.VARIANTS:
-            table.append_row([v]+['None' if v is None else v for v in self.KDATA[v]])
+        table.column_headers = ['top']+self.get_cur_kit_list()
+        for K,V in self.get_axis('variants'):
+            print(V)
+            table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
         print(table)
         print("")
+        
 
     #SORT - TREE FORMAT
 

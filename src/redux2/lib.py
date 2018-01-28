@@ -302,6 +302,8 @@ def skip_to_Hg19(dbo):
 
         trace (20, "   Dumping variants into array...")
         variant_array = np.array(list(variant_dict.values()))
+        print(variant_array)
+        sys.exit()
 
         # variant_array = np.array([],dtype={'names': ('start', 'anc', 'der'),'formats': ('i4', 'S20', 'S20')})
 
