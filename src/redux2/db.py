@@ -244,10 +244,19 @@ class DB(object):
         #2nd tbl prep (no negs)
         self.sort_step1()
 
-        print("data - separate not-neg, perfect, + imperfect ")
+        print("data - step 1")
 
         #2nd tbl out
         self.stdout_tbl_matrix()
+
+        print("data - step 2")
+
+        #2nd tbl prep (no negs)
+        self.sort_step2()
+
+        #2nd tbl out
+        self.stdout_tbl_matrix()
+
         sys.exit()
         
     def sort_cnts(self):
@@ -296,17 +305,37 @@ class DB(object):
         self.NP = np.matrix(list(DATA.values()))
         
     def sort_step2(self):
-        #vars
-        VDATA = OrderedDict()
-        KITS = []
-        #not negatives
-        for k in self.sort_get_cnt('kp',noNums=True,reverse=True):
-            if 0 not in self.VDATA[k]:
-                KITS.append(k)
-                VDATA[k] = self.VDATA[k]
-        #reset obj vars
-        self.KITS = KITS
-        self.VDATA = VDATA
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        #print("bef:1")
+        #print(self.NP)
+        #print("bef:2")
+        self.NP = np.transpose(self.NP)
+        #print(self.NP)
+        #print(self.NP)
+        #sys.exit()
+        #print (self.get_axis('kp'))
+        #sys.exit()
+        #sort by most positives
+        for K,V in self.get_axis('kp'):
+            new_orders.append([K,cnt])
+            DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
+            #print(DATA[K])
+            #sys.exit()
+            cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],kitType=True)
+        #print("here1")
+        #print(DATA.values())
+        #print("here2")
+        #sys.exit()
+        self.NP = np.matrix(list(DATA.values()))
+        #print("bef:3")
+        self.NP = np.transpose(self.NP)
+        #print("bef:3")
+        #print(self.NP)
+        #sys.exit()
         
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
@@ -336,12 +365,11 @@ class DB(object):
                 if orderByType in ['vp','vn','vx']:
                     return [(key, self.VARIANTS[key]) for key in listByCount]
                 if orderByType in ['kp','kn','kx']:
-                    return [(key, self.KEYS[key]) for key in listByCount]
+                    return [(key, self.KITS[key]) for key in listByCount]
         
     def set_new_order(self,val,cnt,kitType=False,variantType=False):
         if kitType:
             self.KITS[val][1] = cnt
-            sys.exit()
         if variantType:
             self.VARIANTS[val][1] = cnt
         
