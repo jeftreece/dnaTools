@@ -92,7 +92,7 @@ class Sort(object):
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
 
-        print ""
+        print("")
         print("data - default")
 
         #1st tbl out
