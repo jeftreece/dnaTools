@@ -39,6 +39,14 @@ REDUX_DATA = os.environ['REDUX_DATA']
 KVIEW = True
 VVIEW = False
 
+#console colors - maybe can use?
+WHITE  = '\033[0m'  # white (normal)
+BLACK  = '\033[30m' # black
+BGREEN  = '\033[42m' # green background
+BYELLOW  = '\033[103m' # yellow background
+BRED  = '\033[91m' # red background
+BBLACK  = '\033[40m' # black background
+
 class DB(object):
     
     def __init__(self):
@@ -338,7 +346,6 @@ class DB(object):
             self.VARIANTS[val][1] = cnt
         
     def stdout_tbl_matrix(self):
-        print("")
         table = BeautifulTable()
         table.column_headers = ['top']+self.get_cur_kit_list()
         for K,V in self.get_axis('variants'):
