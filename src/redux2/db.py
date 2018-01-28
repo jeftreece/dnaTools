@@ -242,27 +242,6 @@ class DB(object):
         self.stdout_tbl_matrix()
         sys.exit()
         
-    def sort_get_cnt(self,TYPE,noNums=False,orderInfo=False,reverse=False):
-        #variant type count request
-        if orderInfo and TYPE in ['vp','vn','vx']:
-            cnt=0
-            for V in list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys()):
-                #self.set_new_order(V,cnt,variantType=True)
-                cnt = cnt + 1
-                return self.get_axis('variants')
-        #kit type  count request
-        elif orderInfo and TYPE in ['kp','kn','kx']:
-            cnt=0
-            for K in list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys()):
-                #self.set_new_order(K,cnt,kitType=True)
-                cnt = cnt + 1
-                return self.get_axis('kits')
-        else:
-            if noNums: #returns List
-                return list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys())
-            else: #returns OrderedDict
-                return OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse))
-        
     def sort_cnts(self):
         #vars
         self.MODE = 2
@@ -286,64 +265,27 @@ class DB(object):
         
     def sort_step1(self):
 
-        #print(list(OrderedDict(sorted(self.CNTS['vp'].items(), key=lambda item: item[1],reverse=True)).keys()))
-        #sys.exit()
-        print("MATRIX:BEG")
-        print(self.NP)
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
-        print("AXIS-VARIANTS")
-        print(self.get_axis('variants'))
-        #sys.exit()
         for K,V in self.get_axis('variants'):
-            #print("get_numpy_matrix_row_as_list(v1)")
-            #print(self.get_numpy_matrix_row_as_list(V[1]))
             if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
-                print("1."+str(cnt)+"."+K)
-        #for K,V in self.get_axis('variants'):
-        #for K,V in self.sort_get_cnt('vp',noNums=True,orderInfo=True,reverse=True):
         for K,V in self.get_axis('vp'):
             if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
-                #print(K)
-                #print(self.get_numpy_matrix_row_as_list(V[1]))
-                #sys.exit()
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
-                print("2."+str(cnt)+"."+K)
-        #for NO in new_orders:
-        #    self.set_new_order(NO[0],NO[1],variantType=True)
-        #imperfects
-        #new_orders = []
         for K,V in self.get_axis('variants'):
-            #if K=='M269':
-            #    print (self.get_numpy_matrix_row_as_list(V[1]))
-            #if all(x in self.get_numpy_matrix_row_as_list(V[1]) for x in [0, None]):
             if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
-                print("3."+str(cnt)+"."+K)
-        print("END:NEW ORDERS")
-        print (new_orders)
-        #sys.exit()
         for NO in new_orders:
             self.set_new_order(NO[0],NO[1],variantType=True)
-        #print(DATA.values)
-        #sys.exit()
-        #print(list(DATA.values()))
-        #for key,value in DATA.items():
-        print("END:MATRIX")
         self.NP = np.matrix(list(DATA.values()))
-        print(self.NP)
-        #sys.exit()
-        #reset obj vars
-        #self.VARIANTS = VARIANTS
-        #self.KDATA = KDATA
         
     def sort_step2(self):
         #vars
@@ -387,8 +329,6 @@ class DB(object):
                     return [(key, self.VARIANTS[key]) for key in listByCount]
                 if orderByType in ['kp','kn','kx']:
                     return [(key, self.KEYS[key]) for key in listByCount]
-                #sys.exit()
-                #[('M343', [0, 0]), ('L11', [7, 1]), ('M269', [12, 2]), ('Z9', [1, 3]), ('U106', [3, 4]), ('Z18', [5, 5]), ('Z156', [6, 6]), ('P312', [9, 7]), ('Z8', [10, 8]), ('Z306', [13, 9]), ('L48', [14, 10]), ('Z381', [2, 11]), ('Z301', [4, 12]), ('Z28', [8, 13]), ('A297', [11, 14])]
         
     def set_new_order(self,val,cnt,kitType=False,variantType=False):
         if kitType:
@@ -396,23 +336,12 @@ class DB(object):
             sys.exit()
         if variantType:
             self.VARIANTS[val][1] = cnt
+        
     def stdout_tbl_matrix(self):
-        #[('M343', [0, 0]), ('L11', [7, 1]), ('M269', [12, 2]), ('Z9', [1, 3]), ('U106', [3, 4]), ('Z18', [5, 5]), ('Z156', [6, 6]), ('P312', [9, 7]), ('Z8', [10, 8]), ('Z306', [13, 9]), ('L48', [14, 10]), ('Z381', [2, 11]), ('Z301', [4, 12]), ('Z28', [8, 13]), ('A297', [11, 14])]
-        #{'M343': [0, 0], 'Z9': [1, 3], 'Z381': [2, 11], 'U106': [3, 4], 'Z301': [4, 12], 'Z18': [5, 5], 'Z156': [6, 6], 'L11': [7, 1], 'Z28': [8, 13], 'P312': [9, 7], 'Z8': [10, 8], 'A297': [11, 14], 'M269': [12, 2], 'Z306': [13, 9], 'L48': [14,
-
-        #print(self.VARIANTS.items())
-        #stdout for debugging
         print("")
         table = BeautifulTable()
         table.column_headers = ['top']+self.get_cur_kit_list()
-        #print(self.get_axis('variants'))
-        print(sorted(self.VARIANTS.items(), key=lambda e: e[1][1]))
-        print(self.get_axis('variants'))
-        print(self.VARIANTS)
-        print(self.get_axis('variants',keysOnly=True))
-        #sys.exit()
         for K,V in self.get_axis('variants'):
-            print(V)
             table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
         print(table)
         print("")
