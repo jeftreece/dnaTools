@@ -15,6 +15,7 @@ from beautifultable import BeautifulTable
 from anytree import Node, RenderTree
 #import string
 import copy #only used for STASHprint (debugging)
+from collections import OrderedDict
 
 # }}}
 
@@ -44,7 +45,12 @@ class DB(object):
         self.REF = None
         self.DBG = 1 #>1 = means show don't stash msgs
         self.MODE = 1 #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
-        
+        self.KITS = None
+        self.VARIANTS = None
+        self.KDATA = None
+        self.VDATA = None
+        self.CNTS = {}
+
     def db_init(self):
         #trace (1, "Initialising database...")
         return sqlite3.connect('variant.db')
@@ -398,6 +404,12 @@ class DB(object):
 
         self.MODE = 2
 
+        #get counts
+        self.sort_cnts()
+        #print(self.sort_get_cnt('vp',reverse=True))
+        #print(self.sort_get_cnt('vp',noNums=True,reverse=True))
+        #sys.exit()
+
         #Letters 
         if self.MODE == 1:
             sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
@@ -405,6 +417,14 @@ class DB(object):
         if self.MODE == 2:
             sql = "select C.kit_id,V.name,C.assigned,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 4"
             sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
+            #cnts - variants
+            sqlVp = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+            sqlVn = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+            sqlVx = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is None group by 2"
+            #cnts - kits
+            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is None group by 2"
         #Combo - Names+Letters
         if self.MODE == 3:
             sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
@@ -412,44 +432,56 @@ class DB(object):
         #all unique variants
         self.dc.execute(sql1)
         F = self.dc.fetchall()
-        VARIANTS = []
+        self.VARIANTS = []
         for itm in F:
-            VARIANTS.append(itm[0])
+            self.VARIANTS.append(itm[0])
 
+        #get data
         self.dc.execute(sql)
         F = self.dc.fetchall()
         
         #all unique kits
-        KITS = sorted(list(set([itm[0] for itm in F])))
+        self.KITS = sorted(list(set([itm[0] for itm in F])))
 
-        #kits = "A B C D E F G H I J"
-        #kitsA = kits.split()
-        #('kA', '(A) M343', 1)
-        DATA = {}
+        #1st tbl prep (1)
+        DATA = OrderedDict()
         for row in F:
-            #print(row)
             if row[1] not in DATA:
                 DATA[row[1]] = {}
             if row[0] not in DATA[row[1]]:
                 DATA[row[1]][row[0]] = []
             DATA[row[1]][row[0]].append(row[2])
 
-        DATA1 = {}
-        DATA1['top'] = KITS
-        for v in VARIANTS:
-            DATA1[v] = []
-            for k in KITS:
-                DATA1[v] = DATA1[v] + DATA[v][k]
+        #kit data prep 
+        self.KDATA = OrderedDict()
+        self.KDATA['top'] = self.KITS
+        for v in self.VARIANTS:
+            self.KDATA[v] = []
+            for k in self.KITS:
+                self.KDATA[v] = self.KDATA[v] + DATA[v][k]
+
+        #variant data prep 
+        self.VDATA = OrderedDict()
+        self.VDATA['top'] = self.VARIANTS
+        for k in self.KITS:
+            self.VDATA[k] = []
+            for v in self.VARIANTS:
+                self.VDATA[k] = self.VDATA[k] + DATA[v][k]
 
         print("")
-        table = BeautifulTable()
-        table.column_headers = ['top']+DATA1['top']
-        for v in VARIANTS:
-            table.append_row([v]+['None' if v is None else v for v in DATA1[v]])
-        print(table)
-        print("")
+        print("data - default")
 
-        #print(DATA1)
+        #1st tbl out
+        self.stdout_tbl_matrix()
+
+        #2nd tbl prep (no negs)
+        self.sort_notneg_perf_imperf_variants()
+
+        print("data - separate not-neg, perfect, + imperfect ")
+
+        #2nd tbl out
+        self.stdout_tbl_matrix()
+
         sys.exit()
 
         #HIDE-ME: some code (may not be useful){{{ 
@@ -489,6 +521,70 @@ class DB(object):
 
         #}}}
         
+    def sort_get_cnt(self,TYPE,noNums=False,reverse=False):
+        if noNums: #returns OrderedDict
+            return list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys())
+        else: #retuns List
+            return OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse))
+        
+    def sort_cnts(self):
+
+        self.MODE = 2
+        self.CNTS = {}
+        sqlc = {}
+
+        #sql
+        if self.MODE == 2:
+            #cnts - variants
+            sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+            sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+            sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+            #cnts - kits
+            sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+            sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+            sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+
+        #get all cnts
+        for key, sql in sqlc.items():
+            self.CNTS[key] = {}
+            #print(key)
+            #print(sql)
+            #sys.exit()
+            self.dc.execute(sql)
+            F = self.dc.fetchall()
+            for itm in F:
+                self.CNTS[key][itm[1]] = itm[0]
+        #print(self.CNTS)
+        
+    def sort_notneg_perf_imperf_variants(self):
+        KDATA = OrderedDict()
+        VARIANTS = []
+        #not negatives
+        for v in self.VARIANTS:
+            if 0 not in self.KDATA[v]:
+                VARIANTS.append(v)
+                KDATA[v] = self.KDATA[v]
+        #perfects - use a count sort here
+        for v in self.sort_get_cnt('vp',noNums=True,reverse=True):
+            if 0 in self.KDATA[v] and None not in self.KDATA[v]:
+                VARIANTS.append(v)
+                KDATA[v] = self.KDATA[v]
+        #imperfects
+        for v in self.VARIANTS:
+            if 0 in self.KDATA[v] and None in self.KDATA[v]:
+                VARIANTS.append(v)
+                KDATA[v] = self.KDATA[v]
+        self.VARIANTS = VARIANTS
+        self.KDATA = KDATA
+        
+    def stdout_tbl_matrix(self):
+        print("")
+        table = BeautifulTable()
+        table.column_headers = ['top']+self.KITS
+        for v in self.VARIANTS:
+            table.append_row([v]+['None' if v is None else v for v in self.KDATA[v]])
+        print(table)
+        print("")
 
     #TREE FORMAT
 
