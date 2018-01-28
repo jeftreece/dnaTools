@@ -32,6 +32,10 @@ REDUX_DATA = os.environ['REDUX_DATA']
 #(1)separate this class from sort
 #(2)set up a random approach to pushing data into the sort. troubleshoot results
 
+#--------------------------------------------------------------------------------------------
+# Old DB Class stuff starts here
+#--------------------------------------------------------------------------------------------
+
 class DB(object):
     
     def __init__(self):
@@ -167,267 +171,25 @@ class DB(object):
         self.commit()
         
 
-    #TOGGLE BTW DIFF METHODS
+#--------------------------------------------------------------------------------------------
+# Sort stuff below this line
+#--------------------------------------------------------------------------------------------
+
+    #TOGGLE BTW SORT TOOLS
 
     def sort_data(self):
         self.sort_data_tbl()
 
-    #FIRST ATTEMPT 
-
-    def sort_data_old(self):
-
-        #HIDE-ME: old stuff based on Iain's PDF - to redo {{{
-
-        print("===")
-        print("FILTER, step: A ")
-        print("===")
-        sql = "select distinct variant_loc from s_calls;"
-        self.dc.execute(sql)
-        A = [itm[0] for itm in self.dc.fetchall()]
-        print("A - distinct variants")
-        print(A) #A - distinct variants
-        print("---")
-        print('numA - num distinct variants')
-        print(len(A)) #numA - num distinct variants
-        #sys.exit()
-
-        print("===")
-        print("FILTER - step: B")
-        print("===")
-        sql = "select distinct variant_loc from s_calls where assigned = 0;"
-        self.dc.execute(sql)
-        B1 = [itm[0] for itm in self.dc.fetchall()]
-        B0 = list(set(A)-set(B1))
-        print("B0 - variants that don't have negs")
-        print(B0) #B0 - variants that don't have negs
-        print("---")
-        print("B1 - variants that have negs")
-        print(B1) #B1 - variants that have negs 
-        #sys.exit()
-
-        print("===")
-        print("FILTER - step: C")
-        print("===")
-        sql = "select variant_loc,count(*) as cnt from s_calls where assigned = 1 group by variant_loc;"
-        self.dc.execute(sql)
-        F = self.dc.fetchall()
-        Fa = list(filter(lambda x: x[1]==(len(A)-1), F))
-        Fb = [(a) for a,b in Fa] #strip out 2nd element, the count
-        C1 = list(set(B1) & set(Fb)) #intersection
-        C0 = list(set(B1)-set(C1))
-        print("list of *all* one person +ve's")
-        print(Fa)
-        print("---")
-        print("not singletons")
-        print(C0) #C0 - not singletons
-        print("---")
-        print("singletons") #C1 - singletons
-        print(C1)
-        #sys.exit()
-
-        print("===")
-        print("FILTER - step: D")
-        print("===")
-        sql = "select distinct variant_loc from s_calls where assigned is null group by variant_loc;"
-        self.dc.execute(sql)
-        F = self.dc.fetchall()
-        D0 = list(set(C1)-set(F))
-        D1 = list(set(F)-set(D0))
-        print("list of variants that are sometimes not called")
-        print(F)
-        print("---")
-        print("imperfect variants")
-        print(D0) #D0 - imperfect variants
-        print("---")
-        print("calls of perfect share variants - these go through the next PROCESS, SORT")
-        print(D1) #D1 - perfect share variants
-        #sys.exit()
-
-        #}}}
-        #HIDE-ME: a type study - may no longer be useful{{{
-        #------------------------------
-
-        #I'm thinking byK is what we're looking to work with
-
-        #byV = [
-        #    { v1:
-        #        ({pos:[k4,k3]},{cnt:2},{neg:[]},{unk:[]})
-        #        },
-        #    { v2:
-        #        ({pos:[k1,k2,k3]},{cnt:3},{neg:[]},{unk:[]})
-        #        },
-        #    { v3:
-        #        ({pos:[k4,k3]},{cnt:2},{neg:[]},{unk:[]})
-        #        },
-        #    { v4:
-        #        ({pos:[k2,k1]},(cnt:2},{neg:[]},{unk:[]})
-        #        }
-        #    ]
-
-        #byK = [
-        #    { k1:
-        #        ({pos:[v2,v4]},{cnt:2},{neg:[]},{unk:[]})
-        #        },
-        #    { k2:
-        #        ({pos,[v2,v4]},{cnt:2},{neg:[]},{unk:[]})
-        #        },
-        #    { k3:
-        #        ({pos,[v1,v2,v3]},{cnt:2},{neg:[]},{unk:[]})
-        #        },
-        #    { k4:
-        #        ({pos,[v1,v3]},{cnt:2},{neg:[]},{unk:[]})
-        #        }
-        #    ]
-            
-        #------------------------------ }}}
-        #HIDE-ME: some code - may no longer be useful {{{
-
-        print("===")
-        print("SORT")
-        print("===")
-        sql = "select kit_id,variant_loc from s_calls order by kit_id, variant_loc;"
-        self.dc.execute(sql)
-        F = self.dc.fetchall()
-        print("all kits + variants")
-        print("+ grabbing kits by variant: F")
-        #[(1, 3019783), (1, 6920349), (1, 7378685), (1, 8928037), ... ]
-        Fa = list(filter(lambda x: x[1]=="A", F))
-        Fb = [(a) for a,b in Fa] #strip out 2nd element, the count
-        #[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        print(Fb)
-        print("---")
-        
-        print("===")
-        print("SETS")
-        print("===")
-
-        # }}}
-        # HIDE-ME: these notes may not be useful {{{
-
-        #loop dict's variant sets with unique variant types to find relations
-        #(step1) A+ {B:(B+,B-)} :: [(A+,B+),(A+,B-)]
-        #if x[0] == A+ && x[1] == B+ exists and if x[0] == A+ && x[1] == B- exists:
-        #    A+>B-
-
-        #--- so this:
-        #    A+>A-
-        #    B+>B-
-        #--- becomes:
-        #    R1+>A-
-        #    R1+>B-
-        #    unk-relations:
-        #    R1:{A1+,B+}
-
-        #(step2) A+ {C:(C+,C-)} :: [(A+,C+),(A+,C-)]
-        #if x[0] == A+ && x[1] == C+ exists and if x[0] == A+ && x[1] == C- exists:
-        #    A+>C-
-
-        #--- so this:
-        #    R1+>A-
-        #    R1+>B-
-        #    unk-relations:
-        #    R1:{A1+,B+}
-        #--- becomes:
-        #    R1+>A-
-        #    R1+>B-
-        #    R1+>C-
-        #    unk-relations:
-        #    R1:{A+,B+,C+}
-
-        #(step3a) B- {C:(C+,C-)} :: [(B-,C+),(B+,C-)]
-        #if x[0] == B- && x[1] == C+ exists and if x[0] == B- && x[1] == C- exists:
-        #    B+>C-
-
-        #--- so this:
-        #    R1+>A-
-        #    R1+>B-
-        #    R1+>C-
-        #    unk-relations:
-        #    R1:{A+,B+,C+}
-        #--- becomes:
-        #    R1+>A-
-        #    R1+>B-
-        #    B->C-
-        #    unk-relations:
-        #    R1:{A+,B+,C+}
-
-        #for Vx in VARIANTSa:
-        #    for key, value in KA.items():
-        #        if key=='variants':
-        #            for Vy in value:
-                       
-        #}}}
-
-        sys.exit()
-
-        #HIDE-ME: some code (may not be useful){{{ 
-
-        #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
-        #self.dc.execute(sql_2b)
-        #varAn = self.dc.fetchall()
-        #print("---")
-        #print("variant negative check")
-        #print(varAn)
-
-        sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
-        sql_2c = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned is not null group by variant_loc order by count(*) desc;"
-        self.dc.execute(sql_2c)
-        varAa = self.dc.fetchall()
-        print("---")
-        print("variant all check")
-        print(varAa)
-        #(3) 9 perfectly called variants - execute sort on these
-        #(4) 6 imperfectly called variants - do Step A
-
-        sql_3 = "select * from s_calls order by kit_id,assigned;"
-        self.dc.execute(sql_3)
-        callsA = self.dc.fetchall()
-        print("---")
-        #[(1, 12060401, None), (1, 6920349, 0), (1, 7378685, 0), (1, 13668461, 0), (1, 19538924, 0), ... ]
-        print (callsA);
-
-        #Note: build the default structure with the kits ordered like kitA and the variants ordered like varA
-        #[{"k1":[{"v12060401",1)},{"v6920349",1), ... ]}
-        #[{"k2":[{"v12060401",1)},{"v6920349",None), ... ]}
-        #and display it
-        #for call in calls:
-        #   for K in kits:
-        #    ...
-        #   sort_positive_variants(kit_id)
-
-        #}}}
-        
-
-    #TBL FORMAT
+    #SORT - MATRIX FORMAT
 
     def sort_data_tbl(self):
 
-        self.MODE = 2
-
         #get counts
         self.sort_cnts()
-        #print(self.sort_get_cnt('vp',reverse=True))
-        #print(self.sort_get_cnt('vp',noNums=True,reverse=True))
-        #sys.exit()
 
-        #Letters 
-        if self.MODE == 1:
-            sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
-        #Names
-        if self.MODE == 2:
-            sql = "select C.kit_id,V.name,C.assigned,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 4"
-            sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
-            #cnts - variants
-            sqlVp = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-            sqlVn = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-            sqlVx = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is None group by 2"
-            #cnts - kits
-            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-            sqlKp = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is None group by 2"
-        #Combo - Names+Letters
-        if self.MODE == 3:
-            sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #sql
+        sql = "select C.kit_id,V.name,C.assigned,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 4"
+        sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
 
         #all unique variants
         self.dc.execute(sql1)
@@ -481,82 +243,42 @@ class DB(object):
 
         #2nd tbl out
         self.stdout_tbl_matrix()
-
-        sys.exit()
-
-        #HIDE-ME: some code (may not be useful){{{ 
-
-        #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
-        #self.dc.execute(sql_2b)
-        #varAn = self.dc.fetchall()
-        #print("---")
-        #print("variant negative check")
-        #print(varAn)
-
-        sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
-        sql_2c = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned is not null group by variant_loc order by count(*) desc;"
-        self.dc.execute(sql_2c)
-        varAa = self.dc.fetchall()
-        print("---")
-        print("variant all check")
-        print(varAa)
-        #(3) 9 perfectly called variants - execute sort on these
-        #(4) 6 imperfectly called variants - do Step A
-
-        sql_3 = "select * from s_calls order by kit_id,assigned;"
-        self.dc.execute(sql_3)
-        callsA = self.dc.fetchall()
-        print("---")
-        #[(1, 12060401, None), (1, 6920349, 0), (1, 7378685, 0), (1, 13668461, 0), (1, 19538924, 0), ... ]
-        print (callsA);
-
-        #Note: build the default structure with the kits ordered like kitA and the variants ordered like varA
-        #[{"k1":[{"v12060401",1)},{"v6920349",1), ... ]}
-        #[{"k2":[{"v12060401",1)},{"v6920349",None), ... ]}
-        #and display it
-        #for call in calls:
-        #   for K in kits:
-        #    ...
-        #   sort_positive_variants(kit_id)
-
-        #}}}
         
     def sort_get_cnt(self,TYPE,noNums=False,reverse=False):
+        #--------------------
+        #sample useage:
+        #--------------------
+        #print(self.sort_get_cnt('vp',reverse=True))
+        #print(self.sort_get_cnt('vp',noNums=True,reverse=True))
+        #--------------------
         if noNums: #returns OrderedDict
             return list(OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse)).keys())
         else: #retuns List
             return OrderedDict(sorted(self.CNTS[TYPE].items(), key=lambda item: item[1],reverse=reverse))
         
     def sort_cnts(self):
-
+        #vars
         self.MODE = 2
         self.CNTS = {}
         sqlc = {}
-
-        #sql
-        if self.MODE == 2:
-            #cnts - variants
-            sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-            sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-            sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
-            #cnts - kits
-            sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-            sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-            sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
-
+        #sql - cnt variants
+        sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+        sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+        sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+        #sql - cnt kits
+        sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+        sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+        sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
         #get all cnts
         for key, sql in sqlc.items():
             self.CNTS[key] = {}
-            #print(key)
-            #print(sql)
-            #sys.exit()
             self.dc.execute(sql)
             F = self.dc.fetchall()
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
-        #print(self.CNTS)
         
     def sort_notneg_perf_imperf_variants(self):
+        #vars
         KDATA = OrderedDict()
         VARIANTS = []
         #not negatives
@@ -574,10 +296,12 @@ class DB(object):
             if 0 in self.KDATA[v] and None in self.KDATA[v]:
                 VARIANTS.append(v)
                 KDATA[v] = self.KDATA[v]
+        #reset obj vars
         self.VARIANTS = VARIANTS
         self.KDATA = KDATA
         
     def stdout_tbl_matrix(self):
+        #stdout for debugging
         print("")
         table = BeautifulTable()
         table.column_headers = ['top']+self.KITS
@@ -586,7 +310,7 @@ class DB(object):
         print(table)
         print("")
 
-    #TREE FORMAT
+    #SORT - TREE FORMAT
 
     def sort_data_tree(self):
 
@@ -1100,4 +824,230 @@ class DB(object):
         print(json.dumps(var, indent=4, sort_keys=True))
         #sys.exit()
 
+    #OLD CODE
 
+    def sort_data_old(self):
+
+        # TODO: probably need to delete this entire routine .... just keeping around just in case
+
+        #HIDE-ME: old stuff based on Iain's PDF - to redo {{{
+
+        print("===")
+        print("FILTER, step: A ")
+        print("===")
+        sql = "select distinct variant_loc from s_calls;"
+        self.dc.execute(sql)
+        A = [itm[0] for itm in self.dc.fetchall()]
+        print("A - distinct variants")
+        print(A) #A - distinct variants
+        print("---")
+        print('numA - num distinct variants')
+        print(len(A)) #numA - num distinct variants
+        #sys.exit()
+
+        print("===")
+        print("FILTER - step: B")
+        print("===")
+        sql = "select distinct variant_loc from s_calls where assigned = 0;"
+        self.dc.execute(sql)
+        B1 = [itm[0] for itm in self.dc.fetchall()]
+        B0 = list(set(A)-set(B1))
+        print("B0 - variants that don't have negs")
+        print(B0) #B0 - variants that don't have negs
+        print("---")
+        print("B1 - variants that have negs")
+        print(B1) #B1 - variants that have negs 
+        #sys.exit()
+
+        print("===")
+        print("FILTER - step: C")
+        print("===")
+        sql = "select variant_loc,count(*) as cnt from s_calls where assigned = 1 group by variant_loc;"
+        self.dc.execute(sql)
+        F = self.dc.fetchall()
+        Fa = list(filter(lambda x: x[1]==(len(A)-1), F))
+        Fb = [(a) for a,b in Fa] #strip out 2nd element, the count
+        C1 = list(set(B1) & set(Fb)) #intersection
+        C0 = list(set(B1)-set(C1))
+        print("list of *all* one person +ve's")
+        print(Fa)
+        print("---")
+        print("not singletons")
+        print(C0) #C0 - not singletons
+        print("---")
+        print("singletons") #C1 - singletons
+        print(C1)
+        #sys.exit()
+
+        print("===")
+        print("FILTER - step: D")
+        print("===")
+        sql = "select distinct variant_loc from s_calls where assigned is null group by variant_loc;"
+        self.dc.execute(sql)
+        F = self.dc.fetchall()
+        D0 = list(set(C1)-set(F))
+        D1 = list(set(F)-set(D0))
+        print("list of variants that are sometimes not called")
+        print(F)
+        print("---")
+        print("imperfect variants")
+        print(D0) #D0 - imperfect variants
+        print("---")
+        print("calls of perfect share variants - these go through the next PROCESS, SORT")
+        print(D1) #D1 - perfect share variants
+        #sys.exit()
+
+        #}}}
+        #HIDE-ME: a type study - may no longer be useful{{{
+        #------------------------------
+
+        #I'm thinking byK is what we're looking to work with
+
+        #byV = [
+        #    { v1:
+        #        ({pos:[k4,k3]},{cnt:2},{neg:[]},{unk:[]})
+        #        },
+        #    { v2:
+        #        ({pos:[k1,k2,k3]},{cnt:3},{neg:[]},{unk:[]})
+        #        },
+        #    { v3:
+        #        ({pos:[k4,k3]},{cnt:2},{neg:[]},{unk:[]})
+        #        },
+        #    { v4:
+        #        ({pos:[k2,k1]},(cnt:2},{neg:[]},{unk:[]})
+        #        }
+        #    ]
+
+        #byK = [
+        #    { k1:
+        #        ({pos:[v2,v4]},{cnt:2},{neg:[]},{unk:[]})
+        #        },
+        #    { k2:
+        #        ({pos,[v2,v4]},{cnt:2},{neg:[]},{unk:[]})
+        #        },
+        #    { k3:
+        #        ({pos,[v1,v2,v3]},{cnt:2},{neg:[]},{unk:[]})
+        #        },
+        #    { k4:
+        #        ({pos,[v1,v3]},{cnt:2},{neg:[]},{unk:[]})
+        #        }
+        #    ]
+            
+        #------------------------------ }}}
+        #HIDE-ME: some code - may no longer be useful {{{
+
+        print("===")
+        print("SORT")
+        print("===")
+        sql = "select kit_id,variant_loc from s_calls order by kit_id, variant_loc;"
+        self.dc.execute(sql)
+        F = self.dc.fetchall()
+        print("all kits + variants")
+        print("+ grabbing kits by variant: F")
+        #[(1, 3019783), (1, 6920349), (1, 7378685), (1, 8928037), ... ]
+        Fa = list(filter(lambda x: x[1]=="A", F))
+        Fb = [(a) for a,b in Fa] #strip out 2nd element, the count
+        #[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        print(Fb)
+        print("---")
+        
+        print("===")
+        print("SETS")
+        print("===")
+
+        # }}}
+        # HIDE-ME: these notes may not be useful {{{
+
+        #loop dict's variant sets with unique variant types to find relations
+        #(step1) A+ {B:(B+,B-)} :: [(A+,B+),(A+,B-)]
+        #if x[0] == A+ && x[1] == B+ exists and if x[0] == A+ && x[1] == B- exists:
+        #    A+>B-
+
+        #--- so this:
+        #    A+>A-
+        #    B+>B-
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    unk-relations:
+        #    R1:{A1+,B+}
+
+        #(step2) A+ {C:(C+,C-)} :: [(A+,C+),(A+,C-)]
+        #if x[0] == A+ && x[1] == C+ exists and if x[0] == A+ && x[1] == C- exists:
+        #    A+>C-
+
+        #--- so this:
+        #    R1+>A-
+        #    R1+>B-
+        #    unk-relations:
+        #    R1:{A1+,B+}
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    R1+>C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+
+        #(step3a) B- {C:(C+,C-)} :: [(B-,C+),(B+,C-)]
+        #if x[0] == B- && x[1] == C+ exists and if x[0] == B- && x[1] == C- exists:
+        #    B+>C-
+
+        #--- so this:
+        #    R1+>A-
+        #    R1+>B-
+        #    R1+>C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+        #--- becomes:
+        #    R1+>A-
+        #    R1+>B-
+        #    B->C-
+        #    unk-relations:
+        #    R1:{A+,B+,C+}
+
+        #for Vx in VARIANTSa:
+        #    for key, value in KA.items():
+        #        if key=='variants':
+        #            for Vy in value:
+                       
+        #}}}
+
+        sys.exit()
+
+        #HIDE-ME: some code (may not be useful){{{ 
+
+        #sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
+        #self.dc.execute(sql_2b)
+        #varAn = self.dc.fetchall()
+        #print("---")
+        #print("variant negative check")
+        #print(varAn)
+
+        sql_2b = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned = 0 group by variant_loc order by count(*) desc;"
+        sql_2c = "select variant_loc,count(*) as pos_v_cnt from s_calls where assigned is not null group by variant_loc order by count(*) desc;"
+        self.dc.execute(sql_2c)
+        varAa = self.dc.fetchall()
+        print("---")
+        print("variant all check")
+        print(varAa)
+        #(3) 9 perfectly called variants - execute sort on these
+        #(4) 6 imperfectly called variants - do Step A
+
+        sql_3 = "select * from s_calls order by kit_id,assigned;"
+        self.dc.execute(sql_3)
+        callsA = self.dc.fetchall()
+        print("---")
+        #[(1, 12060401, None), (1, 6920349, 0), (1, 7378685, 0), (1, 13668461, 0), (1, 19538924, 0), ... ]
+        print (callsA);
+
+        #Note: build the default structure with the kits ordered like kitA and the variants ordered like varA
+        #[{"k1":[{"v12060401",1)},{"v6920349",1), ... ]}
+        #[{"k2":[{"v12060401",1)},{"v6920349",None), ... ]}
+        #and display it
+        #for call in calls:
+        #   for K in kits:
+        #    ...
+        #   sort_positive_variants(kit_id)
+
+        #}}}
+        
