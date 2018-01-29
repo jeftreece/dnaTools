@@ -43,10 +43,78 @@ class Sort(object):
         self.VDATA = None
         self.CNTS = {}
         self.NP = None
-        self.db = None #db init
-        self.dc = None #db cursor
+        self.dbo = None #db object
 
-    #TOGGLE BTW SORT TOOLS
+    def sort_schema(self):
+        self.dbo.run_sql_file('sort-schema.sql')
+        
+    def sort_insert_sample_data(self):
+
+        #hide-me {{{
+
+        #sample data: 3019783,M343,1,1,Null,1,1,1,1,1,1,1
+        #{'v': '3019783', 'n': 'M343', 'k1': '1', 'k2': '1', 'k3': 'Null', 'k4': '1', 'k5': '1', 'k6': '1', 'k7': '1', 'k8': '1', 'k9': '1', 'k10': '1', 'k11': None, 'k12': None}
+
+        #create table s_kits(
+        # kit_id  int,  -- later this can be person_id
+        # sort_order int
+        #);
+
+        #create table s_variants (
+        # -- variant_id int, -- not needed for prototype
+        # variant_loc int,  -- PK
+        # name varchar(20)
+        # -- old_reference varchar(2), -- commenting out right now cuz not part of ian's doc
+        #);
+
+        #create table s_calls(
+        # kit_id int,
+        # variant_loc int,
+        # assigned boolean
+        #);
+
+        # }}}
+
+        cols=10
+        #for k in range(1,cols+1):
+        kits = "A B C D E F G H I J"
+        for k in kits.split():
+        self.dbo.sql_exec("insert into s_kits (kit_id) values ('"+str(k)+"');")
+
+        with open(REDUX_DATA+'/sample-sort-data.csv','r') as FILE:
+            #for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
+            for row in csv.DictReader(FILE,'vi v n A B C D E F G H I J'.split()):
+                row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
+                self.dbo.sql_exec("insert into s_variants (variant_id,variant_loc,name) values ("+row['vi']+",'"+row['v']+"','"+row['n']+"');")
+                #print(' - inserting sample variant data: '+str(row['v']))
+                #for k in range(1,cols+1):
+                for k in kits.split():
+                    #kv = str(row['k'+str(k)])
+                    kv = str(row[str(k)])
+                    #'null' if kv == "None" else kv
+                    vv = str(row['v'])
+                    #print (kv)
+                    self.dbo.sql_exec("insert into s_calls (kit_id,variant_loc,assigned) values ('k"+str(k)+"','"+vv+"',"+kv+");")
+
+        #hide-me {{{
+                    #self.commit()
+                    #print (kv+":"+vv)
+                #break;
+                #sys.exit()
+                j#print(row)
+                #print(row.encode('utf-8-sig'))
+            #for (l,n,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12) in dr]
+            #    print (n)
+            #self.dbo.sql_exec_many("insert into s_kits (col1, col2) VALUES (?, ?);", to_db)
+            #(variant_loc,name,) = t_db
+            #con.commit()
+            #con.close()
+        #}}}
+
+        #self.commit()
+        
+
+        #TOGGLE BTW SORT TOOLS
 
     def sort_data(self):
         #self.sort_data_matrix()
@@ -64,8 +132,8 @@ class Sort(object):
         sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
 
         #all unique variants
-        self.dc.execute(sql1)
-        F = self.dc.fetchall()
+        self.dbo.sql_exec(sql1)
+        F = self.dbo.fetchall()
         self.VARIANTS = {}
         cnt=0
         for itm in F:

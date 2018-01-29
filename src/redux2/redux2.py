@@ -12,8 +12,9 @@
 
 import sys,argparse,yaml,os,glob,shutil,re,time,csv,zipfile
 from collections import defaultdict
-from lib import *
-from clades import *
+from controller import *
+#from lib import *
+#from clades import *
 
 # }}}
 # trace (commenting out){{{
@@ -34,6 +35,7 @@ except:
 config = yaml.load(open(REDUX_CONF))
 
 #}}}
+
 
 # arg parser {{{
 
@@ -161,7 +163,26 @@ else: #this area calls controllers
         c_r2_db()
 
     # }}}
-# clades {{{
+    # v2 {{{
+
+    if args.new:
+        c_v2_db()
+
+    # }}}
+    # sort {{{
+
+    # sort prototype
+    if args.sort or args.sortmatrix:
+        c_sort_sample_db()
+        c_sort_db_matrix()
+    # sort prototype
+    if args.sorttree:
+        c_sort_sample_db()
+        c_sort_db_tree()
+
+    # }}}
+
+# clades (handled in a diff way)  {{{
 
 if namespace.snp or len(namespace.action):
     if cladesO.create:
@@ -184,22 +205,6 @@ if namespace.snp or len(namespace.action):
         cladesO.c_mergeup()
 
 # }}}
-    # v2 {{{
-
-    if args.new:
-        c_v2_db()
-
-    # }}}
-    # sort {{{
-
-    # sort prototype
-    if args.sort or args.sortmatrix:
-        c_sort_db_matrix()
-    # sort prototype
-    if args.sorttree:
-        c_sort_db_tree()
-
-    # }}}
 
 # trace (commenting out) {{{
 

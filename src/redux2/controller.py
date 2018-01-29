@@ -6,12 +6,14 @@
 # version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
 
 # }}}
-# libs (commented out){{{
+# libs (mostly commented out){{{
 
 #import os,yaml,shutil,glob,re,csv,zipfile,subprocess
 #from db import *
 #from sort import *
 #from collections import defaultdict
+from lib import *
+from clades import *
 
 # }}}
 # globals (commented out) {{{

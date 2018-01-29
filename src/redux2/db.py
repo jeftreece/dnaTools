@@ -62,5 +62,11 @@ class DB(object):
         self.dc.executemany(sql)
         self.commit()
         
+    def fetchall(self):
+        return self.dc.fetchall()
+        
+    def fetchone(self):
+        return self.dc.fetchone()
+        
     def commit(self):
         self.db.commit()
