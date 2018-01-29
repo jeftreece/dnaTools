@@ -23,7 +23,6 @@ try:
 except:
     trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
-
 sys.path.append(config['REDUX_PATH'])
 
 #}}}

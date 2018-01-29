@@ -23,7 +23,6 @@ try:
 except:
     trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
-
 sys.path.append(config['REDUX_PATH'])
 
 #}}}
@@ -34,10 +33,10 @@ sys.path.append(config['REDUX_PATH'])
 class DB(object):
     
     def __init__(self):
-
         #proper db class attributes
         self.db = None
         self.dc = None
+        
     def db_init(self):
         #trace (1, "Initialising database...")
         return sqlite3.connect('variant.db')
