@@ -503,11 +503,11 @@ def c_sort_db_matrix():
     #keeping this separate cuz not refreshing every time
     sort = Sort()
     sort.dbo = DB()
-    sort.sort_data_matrix()
+    sort.sort_matrix()
     
 def c_sort_db_tree():
     c_sort_sample_db()
     #keeping this separate cuz not refreshing every time
     sort = Sort()
     sort.dbo = DB()
-    sort.sort_data_tree()
+    sort.sort_tree()

@@ -47,19 +47,23 @@ sys.path.append(config['REDUX_PATH'])
 class Sort(object):
     
     def __init__(self):
-        self.TREE = {}
-        self.REF = None
-        self.MODE = config['MATRIX_VIEW_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
-        self.KITS = None
-        self.VARIANTS = None
-        self.DATA = None
-        self.KDATA = None
-        self.VDATA = None
-        self.CNTS = {}
-        self.NP = None
+
+        #db attributes
         self.dbo = None #db object
         #self.db = None #sqlite db instance
         #self.dc = None #sqlite db cursor
+
+        #tree attributes    
+        self.TREE = {}
+        self.REF = None
+        self.MODE = config['MATRIX_VIEW_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
+
+        #matrix attributes
+        self.KITS = None
+        self.VARIANTS = None
+        self.DATA = None
+        self.CNTS = {}
+        self.NP = None
 
     # schema / sample data
 
@@ -89,7 +93,7 @@ class Sort(object):
 
     # matrix
 
-    def sort_data_matrix(self):
+    def sort_matrix(self):
 
         #db
         self.dbo.db = self.dbo.db_init()
@@ -263,7 +267,37 @@ class Sort(object):
     # tree
     # TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
-    def sort_data_tree(self):
+    def sort_tree(self):
+
+        #prep data
+        DATA = self.sort_tree_prep_data()
+                    
+        #print to stdout so I can see what I'm doing
+        #if config['DEBUG_TREE'] > 2:
+        #    self.stdout_stash_data(DATA)
+
+        #end collapse vim marker
+        debug_chk('DEBUG_TREE',"}"+"}}",2)
+
+        #build unsorted tree with all nodes under top
+        self.TREE = {}
+        self.TREE['top'] = Node("top")
+        #STASH = {}
+        for key, value in DATA.items():
+            self.TREE[key] = Node(key, parent=self.TREE['top'])
+
+        #sort it
+        #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
+        STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
+        STASH = self.sort_variant_tree(STASH,run_all=True,run=2)
+
+        sys.exit()
+
+        #json/stdout a variable (debugging)
+        self.stdout_dump_var(newV2)
+        sys.exit()
+        
+    def sort_tree_prep_data(self):
 
         #db
         self.dbo.db = self.dbo.db_init()
@@ -300,9 +334,9 @@ class Sort(object):
         #VARIANTSp = ['+'+itm[1] for itm in F]
         #VARIANTSn = ['-'+itm[1] for itm in F]
         #VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"all unique variants",4)
-        debug_chk('DEBUG_TREE',VARIANTS,4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"all unique variants",5)
+        debug_chk('DEBUG_TREE',VARIANTS,5)
         #sys.exit()
         #print("---")
         #print("all unique variants - pos+neg")
@@ -311,34 +345,34 @@ class Sort(object):
         
         #kits with positive assignments
         Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"kits with positive assignment variant calls",4)
-        debug_chk('DEBUG_TREE',Fp,4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"kits with positive assignment variant calls",5)
+        debug_chk('DEBUG_TREE',Fp,5)
 
         #kits with negative assignments
         Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"kits with positive negative variant calls",4)
-        debug_chk('DEBUG_TREE',Fn,4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"kits with positive negative variant calls",5)
+        debug_chk('DEBUG_TREE',Fn,5)
         #sys.exit()
 
         #per all the kits with positive variants (build new dict)
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"dict of kits with their positive assignment variant calls",4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"dict of kits with their positive assignment variant calls",5)
         KA={}
         for k in Fp:
             Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
             #['A+', 'D+', 'F+', 'H+', 'M+']
-            debug_chk('DEBUG_TREE',k+" "+str(Kp),4)
+            debug_chk('DEBUG_TREE',k+" "+str(Kp),5)
             #sys.exit()
             KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
 
         #per all the kits with negative variants (build new dict)
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"dict of kits with their negative assignment variant calls",4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"dict of kits with their negative assignment variant calls",5)
         for k in Fn:
             Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
-            debug_chk('DEBUG_TREE',k+" "+str(Kn),4)
+            debug_chk('DEBUG_TREE',k+" "+str(Kn),5)
             if k in KA.keys():
                 KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
                 KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
@@ -360,13 +394,13 @@ class Sort(object):
         newV2 = sorted(newV1, key=lambda k: (k['sort']))
 
         #print to stdout so I can see what I'm doing
-        debug_chk('DEBUG_TREE',"---",4)
-        debug_chk('DEBUG_TREE',"combined dict of kits with pos+neg variant calls - sorted",4)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"combined dict of kits with pos+neg variant calls - sorted",5)
         #newV3 = {}
         for d in newV2:
             #newV3[d['kit']] = d['variants']
             STR = d['kit']+':'+str(d['variants'])
-            debug_chk('DEBUG_TREE',STR.replace("'",""),4)
+            debug_chk('DEBUG_TREE',STR.replace("'",""),5)
 
         #build variant relationship data that we need for sorting
         debug_chk('DEBUG_TREE',"---",2)
@@ -393,33 +427,10 @@ class Sort(object):
                         DATA[VX]['pos'].append(VY)
                     if chk2 is True and chk1 is False:
                         DATA[VX]['neg'].append(VY)
-                    
-        #print to stdout so I can see what I'm doing
-        debug_chk('DEBUG_TREE',"variant relationship data needed for sorting",2)
-        for key, value in DATA.items():
-            debug_chk('DEBUG_TREE',key+'|'+str(value).replace("'","").replace(" ",""),2)
 
-        #end collapse vim marker
-        debug_chk('DEBUG_TREE',"}"+"}}",2)
-
-        #build unsorted tree with all nodes under top
-        self.TREE = {}
-        self.TREE['top'] = Node("top")
-        #STASH = {}
-        for key, value in DATA.items():
-            self.TREE[key] = Node(key, parent=self.TREE['top'])
-
-        #sort it
-        #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
-        STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
-        STASH = self.sort_variant_tree(STASH,run_all=True,run=2)
-
-        sys.exit()
-
-        #json/stdout a variable (debugging)
-        self.stdout_dump_var(newV2)
-        sys.exit()
-        
+        #return prepped data
+        return DATA
+          
     def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None,run=1):
 
         # HIDE-ME: rules {{{
@@ -582,11 +593,10 @@ class Sort(object):
         STASH = {}
         debug_chk('DEBUG_TREE',"===",1)
         debug_chk('DEBUG_TREE',"variant tree sort start",1)
-        debug_chk('DEBUG_TREE',"---",1)
 
         #show pre-proc default data 
         if config['DEBUG_TREE']>3:
-            self.stdout_dump_variant_relations_data(DATA,'pre-proc',run)
+            self.stdout_variant_relations_data(DATA,'STASH pre-proc',run)
         #prep stash
         for key, value in DATA.items():
             STASH[key] = {'mix':[],'pos':[],'neg':[]}
@@ -595,10 +605,11 @@ class Sort(object):
         if self.REF is None:
             self.REF = {}
             for key, value in DATA.items():
-                self.REF[key] = {'r_mix':[],'r_pos':[],'r_neg':[]}
+                self.REF[key] = {'mix':[],'pos':[],'neg':[]}
 
         #MIX RULE CHKS{{{
 
+        debug_chk('DEBUG_TREE',"---",2)
         debug_chk('DEBUG_TREE',"mix-checks {"+"{{",2) #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
         for key, value in DATA.items():
@@ -616,8 +627,8 @@ class Sort(object):
                             self.TREE[Vz].parent.children = tuple(ch1)
                         self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
                         self.TREE[Vz].children = ch2
-                        if key not in self.REF[Vz]['r_mix']:
-                            self.REF[Vz]['r_mix'].append(key)
+                        if key not in self.REF[Vz]['mix']:
+                            self.REF[Vz]['mix'].append(key)
                         #if self.DBG > 1:
                         #    for pre, fill, node in RenderTree(self.TREE['top']):
                         #        debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),2)
@@ -626,8 +637,8 @@ class Sort(object):
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         #if self.DBG > 1:
                         debug_chk('DEBUG_TREE',"MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key,3)
-                        if key not in self.REF[Vz]['r_mix']:
-                            self.REF[Vz]['r_mix'].append(key)
+                        if key not in self.REF[Vz]['mix']:
+                            self.REF[Vz]['mix'].append(key)
 
                     #chk3 - if anything else, then: STASH
                     else:
@@ -650,11 +661,17 @@ class Sort(object):
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",3)
-                        if key not in self.REF[Vz]['r_pos']:
-                            self.REF[Vz]['r_pos'].append(key)
-                    #chk2 - if anything else, then: STASH
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk2 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
+                    elif run>1 and self.dupe_variant_check(key,Vz,STASH):
+                        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - dupe relation found",3)
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk3 - other situations 
                     else:
-                        debug_chk('DEBUG_TREE',"POS-CHK2 - "+key+"|"+Vz+" - no direct lineage found - put in STASH",2)
+                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - other situations - put in STASH",2)
                         STASH[key]['pos'].append(Vz)
                         #print('key-desc: '+str(self.TREE[key].descendants))
                         #print('Vz-desz:'+str(self.TREE[Vz].descendants))
@@ -676,13 +693,13 @@ class Sort(object):
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found",3)
-                        if key not in self.REF[Vz]['r_neg']:
-                            self.REF[Vz]['r_neg'].append(key)
+                        if key not in self.REF[Vz]['neg']:
+                            self.REF[Vz]['neg'].append(key)
                     #chk2 - if the two nodes don't have direct line relation, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found",3)
-                        if key not in self.REF[Vz]['r_neg']:
-                            self.REF[Vz]['r_neg'].append(key)
+                        if key not in self.REF[Vz]['neg']:
+                            self.REF[Vz]['neg'].append(key)
                     #chk3 - if anything else, then: STASH
                     else:
                         debug_chk('DEBUG_TREE',"NEG-CHK3 - "+key+"|"+Vz+" - direct lineage found - put in STASH",2)
@@ -706,57 +723,46 @@ class Sort(object):
             debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
         
         #show post-proc remaining data that didn't get complete (now in STASH)
-        debug_chk('DEBUG_TREE',"---",4)
         if config['DEBUG_TREE']>3:
-            self.stdout_dump_variant_relations_data(STASH,'post-proc',run)
-        debug_chk('DEBUG_TREE',"---",4)
+            self.stdout_variant_relations_data(STASH,'STASH post-proc',run)
+            self.stdout_variant_relations_data(self.REF,'REF post-proc',run)
+        #debug_chk('DEBUG_TREE',"---",3)
 
         return STASH
         
-    def stdout_dump_variant_relations_data(self,DATA,dataStr,run=1):
-        dataPrint = copy.deepcopy(DATA)
-        refPrint = copy.deepcopy(self.REF)
+    def dupe_variant_check(self,variant1,variant2,STASH): #requires run > 1
+        print(variant1)
+        print("stash:"+str(STASH[variant1]))
+        print("ref:"+str(self.REF[variant1]))
+        print(variant2)
+        print("stash:"+str(STASH[variant2]))
+        print("ref:"+str(self.REF[variant2]))
+        sys.exit()
+        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
+        
+    def stdout_variant_relations_data(self,DATA,dataStr,run=1):
+
         mixlen = 0
         poslen = 0
         neglen = 0
-        chkRef1 = False
-        if self.REF is not None:
-            r_mixlen = 0
-            r_poslen = 0
-            r_neglen = 0
+
+        #print the counts
+        print("---")
+        print(dataStr+"{{"+"{") #beg vim marker
         for key, value in DATA.items():
-            dataPrint[key]['mix'] = ','.join(map(str, value['mix']))
-            dataPrint[key]['pos'] = ','.join(map(str, value['pos']))
-            dataPrint[key]['neg'] = ','.join(map(str, value['neg']))
             mixlen = mixlen+len(value['mix'])
             poslen = poslen+len(value['pos'])
             neglen = neglen+len(value['neg'])
-            if self.REF is not None:
-                refPrint[key]['r_mix'] = ','.join(map(str, self.REF[key]['r_mix']))
-                refPrint[key]['r_pos'] = ','.join(map(str, self.REF[key]['r_pos']))
-                refPrint[key]['r_neg'] = ','.join(map(str, self.REF[key]['r_neg']))
-                r_mixlen = r_mixlen+len(self.REF[key]['r_mix'])
-                r_poslen = r_poslen+len(self.REF[key]['r_pos'])
-                r_neglen = r_neglen+len(self.REF[key]['r_neg'])
-        debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") mix cnt:"+str(mixlen),2)
-        debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") pos cnt:"+str(poslen),2)
-        debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") neg cnt:"+str(neglen),2)
-        if self.REF is not None:
-            debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") r_mix cnt:"+str(r_mixlen),2)
-            debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") r_pos cnt:"+str(r_poslen),2)
-            debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") r_neg cnt:"+str(r_neglen),2)
-        debug_chk('DEBUG_TREE',"---",2)
-        #beg collapse vim marker
-        debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") DATA/STASH dump {"+"{{",2)
-        self.stdout_dump_var(dataPrint)
-        #end collapse vim marker
-        #beg collapse vim marker
-        if self.REF is not None:
-            debug_chk('DEBUG_TREE',"}"+"}}",2)
-            debug_chk('DEBUG_TREE',"RUN:"+str(run)+"("+dataStr+") REF dump {"+"{{",2)
-            self.stdout_dump_var(refPrint)
-        #end collapse vim marker
-        debug_chk('DEBUG_TREE',"}"+"}}",2)
+        print("RUN:"+str(run)+"("+dataStr+") - mix cnt:"+str(mixlen))
+        print("RUN:"+str(run)+"("+dataStr+") - pos cnt:"+str(poslen))
+        print("RUN:"+str(run)+"("+dataStr+") - neg cnt:"+str(neglen))
+        print("")
+
+        #print the data
+        print("RUN:"+str(run)+"("+dataStr+") - data")
+        for key, value in DATA.items():
+            print(key+'|'+str(value).replace("'","").replace(" ",""))
+        print("}}"+"}") #end vim marker
 
     # misc
 
