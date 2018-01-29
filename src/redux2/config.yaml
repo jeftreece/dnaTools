@@ -1,10 +1,16 @@
 ---
 # env {{{
 
+#where the code is
+REDUX_PATH: /Users/jazdrv/_prj/dnatools/_env/redux2
+#where the work environmnt is
 REDUX_ENV: /Users/jazdrv/_prj/dnatools/_env/redux2
+#where sql files are
 REDUX_SQL: /Users/jazdrv/_prj/dnatools/sql
+#where data files are
 REDUX_DATA: /Users/jazdrv/_prj/dnatools/data
 
+#debugging vars
 DEBUG_SQL: True
 COMMITS_ON: True
 

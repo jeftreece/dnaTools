@@ -16,16 +16,16 @@ import copy #only used for STASHprint (debugging)
 from collections import OrderedDict
 
 # }}}
-# yaml {{{
+# conf {{{
 
 try:
-    sys.path.append(os.environ['REDUX_PATH'])
-    REDUX_CONF = os.environ['REDUX_PATH']+'/config.yaml'
+    sys.path.append(os.environ['REDUX_CONF'])
 except:
-    trace(0,"Missing environment variable REDUX_PATH. Aborting.")
+    trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 
 config = yaml.load(open(REDUX_CONF))
+sys.path.append(config['REDUX_PATH'])
 
 #}}}
 
