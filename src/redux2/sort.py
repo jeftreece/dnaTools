@@ -49,7 +49,7 @@ class Sort(object):
     def __init__(self):
         self.TREE = {}
         self.REF = None
-        self.MODE = 1 #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
+        self.MODE = config['MATRIX_VIEW_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
         self.KITS = None
         self.VARIANTS = None
         self.DATA = None
@@ -158,7 +158,6 @@ class Sort(object):
         
     def sort_cnts(self):
         #vars
-        self.MODE = 2
         self.CNTS = {}
         sqlc = {}
         #sql - cnt variants
@@ -273,10 +272,7 @@ class Sort(object):
         #beg collapse vim marker
         debug_chk('DEBUG_TREE',"PREP {"+"{{",2)
 
-        self.MODE = 3
-
         #all kits, variant, assignment mixes 
-        #self.commit()
 
         #Letters 
         if self.MODE == 1:
