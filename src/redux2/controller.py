@@ -60,7 +60,7 @@ def c_all():
 # redux2
 
 def c_r2_db():
-    trace(1, "Initialising database...")
+    #trace(1, "Initialising database...")
     dbo = DB()
     dbo.db = dbo.db_init()
     dbo.dc = dbo.cursor()
@@ -69,8 +69,8 @@ def c_r2_db():
     
 def c_r2_backup():
 
-    trace(0,"** performing backup.")
-    trace(0,"** (msg) CREATING BACKUP COPIES OF EXISTING FILES...")
+    #trace(0,"** performing backup.")
+    #trace(0,"** (msg) CREATING BACKUP COPIES OF EXISTING FILES...")
     
     # autobackup dir
     refresh_dir('autobackup')
@@ -97,11 +97,11 @@ def c_r2_backup():
         #print "MAKING REPORT..."
         delete_file('report.csv')
     
-    trace(0,"** + backup done.")
+    #trace(0,"** + backup done.")
     
 def c_r2_prep():
 
-    trace(0,"** prepare file structure.")
+    #trace(0,"** prepare file structure.")
 
     # SKIPZIP check (beg)
 
@@ -111,7 +111,7 @@ def c_r2_prep():
         # Check ZIPDIR - contains existing zip files {{{
 
         if not os.path.exists(config['zip_dir']):
-            trace(0,"Input zip folder does not appear to exist. Aborting.\n")
+            #trace(0,"Input zip folder does not appear to exist. Aborting.\n")
             sys.exit()
 
         # }}}
@@ -130,17 +130,17 @@ def c_r2_prep():
         FILES = glob.glob(config['REDUX_ENV']+'/zips/bigy-*.zip')
 
         if len(FILES) == 0:
-            trace(0,"No input files detected in zip folder. Aborting.")
-            trace(0,"Check name format: should be bigy-<NAME>-<NUMBER>.zip\n")
+            #trace(0,"No input files detected in zip folder. Aborting.")
+            #trace(0,"Check name format: should be bigy-<NAME>-<NUMBER>.zip\n")
             sys.exit()
         else:
-            trace(0,"input files detected: " + str(FILES))
+            #trace(0,"input files detected: " + str(FILES))
 
         # }}}
         # Check whether unzip is installed {{{
 
         if not cmd_exists('unzip'):
-            trace(0,"Unzip package not found. Aborting.")
+            #trace(0,"Unzip package not found. Aborting.")
             sys.exit()
 
         # }}}
@@ -148,8 +148,8 @@ def c_r2_prep():
 
         csv = config['SNP_CSV']
         if not os.path.exists(csv):
-            trace(0,"SNP names file does not exist. Try:")
-            trace(0,"wget http://ybrowse.org/gbrowse2/gff/"+csv+" -O "+csv+"\n")
+            #trace(0,"SNP names file does not exist. Try:")
+            #trace(0,"wget http://ybrowse.org/gbrowse2/gff/"+csv+" -O "+csv+"\n")
             sys.exit()
 
         # }}}
@@ -163,14 +163,14 @@ def c_r2_prep():
 
         # Unzip each zip in turn {{{
 
-        trace(0,"Unzipping...")
+        #trace(0,"Unzipping...")
 
         if config['zip_update_only']:
             #FILES=(`diff <(ls zip/bigy-*.zip | sed 's/zip\/bigy-//' | sed 's/.zip//') <(ls unzip/*.vcf | sed 's/unzip\///' | sed 's/.vcf//') | grep '<' | awk '{print "zip/bigy-"$2".zip"}'`)
             SET = [set(re.sub('zip/bigy-','',re.sub('.zip','',S)) for S in glob.glob('zips/bigy-*.zip'))]-set([re.sub('bigy-','',S) for S in glob.glob('unzips/*.vcf')])
             #print  ${#FILES[@]} "new files found"
-            trace(0,"new files found: "+len(SET))
-            trace(0,"new files detected: " + list(SET))
+            #trace(0,"new files found: "+len(SET))
+            #trace(0,"new files detected: " + list(SET))
 
         #FILECOUNT=0
 
@@ -351,7 +351,7 @@ def c_r2_prep():
 
     # fix bash code (end)
 
-    trace(0,"** + prep done.")
+    #trace(0,"** + prep done.")
     
 
 # clades - controllers?
@@ -361,7 +361,7 @@ def analyzeVcf(file):
     #Returns a dict of position -> mutation mappings
 
     with open(os.path.splitext(file)[0] + '.vcf') as vcffile:
-        trace (30, "   Extracting VCF: %s" % vcffile)
+        #trace (30, "   Extracting VCF: %s" % vcffile)
         result = {}
         for line in vcffile:
             fields = line.split()
@@ -376,7 +376,7 @@ def analyzeBed(file):
     #Returns an array of path segments.
 
     with open(os.path.splitext(file)[0] + '.bed') as bedfile:
-        trace (30, "   Extracting BED: %s" % bedfile)
+        #trace (30, "   Extracting BED: %s" % bedfile)
         result = []
         for line in bedfile:
             fields = line.split()
@@ -458,7 +458,7 @@ def readHg19Vcf(file):
     #its derived value, regardless of whether it was ancestral or not
 
     with open(os.path.splitext(file)[0] + '.vcf') as vcffile:
-        trace (30, "   Extracting VCF: %s" % vcffile)
+        #trace (30, "   Extracting VCF: %s" % vcffile)
         result = {}
         for line in vcffile:
             fields = line.split()
@@ -469,7 +469,7 @@ def readHg19Vcf(file):
 # v2
 
 def c_v2_db():
-    trace(1, "Initialising database...")
+    #trace(1, "Initialising database...")
     dbo = DB()
     dbo.db = dbo.db_init()
     dbo.dc = dbo.cursor()
