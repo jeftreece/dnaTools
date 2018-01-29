@@ -10,6 +10,7 @@ drop table if exists s_calls;
 drop table if exists s_kits;
 -- drop table if exists s_sort_kits;
 drop table if exists s_dupes;
+drop table if exists s_dupe_joins;
 
 -- CREATES
 
@@ -87,10 +88,10 @@ create table s_kits(
 create table s_dupes (
   variant_id int, -- parent
   name varchar(30)
-)
+);
 
 create table s_dupe_joins (
   variant_id int, -- parent
-  variant_id int -- children
-)
+  dupe_variant_id int -- children
+);
 

@@ -30,7 +30,7 @@ config = yaml.load(open(REDUX_CONF))
 #}}}
 
 #TODO: fix this
-start_time = 0 
+#start_time = 0 
 
 class DB(object):
     
@@ -46,7 +46,7 @@ class DB(object):
     def cursor(self):
         return self.db.cursor()
         
-    def run_sql_file(self,FILE):
+    def sql_exec_file(self,FILE):
         fh = open(config['REDUX_SQL']+'/'+FILE,'r');
         try:
             #print(fh.read())
@@ -54,13 +54,19 @@ class DB(object):
         finally:
             fh.close()
         
-    def exec_sql_exec(self,sql):
-        self.dc.executemany(sql)
-        self.commit()
+    def sql_exec(self,sql):
+        if config['DEBUG_SQL']:
+            print("[SQL] "+sql)
+        self.dc.execute(sql)
+        if config['COMMITS_ON']:
+            self.commit()
         
-    def exec_sql_exec_many(self,sql):
+    def sql_exec_many(self,sql):
+        if config['DEBUG_SQL']:
+            print("[SQL] "+sql)
         self.dc.executemany(sql)
-        self.commit()
+        if config['COMMITS_ON']:
+            self.commit()
         
     def fetchall(self):
         return self.dc.fetchall()

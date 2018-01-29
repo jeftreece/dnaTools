@@ -480,26 +480,21 @@ def c_v2_db():
 # sort
 
 def c_sort_sample_db():
-    dbo = DB()
-    dbo.db = dbo.db_init()
-    dbo.dc = dbo.cursor()
-    dbo.sort_schema()
-    dbo.sort_ins_sample_data()
+    sort = Sort()
+    sort.dbo = DB()
+    sort.sort_schema()
+    sort.sort_ins_sample_data()
     
 def c_sort_db_matrix():
-    dbo = DB()
-    dbo.db = dbo.db_init()
-    dbo.dc = dbo.cursor()
+    c_sort_sample_db()
+    #keeping this separate cuz not refreshing every time
     sort = Sort()
-    sort.db = dbo.db
-    sort.dc = dbo.dc
+    sort.dbo = DB()
     sort.sort_data_matrix()
     
 def c_sort_db_tree():
-    dbo = DB()
-    dbo.db = dbo.db_init()
-    dbo.dc = dbo.cursor()
+    c_sort_sample_db()
+    #keeping this separate cuz not refreshing every time
     sort = Sort()
-    sort.db = dbo.db
-    sort.dc = dbo.dc
-    sort.sort_data_tree()
+    sort.dbo = DB()
+    sort.sort_data_matrix()

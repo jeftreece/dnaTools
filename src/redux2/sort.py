@@ -44,11 +44,15 @@ class Sort(object):
         self.CNTS = {}
         self.NP = None
         self.dbo = None #db object
+        #self.db = None #sqlite db instance
+        #self.dc = None #sqlite db cursor
 
     def sort_schema(self):
-        self.dbo.run_sql_file('sort-schema.sql')
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        self.dbo.sql_exec_file('sort-schema.sql')
         
-    def sort_insert_sample_data(self):
+    def sort_ins_sample_data(self):
 
         #hide-me {{{
 
@@ -79,9 +83,9 @@ class Sort(object):
         #for k in range(1,cols+1):
         kits = "A B C D E F G H I J"
         for k in kits.split():
-        self.dbo.sql_exec("insert into s_kits (kit_id) values ('"+str(k)+"');")
+            self.dbo.sql_exec("insert into s_kits (kit_id) values ('"+str(k)+"');")
 
-        with open(REDUX_DATA+'/sample-sort-data.csv','r') as FILE:
+        with open(config['REDUX_DATA']+'/sample-sort-data.csv','r') as FILE:
             #for row in csv.DictReader(FILE,'v n k1 k2 k3 k4 k5 k6 k7 k8 k9 k10'.split()):
             for row in csv.DictReader(FILE,'vi v n A B C D E F G H I J'.split()):
                 row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
@@ -101,7 +105,7 @@ class Sort(object):
                     #print (kv+":"+vv)
                 #break;
                 #sys.exit()
-                j#print(row)
+                #print(row)
                 #print(row.encode('utf-8-sig'))
             #for (l,n,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12) in dr]
             #    print (n)
@@ -116,13 +120,13 @@ class Sort(object):
 
         #TOGGLE BTW SORT TOOLS
 
-    def sort_data(self):
-        #self.sort_data_matrix()
-        self.sort_data_tree()
-
     #SORT - MATRIX FORMAT
 
     def sort_data_matrix(self):
+
+        #db
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
 
         #get counts
         self.sort_cnts()
@@ -141,8 +145,8 @@ class Sort(object):
             cnt = cnt + 1
 
         #get data
-        self.dc.execute(sql)
-        F = self.dc.fetchall()
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
         
         #all unique kits
         self.KITS = {}
@@ -202,8 +206,8 @@ class Sort(object):
         #get all cnts
         for key, sql in sqlc.items():
             self.CNTS[key] = {}
-            self.dc.execute(sql)
-            F = self.dc.fetchall()
+            self.dbo.sql_exec(sql)
+            F = self.dbo.fetchall()
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
         
@@ -292,10 +296,13 @@ class Sort(object):
         
 
     #SORT - TREE FORMAT
-
     #TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
     def sort_data_tree(self):
+
+        #db
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
 
         #beg collapse vim marker
         print("PREP {"+"{{")
@@ -315,7 +322,7 @@ class Sort(object):
         if self.MODE == 3:
             sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
 
-        self.dc.execute(sql)
+        self.dbo.sql_exec(sql)
         F = self.dc.fetchall()
         #print(F)
         #sys.exit()

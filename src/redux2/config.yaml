@@ -5,6 +5,9 @@ REDUX_ENV: /Users/jazdrv/_prj/dnatools/_env/redux2
 REDUX_SQL: /Users/jazdrv/_prj/dnatools/sql
 REDUX_DATA: /Users/jazdrv/_prj/dnatools/data
 
+DEBUG_SQL: True
+COMMITS_ON: True
+
 # }}}
 # redux2 {{{
 
