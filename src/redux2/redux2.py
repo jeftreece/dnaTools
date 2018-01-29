@@ -123,7 +123,7 @@ for a in namespace.action:
 # }}}
 
 # TODO: clades line
-t0 = time.time()
+#t0 = time.time()
 
 # TODO: clades stuff {{{
 
