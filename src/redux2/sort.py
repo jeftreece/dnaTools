@@ -48,11 +48,12 @@ class Sort(object):
     #TOGGLE BTW SORT TOOLS
 
     def sort_data(self):
-        self.sort_data_tbl()
+        #self.sort_data_matrix()
+        self.sort_data_tree()
 
     #SORT - MATRIX FORMAT
 
-    def sort_data_tbl(self):
+    def sort_data_matrix(self):
 
         #get counts
         self.sort_cnts()
@@ -230,6 +231,8 @@ class Sort(object):
         #beg collapse vim marker
         print("PREP {"+"{{")
 
+        self.MODE = 3
+
         #all kits, variant, assignment mixes 
         #self.commit()
 
@@ -335,9 +338,7 @@ class Sort(object):
             VXP = '+'+VX
             for VY in VARIANTS:
                 VYP = '+'+VY
-                if VXP == VYP:
-                    foo=1
-                else:
+                if VXP != VYP:
                     VYN = '-'+VY
                     chk1 = False
                     chk2 = False
@@ -394,9 +395,7 @@ class Sort(object):
         # -----------------------------------
         #TODO: need to track +/- in the tree nodes???
         # ----------------------------------- }}}
-        #HIDE-ME: notes {{{
-
-        # sample data{{{
+        # HIDE-ME: sample data{{{
 
         # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
         # A,M343,1,1,Null,1,1,1,1,1,1,1
@@ -416,7 +415,7 @@ class Sort(object):
         # O,L48,0,0,1,1,0,0,0,1,1,0
 
         #}}}
-        # processed raw results: {{{
+        # HIDE-ME: processed raw results: {{{
 
         # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
         # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
@@ -435,7 +434,7 @@ class Sort(object):
         # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
 
         #}}}
-        # rules: {{{
+        # HIDE-ME: rules {{{
 
         # mix: (1|2) means 1 is above 2
         # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
@@ -443,7 +442,7 @@ class Sort(object):
         # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
 
         # }}}
-        # results when applying these rules manually:{{{
+        # HIDE-ME: results when applying these rules manually:{{{
 
         # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
         # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
@@ -462,7 +461,7 @@ class Sort(object):
         #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
 
         #}}}
-        # disputes: {{{
+        # HIDE-ME: disputes: {{{
         # (1) L:mix-O vs. O:mix-L 
         #
         # resolutions: 
@@ -477,7 +476,7 @@ class Sort(object):
         #   (6) I-pos-L
 
         #}}}
-        #sample output (at the moment) {{{
+        # HIDE-ME: sample output (at the moment) {{{
 
         # top
         # ├── (A) M343(=)
@@ -505,7 +504,7 @@ class Sort(object):
         # TODO: Z28 is equivalent to Z9
 
         #}}}
-        # PROBLEM 1: {{{
+        # HIDE-ME: PROBLEM 1: {{{
 
         # POS C|E
         # POS O|E
@@ -530,15 +529,14 @@ class Sort(object):
         #     if move E?
 
         # }}}
-        # the ones I missed: {{{
+        # HIDE-ME: the ones I missed: {{{
+
         # ------------------------
         # OK - F should be under D
         # #1 - E should be under C like this D>C>E
         # (fixed by #1) L should be under E like this D>C>E>L ...
         # B should be under I (B and I should be dupes -- my manual work was wrong)
         # ------------------------
-
-        #}}}
 
         #}}}
 
@@ -566,13 +564,12 @@ class Sort(object):
         for key, value in DATA.items():
             if run_all or run_mix:
                 for Vz in value['mix']:
+
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent:
                         if self.DBG > 1:
                             print("---")
                             print("MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key)
-                        #print("(bef)Vz children:"+str(self.TREE[Vz].parent.children))
-                        #print("(bef)Vz parent:"+str(self.TREE[Vz].parent))
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
                         ch2 = self.TREE[Vz].children
                         if ch1 is None:
@@ -583,25 +580,24 @@ class Sort(object):
                         self.TREE[Vz].children = ch2
                         if key not in self.REF[Vz]['r_mix']:
                             self.REF[Vz]['r_mix'].append(key)
-                        #print("(aft)Vz children:"+str(self.TREE[Vz].parent.children))
-                        #print("(aft)Vz parent:"+str(self.TREE[Vz].parent))
                         if self.DBG > 1:
                             for pre, fill, node in RenderTree(self.TREE['top']):
                                 print("%s%s" % (pre, node.name))
+
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         if self.DBG > 1:
                             print("MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key)
                         if key not in self.REF[Vz]['r_mix']:
                             self.REF[Vz]['r_mix'].append(key)
+
                     #chk3 - if anything else, then: STASH
                     else:
                         if self.DBG > 1:
                             print("---")
                         print("MIX-CHK3 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH")
                         STASH[key]['mix'].append(Vz)
-                        #print(STASH)
-                        #sys.exit()
+
             else:
                 #since we're skipping "mix" relations, they need to go to STASH
                 STASH[key]['mix'] = value['mix']

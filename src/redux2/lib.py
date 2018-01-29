@@ -700,7 +700,7 @@ def getVCFvariants(FILE):
 
 #routines - "arghandler" (sort prototype) - Zak
 
-def go_sort_db():
+def go_sort_db_matrix():
     #trace(0,"** process SNP data.")
     dbo = DB()
     dbo.db = dbo.db_init()
@@ -711,7 +711,21 @@ def go_sort_db():
     sort = Sort()
     sort.db = dbo.db
     sort.dc = dbo.dc
-    sort.sort_data()
+    sort.sort_data_matrix()
+    #trace(0,"** + SNP processing done.")
+    
+def go_sort_db_tree():
+    #trace(0,"** process SNP data.")
+    dbo = DB()
+    dbo.db = dbo.db_init()
+    dbo.dc = dbo.cursor()
+    dbo.sort_schema()
+    dbo.insert_sample_sort_data()
+    #dbo.commit()
+    sort = Sort()
+    sort.db = dbo.db
+    sort.dc = dbo.dc
+    sort.sort_data_tree()
     #trace(0,"** + SNP processing done.")
 
 #routines - "arghandler" (new v2 schema)- Jef/Zak

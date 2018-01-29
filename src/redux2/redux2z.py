@@ -61,7 +61,9 @@ parser.add_argument('-p', '--prep', help='prep file structure (redux.bash stuff)
 # note: redux2.py refactoring area
 parser.add_argument('-r', '--redux2', help='redux2.py stuff (v1 schema) ', action='store_true')
 # note: sort prototype stuff
-parser.add_argument('-o', '--sort', help='sort data prototype (s_ schema currently)', action='store_true')
+parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema currently)', action='store_true')
+parser.add_argument('-om', '--sortmatrix', help='sort matrixdata prototype (s_ schema currently)', action='store_true')
+parser.add_argument('-ot', '--sorttree', help='sort tree data prototype (s_ schema currently)', action='store_true')
 # note: Jef's new v2 schema
 parser.add_argument('-n', '--new', help='new v2 schema', action='store_true')
 # note: clades.py args
@@ -142,8 +144,11 @@ else:
     if args.redux2:
         go_v1_db()
     # sort prototype
-    if args.sort:
-        go_sort_db()
+    if args.sort or args.sortmatrix:
+        go_sort_db_matrix()
+    # sort prototype
+    if args.sorttree:
+        go_sort_db_tree()
     # (v2 schema)
     if args.new:
         go_db()
