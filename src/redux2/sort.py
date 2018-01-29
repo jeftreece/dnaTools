@@ -46,6 +46,8 @@ class Sort(object):
         #self.db = None #sqlite db instance
         #self.dc = None #sqlite db cursor
 
+    # schema / sample data
+
     def sort_schema(self):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
@@ -119,7 +121,7 @@ class Sort(object):
 
         #TOGGLE BTW SORT TOOLS
 
-    #SORT - MATRIX FORMAT
+    # matrix
 
     def sort_data_matrix(self):
 
@@ -294,8 +296,8 @@ class Sort(object):
         print("")
         
 
-    #SORT - TREE FORMAT
-    #TODO: set up a random approach to pushing data into the sort. troubleshoot results
+    # tree
+    # TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
     def sort_data_tree(self):
 
@@ -804,7 +806,7 @@ class Sort(object):
         print("}"+"}}")
         
 
-    #MISC DEF
+    # misc
 
     def stdout_dump_var(self,var):
         #TODO: put this somewhere else
