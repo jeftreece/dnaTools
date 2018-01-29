@@ -14,25 +14,43 @@ import sys,argparse,yaml,os,glob,shutil,re,time,csv,zipfile
 from collections import defaultdict
 from controller import *
 #from lib import *
+import lib,controller
 #from clades import *
 
 # }}}
-# trace (commenting out){{{
 
-#start_time = time.clock()
-#trace (1, "Beginning run [%s]" % time.strftime("%H:%M:%S"))
+#debugging {{{
 
-# }}}
+def trace (level, msg):
+    print(msg)
+    #if level <= config['verbosity']:
+    #    print(msg)
+    #TODO: below line in clades.py
+    #sys.stderr(flush)
+    
+def debug_chk(TYPE,msg):
+    if config[TYPE]:
+        print(msg)
+
+#}}}
 # conf {{{
 
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
+    #conf = Dict2Obj(config)
 except:
     trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
 #}}}
+
+# trace (commenting out){{{
+
+#start_time = time.clock()
+#trace (1, "Beginning run [%s]" % time.strftime("%H:%M:%S"))
+
+# }}}
 
 # arg parser {{{
 

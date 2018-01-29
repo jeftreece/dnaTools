@@ -14,6 +14,21 @@ from sort import *
 from collections import defaultdict
 
 # }}}
+
+#debugging {{{
+
+def trace (level, msg):
+    print(msg)
+    #if level <= config['verbosity']:
+    #    print(msg)
+    #TODO: below line in clades.py
+    #sys.stderr(flush)
+    
+def debug_chk(TYPE,msg):
+    if config[TYPE]:
+        print(msg)
+
+#}}}
 # conf {{{
 
 try:
@@ -46,16 +61,6 @@ for row in csv.reader(names.splitlines()):
 #}}}
 
 # redux2 {{{
-
-# debug
-
-def trace (level, msg):
-    print(msg)
-    #if level <= config['verbosity']:
-    #    print(msg)
-    #TODO: below line in clades.py
-    #sys.stderr(flush)
-    
 
 # file/dir
 
@@ -522,3 +527,4 @@ def readHg19Vcf(file):
         return result
 
 #}}}
+

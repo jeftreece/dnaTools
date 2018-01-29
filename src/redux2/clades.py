@@ -15,6 +15,21 @@ from db import *
 from lib import *
 
 # }}}
+
+#debugging {{{
+
+def trace (level, msg):
+    print(msg)
+    #if level <= config['verbosity']:
+    #    print(msg)
+    #TODO: below line in clades.py
+    #sys.stderr(flush)
+    
+def debug_chk(TYPE,msg):
+    if config[TYPE]:
+        print(msg)
+
+#}}}
 # conf {{{
 
 try:

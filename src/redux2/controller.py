@@ -39,6 +39,21 @@ from clades import *
 #}}}
 
 # }}}
+
+#debugging {{{
+
+def trace (level, msg):
+    print(msg)
+    #if level <= config['verbosity']:
+    #    print(msg)
+    #TODO: below line in clades.py
+    #sys.stderr(flush)
+    
+def debug_chk(TYPE,msg):
+    if config[TYPE]:
+        print(msg)
+
+#}}}
 # conf {{{
 
 try:
@@ -134,7 +149,7 @@ def c_r2_prep():
             #trace(0,"Check name format: should be bigy-<NAME>-<NUMBER>.zip\n")
             sys.exit()
         else:
-            #trace(0,"input files detected: " + str(FILES))
+            trace(0,"input files detected: " + str(FILES))
 
         # }}}
         # Check whether unzip is installed {{{
@@ -495,4 +510,4 @@ def c_sort_db_tree():
     #keeping this separate cuz not refreshing every time
     sort = Sort()
     sort.dbo = DB()
-    sort.sort_data_matrix()
+    sort.sort_data_tree()
