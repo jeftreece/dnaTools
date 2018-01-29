@@ -18,12 +18,11 @@ from lib import *
 # conf {{{
 
 try:
-    sys.path.append(os.environ['REDUX_CONF'])
+    config = yaml.load(open(os.environ['REDUX_CONF']))
 except:
     trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 
-config = yaml.load(open(REDUX_CONF))
 sys.path.append(config['REDUX_PATH'])
 
 #}}}
