@@ -52,7 +52,7 @@ config = yaml.load(open(REDUX_CONF))
 
 # all
 
-def cont_all():
+def c_all():
     go_backup()
     go_prep()
     go_db()

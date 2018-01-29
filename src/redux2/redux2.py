@@ -140,9 +140,9 @@ if args.all:
 
     # all {{{
 
-    go_backup()
-    go_prep()
-    go_db()
+    c_r2_backup()
+    c_r2_prep()
+    c_r2_db()
 
     # }}}
 
