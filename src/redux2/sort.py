@@ -730,16 +730,6 @@ class Sort(object):
 
         return STASH
         
-    def dupe_variant_check(self,variant1,variant2,STASH): #requires run > 1
-        print(variant1)
-        print("stash:"+str(STASH[variant1]))
-        print("ref:"+str(self.REF[variant1]))
-        print(variant2)
-        print("stash:"+str(STASH[variant2]))
-        print("ref:"+str(self.REF[variant2]))
-        sys.exit()
-        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
-        
     def stdout_variant_relations_data(self,DATA,dataStr,run=1):
 
         mixlen = 0
@@ -763,6 +753,25 @@ class Sort(object):
         for key, value in DATA.items():
             print(key+'|'+str(value).replace("'","").replace(" ",""))
         print("}}"+"}") #end vim marker
+        
+    def dupe_variant_check(self,variant1,variant2,STASH): #requires run > 1
+        mixList1 = []
+        mixList2 = []
+        for k,v in self.REF.items():
+            if k not in [variant1,variant2] and variant1 in v['mix']:
+                mixList1.append(k)
+            if k not in [variant1,variant2] and variant2 in v['mix']:
+                mixList2.append(k)
+        print(mixList1)
+        print(mixList2)
+        print(variant1)
+        print("stash:"+str(STASH[variant1]))
+        print("ref:"+str(self.REF[variant1]))
+        print(variant2)
+        print("stash:"+str(STASH[variant2]))
+        print("ref:"+str(self.REF[variant2]))
+        sys.exit()
+        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
 
     # misc
 
