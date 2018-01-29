@@ -11,9 +11,9 @@
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
 from beautifultable import BeautifulTable
 from anytree import Node, RenderTree
-#import string
 import copy #only used for STASHprint (debugging)
 from collections import OrderedDict
+#import string
 
 # }}}
 # yaml {{{
