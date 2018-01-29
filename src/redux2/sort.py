@@ -397,7 +397,7 @@ class Sort(object):
         #print to stdout so I can see what I'm doing
         debug_chk('DEBUG_TREE',"variant relationship data needed for sorting",2)
         for key, value in DATA.items():
-            debug_chk('DEBUG_TREE',key+'|'+str(value),2)
+            debug_chk('DEBUG_TREE',key+'|'+str(value).replace("'","").replace(" ",""),2)
 
         #end collapse vim marker
         debug_chk('DEBUG_TREE',"}"+"}}",2)
