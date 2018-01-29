@@ -1,11 +1,9 @@
-# authors/licensing {{{
+# license {{{
 
-# @author: Iain McDonald
-# Contributors: Jef Treece, Harald Alvestrand
-# Purpose: Reduction and comparison script for Y-chromosome NGS test data
+# Purpose: Y-DNA NGS analytics
+# Github repo: https://github.com/jazdrv/dnaTools/tree/master
 # For free distribution under the terms of the GNU General Public License,
-# version 3 (29 June 2007)
-# https://www.gnu.org/licenses/gpl.html
+# version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
 
 # }}}
 # libs {{{
