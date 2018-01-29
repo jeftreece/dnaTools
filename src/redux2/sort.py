@@ -1,13 +1,3 @@
-# authors/licensing{{{
-
-# @author: Iain McDonald
-# Contributors: Jef Treece, Harald Alvestrand
-# Purpose: Reduction and comparison script for Y-chromosome NGS test data
-# For free distribution under the terms of the GNU General Public License,
-# version 3 (29 June 2007)
-# https://www.gnu.org/licenses/gpl.html
-
-# }}}
 # libs {{{
 
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
@@ -18,15 +8,18 @@ import copy #only used for STASHprint (debugging)
 from collections import OrderedDict
 
 # }}}
+# yaml {{{
 
-REDUX_CONF = os.environ['REDUX_CONF']
+try:
+    sys.path.append(os.environ['REDUX_PATH'])
+    REDUX_CONF = os.environ['REDUX_PATH']+'/config.yaml'
+except:
+    trace(0,"Missing environment variable REDUX_PATH. Aborting.")
+    sys.exit()
+
 config = yaml.load(open(REDUX_CONF))
-start_time = 0 # need to fix this
 
-#TODO: need to put this info properly into yaml file (for now, I'm hacking bashrc)
-REDUX_ENV = os.environ['REDUX_ENV']
-REDUX_SQL = os.environ['REDUX_SQL']
-REDUX_DATA = os.environ['REDUX_DATA']
+#}}}
 
 class Sort(object):
     

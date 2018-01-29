@@ -1,10 +1,24 @@
-# note:: class lib of Jef's original clades.py script
+# lib {{{
 
 import locale,time,subprocess
 #import sqlite3,os,time,sys,random,argparse,locale,csv,subprocess
 #from collections import defaultdict
 from db import *
 from lib import *
+
+# }}}
+# yaml {{{
+
+try:
+    sys.path.append(os.environ['REDUX_PATH'])
+    REDUX_CONF = os.environ['REDUX_PATH']+'/config.yaml'
+except:
+    trace(0,"Missing environment variable REDUX_PATH. Aborting.")
+    sys.exit()
+
+config = yaml.load(open(REDUX_CONF))
+
+#}}}
 
 class Clades(object):
 

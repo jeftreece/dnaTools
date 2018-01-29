@@ -16,14 +16,21 @@ from sort import *
 from collections import defaultdict
 
 # }}}
+# yaml {{{
 
-REDUX_CONF = os.environ['REDUX_CONF']
-REDUX_ENV = os.environ['REDUX_ENV']
+try:
+    sys.path.append(os.environ['REDUX_PATH'])
+    REDUX_CONF = os.environ['REDUX_PATH']+'/config.yaml'
+except:
+    trace(0,"Missing environment variable REDUX_PATH. Aborting.")
+    sys.exit()
+
 config = yaml.load(open(REDUX_CONF))
 
-# ==
-# USER DEFINED FILE MAPPING
-# ==
+#}}}
+
+# user defined file mapping {{{
+
 names = """
 FTDNA345238Newell.zip, 345238, Newell
 155941_BigY_RawData_20140911-1.zip, 155941, Unknown
@@ -31,14 +38,19 @@ Lee 237414 BigY Raw Data.zip, 237414, Lee
 U106_515653_Hogenmiller_BigY_RawData_2016_11_20.zip, 515653, Hogenmiller
 bigy-Bettinger57020.zip, 57020, Bettinger
 """
-# ==
-# RENAME_DICT
-# ==
+
+#}}}
+# rename dict{{{
+
 rename_dict = {}
 for row in csv.reader(names.splitlines()):
     if row and row[0]:
         rename_dict[row[0].strip()] = (row[1].strip(), row[2].strip())
-# ==
+
+#}}}
+
+
+# redux2 {{{
 
 # routines - debug
 
@@ -53,7 +65,7 @@ def trace (level, msg):
 # routines - file/dir - Zak
 
 def refresh_dir(DIR,cleanFlag=False):
-    DIR = REDUX_ENV+'/'+DIR
+    DIR = config['REDUX_ENV']+'/'+DIR
     #print DIR
     if (os.path.isdir(DIR)):
         files = glob.glob(DIR+'/*')
@@ -64,12 +76,12 @@ def refresh_dir(DIR,cleanFlag=False):
         os.makedirs(DIR)
     
 def delete_file(FILE):
-    FILE = REDUX_ENV+'/'+FILE
+    FILE = config['REDUX_ENV']+'/'+FILE
     if os.path.exists(FILE):
         os.remove(FILE)
     
 def touch_file(FILE):
-    FILE = REDUX_ENV+'/'+FILE
+    FILE = config['REDUX_ENV']+'/'+FILE
     if not os.path.exists('merge-ignore.txt'):
         open('merge-ignore.txt','w').close()
     
@@ -84,11 +96,11 @@ def setup_dirs():
     
 def extract_zips():
 
-    if not os.path.isdir(REDUX_ENV+'/'+config['zip_dir']):
+    if not os.path.isdir(config['REDUX_ENV']+'/'+config['zip_dir']):
         trace (0, '   Warn: no directory with zip files: %s' % config['zip_dir'])
         return []
 
-    FILES = os.listdir(REDUX_ENV+'/'+config['zip_dir'])
+    FILES = os.listdir(config['REDUX_ENV']+'/'+config['zip_dir'])
 
     # try to parse out at least the kit number by trying a series of regular expressions
     # adding regular expressions at the end of this list is safer than at the beginning
@@ -187,7 +199,7 @@ def extract_zips():
     for fname in fname_dict:
         kitnumber, kitname = fname_dict[fname]
         try:
-            zf = zipfile.ZipFile(REDUX_ENV+'/'+config['zip_dir']+'/'+fname)
+            zf = zipfile.ZipFile(config['REDUX_ENV']+'/'+config['zip_dir']+'/'+fname)
             #zf = zipfile.ZipFile(os.path.join(config['zip_dir'],fname))
 
         except:
@@ -237,7 +249,7 @@ def extract_zips():
 
     # list of file names we unzipped
 
-    files = os.listdir(REDUX_ENV+'/'+config['unzip_dir'])
+    files = os.listdir(config['REDUX_ENV']+'/'+config['unzip_dir'])
     return files
     
 def unpack():
@@ -284,7 +296,7 @@ def skip_to_Hg19(dbo):
         #vcffiles
 
         trace (2, "Generating database of all variants...")
-        vcffiles = [f for f in os.listdir(REDUX_ENV+'/'+config['unzip_dir']) if f.endswith('.vcf')]
+        vcffiles = [f for f in os.listdir(config['REDUX_ENV']+'/'+config['unzip_dir']) if f.endswith('.vcf')]
         trace (10, "   %i files detected" % len(vcffiles))
         
         #variant_dict
@@ -292,7 +304,7 @@ def skip_to_Hg19(dbo):
         #print(REDUX_ENV)
         variant_dict = {}
         for file in vcffiles:
-            vcf_calls = readHg19Vcf(REDUX_ENV+'/'+config['unzip_dir']+'/'+ file)
+            vcf_calls = readHg19Vcf(config['REDUX_ENV']+'/'+config['unzip_dir']+'/'+ file)
             variant_dict.update(vcf_calls)
 
         trace (10, "   %i variants found" % len(variant_dict))
@@ -326,7 +338,7 @@ def skip_to_Hg19(dbo):
     
     if (config['skip_to'] <= 12):
         trace (2, "Generating database of calls...")
-        vcffiles = [f for f in os.listdir(REDUX_ENV+'/'+config['unzip_dir']) if f.endswith('.vcf')]
+        vcffiles = [f for f in os.listdir(config['REDUX_ENV']+'/'+config['unzip_dir']) if f.endswith('.vcf')]
         trace (10, "   %i files detected" % len(vcffiles))
         dbo.insert_v1_calls()
 
@@ -343,12 +355,12 @@ def skip_to_Hg19(dbo):
         trace (2, "Getting names of variants...")
         trace (10, "   Importing SNP reference lists...")
             
-        snp_reference = csv.reader(open(REDUX_ENV+'/'+config['b37_snp_file']))
+        snp_reference = csv.reader(open(config['REDUX_ENV']+'/'+config['b37_snp_file']))
         #for rec in snp_reference:
         #   print "INSERT INTO v1_hg19(grch37,grch37end,name,anc,der) VALUES (?,?,?,?,?)", (rec[3], rec[4], rec[8], rec[10], rec[11])
         dbo.insert_v1_hg19(snp_reference)
             
-        snp_reference = csv.reader(open(REDUX_ENV+'/'+config['b38_snp_file']))
+        snp_reference = csv.reader(open(config['REDUX_ENV']+'/'+config['b38_snp_file']))
         dbo.insert_v1_hg38(snp_reference)
 
         # db work - how we doing? {{{
@@ -448,7 +460,7 @@ def go_prep():
         # }}}
         # Get the list of input files {{{
 
-        FILES = glob.glob(REDUX_ENV+'/zips/bigy-*.zip')
+        FILES = glob.glob(config['REDUX_ENV']+'/zips/bigy-*.zip')
 
         if len(FILES) == 0:
             trace(0,"No input files detected in zip folder. Aborting.")
@@ -692,43 +704,44 @@ def go_v1_db():
 def getH38references():
     foo = 1
 
-#note: sample code for calling this awk script
+# }}}
+# sample code {{{
+
 def getVCFvariants(FILE):
-    cmd = REDUX_ENV+"/getVCFvariants.sh"
+    cmd = config['REDUX_ENV']+"/getVCFvariants.sh"
     p = subprocess.Popen(cmd, FILE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = p.communicate()
 
-#routines - "arghandler" (sort prototype) - Zak
+# }}}
+# sort {{{
 
-def go_sort_db_matrix():
-    #trace(0,"** process SNP data.")
+def sort_sample_data():
     dbo = DB()
     dbo.db = dbo.db_init()
     dbo.dc = dbo.cursor()
     dbo.sort_schema()
-    dbo.insert_sample_sort_data()
-    #dbo.commit()
+    dbo.sort_ins_sample_data()
+    
+def sort_db_matrix():
+    dbo = DB()
+    dbo.db = dbo.db_init()
+    dbo.dc = dbo.cursor()
     sort = Sort()
     sort.db = dbo.db
     sort.dc = dbo.dc
     sort.sort_data_matrix()
-    #trace(0,"** + SNP processing done.")
     
-def go_sort_db_tree():
-    #trace(0,"** process SNP data.")
+def sort_db_tree():
     dbo = DB()
     dbo.db = dbo.db_init()
     dbo.dc = dbo.cursor()
-    dbo.sort_schema()
-    dbo.insert_sample_sort_data()
-    #dbo.commit()
     sort = Sort()
     sort.db = dbo.db
     sort.dc = dbo.dc
     sort.sort_data_tree()
-    #trace(0,"** + SNP processing done.")
 
-#routines - "arghandler" (new v2 schema)- Jef/Zak
+# }}}
+# v2 {{{
 
 def go_db():
     trace(1, "Initialising database...")
@@ -736,6 +749,9 @@ def go_db():
     dbo.db = dbo.db_init()
     dbo.dc = dbo.cursor()
     dbo.v2_schema()
+
+# }}}
+# clades {{{
 
 # SNP extraction routines based on original - Harald 
 # extracts the SNP calls from the VCF files and
@@ -854,3 +870,4 @@ def readHg19Vcf(file):
                 result[fields[1]] = [int(fields[1]), str(fields[3]), str(fields[4])]
         return result
 
+#}}}
