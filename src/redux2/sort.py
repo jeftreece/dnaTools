@@ -229,16 +229,24 @@ class Sort(object):
         self.NP = np.transpose(self.NP)
         
     def sort_step3(self):
+        print("")
+        print("Processing Nones:")
+        print("----------------")
+        #variant list that have kits with negative (zero) values
+        zlist = np.unique(np.argwhere(self.NP ==0)[:,0]).tolist()
+        #iterate all None situations
         for non in ((np.argwhere(self.NP == None)).tolist()):
-            for itm in list(self.VARIANTS.items()):
-                if itm[1][1] == non[0]:
-                    variant = itm[0]
-                    break
-            for itm in list(self.KITS.items()):
-                if itm[1][1] == non[1]:
-                    kit = itm[0]
-                    break
-            print("kit:"+str(kit)+",variant:"+str(variant))
+            if non[0] in zlist:
+                for itm in list(self.VARIANTS.items()):
+                    if itm[1][1] == non[0]:
+                        variant = itm[0]
+                        break
+                for itm in list(self.KITS.items()):
+                    if itm[1][1] == non[1]:
+                        kit = itm[0]
+                        break
+                print("kit:"+str(kit)+",variant:"+str(variant))
+        print("")
         sys.exit()
         
     def get_cur_kit_list(self):
