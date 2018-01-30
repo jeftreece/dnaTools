@@ -56,7 +56,8 @@ class Sort(object):
         #tree attributes    
         self.TREE = {}
         self.REF = None
-        self.MODE = config['MATRIX_VIEW_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
+        self.MATRIX_MODE = config['MATRIX_MODE']
+        self.TREE_MODE = config['TREE_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
 
         #matrix attributes
         self.KITS = None
@@ -267,15 +268,121 @@ class Sort(object):
     # tree
     # TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
+    #NOTES{{{
+        # HIDE-ME: rules {{{
+        # -----------------------------------
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+        # -----------------------------------
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # -----------------------------------
+        #TODO: need to track +/- in the tree nodes???
+        # ----------------------------------- }}}
+        # HIDE-ME: results when applying these rules manually:{{{
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        #}}}
+        # HIDE-ME: disputes: {{{
+        # (1) L:mix-O vs. O:mix-L 
+        #
+        # resolutions: 
+        # (1) winning rule is L:mix-O
+        #
+        # reasons for (1) resolution:
+        #   (1) L-mix-I
+        #   (2) L-mix-B
+        #   (3) L-mix-K
+        #   (4) B-pos-L
+        #   (5) K-pos-L
+        #   (6) I-pos-L
+
+        #}}}
+        # HIDE-ME: sample output (at the moment) {{{
+
+        # top
+        # ├── (A) M343(=)
+        # │   ├── (D) U106 (ok)
+        # │   │   ├── (C) Z381 (ok)
+        # │   │   │   └── (L) A297 (!!!) <--- recurrent rule (see Iain notes)
+        # │   │   │       ├── (G) Z156 (ok)
+        # │   │   │       │   └── (N) Z306 (ok)
+        # │   │   │       └── (O) L48 (ok)
+        # │   │   │           ├── (B) Z9 (ok)
+        # │   │   │           │   └── (K) Z8 (ok)
+        # │   │   │           └── (I) Z28 (!!!) <-- Iain says this is equiv to Z9
+        # │   │   ├── (E) Z301 (!!!) <-- should be under (C) Z381 (known Problem#1)
+        # │   │   └── (F) Z18 (ok)
+        # │   └── (J) P312 (ok)
+        # ├── (H) L11 (=)
+        # └── (M) M269 (=)
+
+        # TODO: Z301+ exists, but you don't have any Z381+ Z301- tests in the example, 
+        # so you have to treat Z381 and Z301 as equivalent]
+
+        # TODO: A297 is a recurrent SNP that doesn't fit into the phylogeny, so
+        # could either be dumped or listed as recurrent.
+
+        # TODO: Z28 is equivalent to Z9
+
+        #}}}
+        # HIDE-ME: PROBLEM 1: {{{
+
+        # POS C|E
+        # POS O|E
+
+        # C,O have positive E values (and not seeing E in direct line when under D directly)
+        # the C could actually be ok, if it's a dupe. but the O -- no.
+
+        # how to come up with other ideas?
+
+        # (1) what is the last mix node for E 
+        #     (answer: D)
+        # (2) what are other desc of D that have direct lines (or are dupes # with) with C and O
+        #     (answer: C,L,O,B,I,K)
+        #     Arch Need: keep ref of what's been processed like so:
+        #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
+        # (3) are there any neg for E in those results? (if so -- it can't be
+        #     one of them ... or any of their direct lines)
+        #     (answer: No)
+        # (4  what is the first possibility? ... use dupe options last
+        #     (answer: E is C's parent)
+        # (5) (ISSUE) what about E's children if it has any -- and their possible conflicts 
+        #     if move E?
+
+        # }}}
+        # HIDE-ME: the ones I missed: {{{
+
+        # ------------------------
+        # OK - F should be under D
+        # #1 - E should be under C like this D>C>E
+        # (fixed by #1) L should be under E like this D>C>E>L ...
+        # B should be under I (B and I should be dupes -- my manual work was wrong)
+        # ------------------------
+
+        #}}}
+    #}}}
     def sort_tree(self):
 
         #prep data
         DATA = self.sort_tree_prep_data()
                     
-        #print to stdout so I can see what I'm doing
-        #if config['DEBUG_TREE'] > 2:
-        #    self.stdout_stash_data(DATA)
-
         #end collapse vim marker
         debug_chk('DEBUG_TREE',"}"+"}}",2)
 
@@ -284,17 +391,21 @@ class Sort(object):
         self.TREE['_'] = Node("_")
         self.TREE['top'] = Node('top', parent=self.TREE['_'])
         self.TREE['dupes'] = Node('dupes', parent=self.TREE['_'])
-        #STASH = {}
         for key, value in DATA.items():
             self.TREE[key] = Node(key, parent=self.TREE['top'])
 
         #sort it
-        #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
-        STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
-        cnt = 2 
-        while cnt < config['TREE_SORT_RUN_CNT']:
-            STASH = self.sort_variant_tree(STASH,run_all=True,run=cnt)
-            cnt = cnt + 1
+        STASH = self.sort_variant_tree(DATA,run_mix=True,run=1)
+        STASH = self.sort_variant_tree(DATA,run_mix=True,run=2)
+        STASH = self.sort_variant_tree(DATA,run_pos=True,run=3)
+        STASH = self.sort_variant_tree(DATA,run_pos=True,run=4)
+        STASH = self.sort_variant_tree(DATA,run_neg=True,run=5)
+        STASH = self.sort_variant_tree(DATA,run_all=True,run=6)
+        STASH = self.sort_variant_tree(DATA,run_all=True,run=7)
+        #cnt = 2 
+        #while cnt < config['TREE_SORT_RUN_CNT']:
+        #    STASH = self.sort_variant_tree(STASH,run_all=True,run=cnt)
+        #    cnt = cnt + 1
 
         sys.exit()
 
@@ -314,13 +425,13 @@ class Sort(object):
         #all kits, variant, assignment mixes 
 
         #Letters 
-        if self.MODE == 1:
+        if self.TREE_MODE == 1:
             sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
         #Names
-        if self.MODE == 2:
+        if self.TREE_MODE == 2:
             sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
         #Combo - Names+Letters
-        if self.MODE == 3:
+        if self.TREE_MODE == 3:
             sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
 
         self.dbo.sql_exec(sql)
@@ -439,115 +550,6 @@ class Sort(object):
           
     def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None,run=1):
 
-        # HIDE-ME: rules {{{
-        # -----------------------------------
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-        # -----------------------------------
-        #note: next -- attempt to automate the "rules" to sort the "blocks" data
-        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # -----------------------------------
-        #TODO: need to track +/- in the tree nodes???
-        # ----------------------------------- }}}
-        # HIDE-ME: results when applying these rules manually:{{{
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
-        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-
-        #}}}
-        # HIDE-ME: disputes: {{{
-        # (1) L:mix-O vs. O:mix-L 
-        #
-        # resolutions: 
-        # (1) winning rule is L:mix-O
-        #
-        # reasons for (1) resolution:
-        #   (1) L-mix-I
-        #   (2) L-mix-B
-        #   (3) L-mix-K
-        #   (4) B-pos-L
-        #   (5) K-pos-L
-        #   (6) I-pos-L
-
-        #}}}
-        # HIDE-ME: sample output (at the moment) {{{
-
-        # top
-        # ├── (A) M343(=)
-        # │   ├── (D) U106 (ok)
-        # │   │   ├── (C) Z381 (ok)
-        # │   │   │   └── (L) A297 (!!!) <--- recurrent rule (see Iain notes)
-        # │   │   │       ├── (G) Z156 (ok)
-        # │   │   │       │   └── (N) Z306 (ok)
-        # │   │   │       └── (O) L48 (ok)
-        # │   │   │           ├── (B) Z9 (ok)
-        # │   │   │           │   └── (K) Z8 (ok)
-        # │   │   │           └── (I) Z28 (!!!) <-- Iain says this is equiv to Z9
-        # │   │   ├── (E) Z301 (!!!) <-- should be under (C) Z381 (known Problem#1)
-        # │   │   └── (F) Z18 (ok)
-        # │   └── (J) P312 (ok)
-        # ├── (H) L11 (=)
-        # └── (M) M269 (=)
-
-        # TODO: Z301+ exists, but you don't have any Z381+ Z301- tests in the example, 
-        # so you have to treat Z381 and Z301 as equivalent]
-
-        # TODO: A297 is a recurrent SNP that doesn't fit into the phylogeny, so
-        # could either be dumped or listed as recurrent.
-
-        # TODO: Z28 is equivalent to Z9
-
-        #}}}
-        # HIDE-ME: PROBLEM 1: {{{
-
-        # POS C|E
-        # POS O|E
-
-        # C,O have positive E values (and not seeing E in direct line when under D directly)
-        # the C could actually be ok, if it's a dupe. but the O -- no.
-
-        # how to come up with other ideas?
-
-        # (1) what is the last mix node for E 
-        #     (answer: D)
-        # (2) what are other desc of D that have direct lines (or are dupes # with) with C and O
-        #     (answer: C,L,O,B,I,K)
-        #     Arch Need: keep ref of what's been processed like so:
-        #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
-        # (3) are there any neg for E in those results? (if so -- it can't be
-        #     one of them ... or any of their direct lines)
-        #     (answer: No)
-        # (4  what is the first possibility? ... use dupe options last
-        #     (answer: E is C's parent)
-        # (5) (ISSUE) what about E's children if it has any -- and their possible conflicts 
-        #     if move E?
-
-        # }}}
-        # HIDE-ME: the ones I missed: {{{
-
-        # ------------------------
-        # OK - F should be under D
-        # #1 - E should be under C like this D>C>E
-        # (fixed by #1) L should be under E like this D>C>E>L ...
-        # B should be under I (B and I should be dupes -- my manual work was wrong)
-        # ------------------------
-
-        #}}}
-
         #init sort logging and var prep
         STASH = {}
         debug_chk('DEBUG_TREE',"===",1)
@@ -568,13 +570,36 @@ class Sort(object):
                 #self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
                 self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[]}
 
-        #MIX RULE CHKS{{{
+        STASH = self.mix_rule_chks(DATA,STASH,run_mix or run_all,run)
+        STASH = self.pos_rule_chks(DATA,STASH,run_pos or run_all,run)
+        STASH = self.neg_rule_chks(DATA,STASH,run_neg or run_all,run)
+        STASH = self.neg_rule_chks(DATA,STASH,run_neg or run_all,run)
 
+        #show the final tree diagram after run completion
+        debug_chk('DEBUG_TREE',"---",1)
+        debug_chk('DEBUG_TREE',"RUN:"+str(run)+" DONE",1)
+        for pre, fill, node in RenderTree(self.TREE['top']):
+            #print("%s%s" % (pre, node.name))
+            debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
+        if len(self.TREE['dupes'].children):
+            for pre, fill, node in RenderTree(self.TREE['dupes']):
+                #print("%s%s" % (pre, node.name))
+                debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
+
+        #show post-proc remaining data that didn't get complete (now in STASH)
+        if config['DEBUG_TREE']>3:
+            self.stdout_variant_relations_data(STASH,'STASH post-proc',run)
+            self.stdout_variant_relations_data(self.REF,'REF post-proc',run)
+        #debug_chk('DEBUG_TREE',"---",3)
+
+        return STASH
+        
+    def mix_rule_chks(self,DATA,STASH,run_flg,run):
         debug_chk('DEBUG_TREE',"---",2)
         debug_chk('DEBUG_TREE',"mix-checks {"+"{{",2) #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
         for key, value in DATA.items():
-            if run_all or run_mix:
+            if run_flg:
                 for Vz in value['mix']:
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent and self.TREE[key].parent != self.TREE['dupes'] :
@@ -599,80 +624,89 @@ class Sort(object):
                         debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
-                    #chk4 - if both are dupes and there is already a good direct line established, then: don't STASH
-                    elif len(self.REF[Vz]['dup']) > 0 and len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                    #chk4 - if there's one dupe and there is already a good direct line established, then: don't STASH
+                    elif len(self.REF[Vz]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"MIX-CHK4 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
-                    #chk4 - if anything else, then: STASH
+                    #chk5 - if both are dupes and there is already a good direct line established, then: don't STASH
+                    elif len(self.REF[Vz]['dup']) > 0 and len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                        debug_chk('DEBUG_TREE',"MIX-CHK5 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
+                        if key not in self.REF[Vz]['mix']:
+                            self.REF[Vz]['mix'].append(key)
+                    #chk6 - if anything else, then: STASH
                     else:
-                        debug_chk('DEBUG_TREE',"MIX-CHK5 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH",2)
+                        debug_chk('DEBUG_TREE',"MIX-CHK6 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH",2)
                         STASH[key]['mix'].append(Vz)
 
             else:
                 #since we're skipping "mix" relations, they need to go to STASH
                 STASH[key]['mix'] = value['mix']
         debug_chk('DEBUG_TREE',"}"+"}}",2)  #end collapse vim marker
-
-        #}}}
-        #POS RULE CHKS{{{
-
+        return STASH
+        
+    def pos_rule_chks(self,DATA,STASH,run_flg,run):
         debug_chk('DEBUG_TREE',"pos-checks {"+"{{",2)  #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
         for key, value in DATA.items():
-            if run_all or run_pos:
+            if run_flg:
                 for Vz in value['pos']:
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk2 - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    #chk2a - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK2 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        debug_chk('DEBUG_TREE',"POS-CHK2a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk3 - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    #chk2b - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    elif len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[key]['dup'][0]] in self.TREE[Vz].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK2b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk3a - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and self.TREE[key] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        debug_chk('DEBUG_TREE',"POS-CHK3a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk3 - if both nodes have direct line relation via dupe, then: don't STASH
+                    #chk3b - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    elif len(self.REF[Vz]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[key].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK3b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk4 - if both nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and len(self.REF[Vz]['dup']) > 0:
                         if self.TREE[self.REF[key]['dup'][0]] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
-                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                            debug_chk('DEBUG_TREE',"POS-CHK4a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
                         if self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                            debug_chk('DEBUG_TREE',"POS-CHK4b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
-                    #chk4 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
+                    #chk5 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
                     elif run>1 and self.dupe_variant_check(key,Vz):
                         #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK4 - "+key+"|"+Vz+" - dupe relation found",4)
+                        debug_chk('DEBUG_TREE',"POS-CHK5 - "+key+"|"+Vz+" - dupe relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk5 - other situations 
+                    #chk6 - other situations 
                     else:
-                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - other situations - put in STASH",2)
+                        debug_chk('DEBUG_TREE',"POS-CHK6 - "+key+"|"+Vz+" - other situations - put in STASH",2)
                         STASH[key]['pos'].append(Vz)
-                        #print('key-desc: '+str(self.TREE[key].descendants))
-                        #print('Vz-desz:'+str(self.TREE[Vz].descendants))
-                        #print(STASH)
-                        #sys.exit()
             else:
                 #since we're skipping "pos" relations, they need to go to STASH
                 STASH[key]['pos'] = value['pos']
         debug_chk('DEBUG_TREE',"}"+"}}",2)  #end collapse vim marker
-
-        #}}}
-        #NEG RULE CHKS{{{
-
+        return STASH
+        
+    def neg_rule_chks(self,DATA,STASH,run_flg,run):
         debug_chk('DEBUG_TREE',"neg-checks {"+"{{",2)  #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
         for key, value in DATA.items():
-            if run_all or run_neg:
+            if run_flg:
                 for Vz in value['neg']:
                     #print ("key:"+str(key)+" Vz: "+str(Vz))
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
@@ -697,26 +731,6 @@ class Sort(object):
                 #since we're skipping "neg" relations, they need to go to STASH
                 STASH[key]['neg'] = value['neg']
         debug_chk('DEBUG_TREE',"}"+"}}",2) #end collapse vim marker
-
-        #}}}
-
-        #show the final tree diagram after run completion
-        debug_chk('DEBUG_TREE',"---",1)
-        debug_chk('DEBUG_TREE',"RUN:"+str(run)+" DONE",1)
-        for pre, fill, node in RenderTree(self.TREE['top']):
-            #print("%s%s" % (pre, node.name))
-            debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
-        if len(self.TREE['dupes'].children):
-            for pre, fill, node in RenderTree(self.TREE['dupes']):
-                #print("%s%s" % (pre, node.name))
-                debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
-
-        #show post-proc remaining data that didn't get complete (now in STASH)
-        if config['DEBUG_TREE']>3:
-            self.stdout_variant_relations_data(STASH,'STASH post-proc',run)
-            self.stdout_variant_relations_data(self.REF,'REF post-proc',run)
-        #debug_chk('DEBUG_TREE',"---",3)
-
         return STASH
         
     def stdout_variant_relations_data(self,DATA,dataStr,run=1):
