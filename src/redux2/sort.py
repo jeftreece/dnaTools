@@ -281,7 +281,9 @@ class Sort(object):
 
         #build unsorted tree with all nodes under top
         self.TREE = {}
-        self.TREE['top'] = Node("top")
+        self.TREE['_'] = Node("_")
+        self.TREE['top'] = Node('top', parent=self.TREE['_'])
+        self.TREE['dupes'] = Node('dupes', parent=self.TREE['_'])
         #STASH = {}
         for key, value in DATA.items():
             self.TREE[key] = Node(key, parent=self.TREE['top'])
@@ -290,6 +292,8 @@ class Sort(object):
         #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
         STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
         STASH = self.sort_variant_tree(STASH,run_all=True,run=2)
+        STASH = self.sort_variant_tree(STASH,run_all=True,run=3)
+        STASH = self.sort_variant_tree(STASH,run_all=True,run=4)
 
         sys.exit()
 
@@ -406,7 +410,8 @@ class Sort(object):
         debug_chk('DEBUG_TREE',"---",2)
         DATA = {}
         for VX in VARIANTS:
-            DATA[VX] = {'mix':[],'pos':[],'neg':[]}
+            #DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
+            DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[]}
             VXP = '+'+VX
             for VY in VARIANTS:
                 VYP = '+'+VY
@@ -599,13 +604,15 @@ class Sort(object):
             self.stdout_variant_relations_data(DATA,'STASH pre-proc',run)
         #prep stash
         for key, value in DATA.items():
-            STASH[key] = {'mix':[],'pos':[],'neg':[]}
+            #STASH[key] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
+            STASH[key] = {'mix':[],'pos':[],'neg':[],'dup':[]}
 
         #prep ref
         if self.REF is None:
             self.REF = {}
             for key, value in DATA.items():
-                self.REF[key] = {'mix':[],'pos':[],'neg':[]}
+                #self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
+                self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[]}
 
         #MIX RULE CHKS{{{
 
@@ -615,9 +622,8 @@ class Sort(object):
         for key, value in DATA.items():
             if run_all or run_mix:
                 for Vz in value['mix']:
-
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
-                    if self.TREE[Vz].parent == self.TREE[key].parent:
+                    if self.TREE[Vz].parent == self.TREE[key].parent and self.TREE[key].parent != self.TREE['dupes'] :
                         debug_chk('DEBUG_TREE',"MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key,3)
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
                         ch2 = self.TREE[Vz].children
@@ -629,20 +635,24 @@ class Sort(object):
                         self.TREE[Vz].children = ch2
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
-                        #if self.DBG > 1:
-                        #    for pre, fill, node in RenderTree(self.TREE['top']):
-                        #        debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),2)
-
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        #if self.DBG > 1:
                         debug_chk('DEBUG_TREE',"MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key,3)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
-
-                    #chk3 - if anything else, then: STASH
+                    #chk3 - if there's one dupe and there is already a good direct line established, then: don't STASH
+                    elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                        debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,3)
+                        if key not in self.REF[Vz]['mix']:
+                            self.REF[Vz]['mix'].append(key)
+                    #chk4 - if both are dupes and there is already a good direct line established, then: don't STASH
+                    elif len(self.REF[Vz]['dup']) > 0 and len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                        debug_chk('DEBUG_TREE',"MIX-CHK4 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,3)
+                        if key not in self.REF[Vz]['mix']:
+                            self.REF[Vz]['mix'].append(key)
+                    #chk4 - if anything else, then: STASH
                     else:
-                        debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH",2)
+                        debug_chk('DEBUG_TREE',"MIX-CHK5 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH",2)
                         STASH[key]['mix'].append(Vz)
 
             else:
@@ -663,13 +673,33 @@ class Sort(object):
                         debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",3)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk2 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
-                    elif run>1 and self.dupe_variant_check(key,Vz,STASH):
-                        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - dupe relation found",3)
+                    #chk2 - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK2 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
-                    #chk3 - other situations 
+                    #chk3 - if one of the two nodes have direct line relation via dupe, then: don't STASH
+                    elif len(self.REF[Vz]['dup']) > 0 and self.TREE[key] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk3 - if both nodes have direct line relation via dupe, then: don't STASH
+                    elif len(self.REF[key]['dup']) > 0 and len(self.REF[Vz]['dup']) > 0:
+                        if self.TREE[self.REF[key]['dup'][0]] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
+                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                            if key not in self.REF[Vz]['pos']:
+                                self.REF[Vz]['pos'].append(key)
+                        if self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
+                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                            if key not in self.REF[Vz]['pos']:
+                                self.REF[Vz]['pos'].append(key)
+                    #chk4 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
+                    elif run>1 and self.dupe_variant_check(key,Vz):
+                        #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
+                        debug_chk('DEBUG_TREE',"POS-CHK4 - "+key+"|"+Vz+" - dupe relation found",3)
+                        if key not in self.REF[Vz]['pos']:
+                            self.REF[Vz]['pos'].append(key)
+                    #chk5 - other situations 
                     else:
                         debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - other situations - put in STASH",2)
                         STASH[key]['pos'].append(Vz)
@@ -690,6 +720,7 @@ class Sort(object):
         for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
+                    print ("key:"+str(key)+" Vz: "+str(Vz))
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found",3)
@@ -721,7 +752,11 @@ class Sort(object):
         for pre, fill, node in RenderTree(self.TREE['top']):
             #print("%s%s" % (pre, node.name))
             debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
-        
+        if len(self.TREE['dupes'].children):
+            for pre, fill, node in RenderTree(self.TREE['dupes']):
+                #print("%s%s" % (pre, node.name))
+                debug_chk('DEBUG_TREE',"%s%s" % (pre, node.name),1)
+
         #show post-proc remaining data that didn't get complete (now in STASH)
         if config['DEBUG_TREE']>3:
             self.stdout_variant_relations_data(STASH,'STASH post-proc',run)
@@ -735,6 +770,7 @@ class Sort(object):
         mixlen = 0
         poslen = 0
         neglen = 0
+        duplen = 0
 
         #print the counts
         print("---")
@@ -743,9 +779,13 @@ class Sort(object):
             mixlen = mixlen+len(value['mix'])
             poslen = poslen+len(value['pos'])
             neglen = neglen+len(value['neg'])
+            duplen = neglen+len(value['dup'])
+            #DUPlen = neglen+len(value['DUP'])
         print("RUN:"+str(run)+"("+dataStr+") - mix cnt:"+str(mixlen))
         print("RUN:"+str(run)+"("+dataStr+") - pos cnt:"+str(poslen))
         print("RUN:"+str(run)+"("+dataStr+") - neg cnt:"+str(neglen))
+        print("RUN:"+str(run)+"("+dataStr+") - dup cnt:"+str(duplen))
+        #print("RUN:"+str(run)+"("+dataStr+") - DUP cnt:"+str(DUPlen))
         print("")
 
         #print the data
@@ -754,22 +794,67 @@ class Sort(object):
             print(key+'|'+str(value).replace("'","").replace(" ",""))
         print("}}"+"}") #end vim marker
         
-    def dupe_variant_check(self,variant1,variant2,STASH): #requires run > 1
-        mixList1 = []
-        mixList2 = []
-        for k,v in self.REF.items():
-            if k not in [variant1,variant2] and variant1 in v['mix']:
-                mixList1.append(k)
-            if k not in [variant1,variant2] and variant2 in v['mix']:
-                mixList2.append(k)
-        print(mixList1)
-        print(mixList2)
-        print(variant1)
-        print("stash:"+str(STASH[variant1]))
-        print("ref:"+str(self.REF[variant1]))
-        print(variant2)
-        print("stash:"+str(STASH[variant2]))
-        print("ref:"+str(self.REF[variant2]))
+    def dupe_variant_check(self,variant1,variant2): #requires run > 1
+        if self.REF[variant2]['dup'] == [variant1]:
+            return True #don't stash
+        if self.REF[variant1]['dup'] == [variant2]:
+            return True #don't stash
+        #when siblings
+        if self.TREE[variant1].parent == self.TREE[variant2].parent:
+            mixList1 = []
+            mixList2 = []
+            chk = 0
+            for k,v in self.REF.items():
+                if k not in [variant1,variant2] and variant1 in v['mix']:
+                    mixList1.append(k)
+                if k not in [variant1,variant2] and variant2 in v['mix']:
+                    mixList2.append(k)
+            if len(mixList1) == 0 and len(mixList2)>0: #variant1 references
+                for k in mixList2:
+                    chk = 1
+                    if self.TREE[variant2] not in self.TREE[k].ancestors:
+                        chk = 0
+                #chk = 1 : v2 is part of all k's ancestors (so v1 is a dupe of v2)
+            if len(mixList2) == 0 and len(mixList1)>0: #variant2 references 
+                for k in mixList1:
+                    chk = 2
+                    #print(str(variant1)+":"+str(k))
+                    if self.TREE[variant1] not in self.TREE[k].ancestors:
+                        chk = 0
+                #chk == 2: v1 is part of all k's ancestors (so v2 is a dupe of v1)
+            if chk == 1:
+                #self.REF[variant2]['dup'] = list(set(self.REF[variant2]['DUP']+[variant1]))
+                self.REF[variant1]['dup'] = [variant2]
+                self.TREE[variant1].parent = self.TREE['dupes']
+            if chk == 2:
+                #self.REF[variant1]['dup'] = list(set(self.REF[variant1]['DUP']+[variant2]))
+                self.REF[variant2]['dup'] = [variant1]
+                self.TREE[variant2].parent = self.TREE['dupes']
+        if self.REF[variant2]['dup'] == [variant1]:
+            return True #don't stash
+        elif self.REF[variant1]['dup'] == [variant2]:
+            return True #don't stash
+        else:
+            return False #stash
+        #HIDE-ME {{{
+        #print(chk)
+        #sys.exit()
+        #print(mixList1) #['B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'N', 'O']
+        #for k in mixList1:
+        #    print(k+":"+str(self.TREE[k].ancestors))
+        #print(mixList2) #[]
+        #for k in mixList2:
+        #    print(k+":"+str(self.TREE[k].ancestors))
+        #...
+        #print(variant1)
+        #print("stash:"+str(STASH[variant1]))
+        #print("ref:"+str(self.REF[variant1]))
+        #...
+        #print(variant2)
+        #print("stash:"+str(STASH[variant2]))
+        #print("ref:"+str(self.REF[variant2]))
+        #}}}
+        #...
         sys.exit()
         #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
 
