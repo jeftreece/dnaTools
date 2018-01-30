@@ -449,53 +449,6 @@ class Sort(object):
         # -----------------------------------
         #TODO: need to track +/- in the tree nodes???
         # ----------------------------------- }}}
-        # HIDE-ME: sample data{{{
-
-        # variant,name,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
-        # A,M343,1,1,Null,1,1,1,1,1,1,1
-        # B,Z9,0,0,0,1,0,0,0,0,1,0
-        # C,Z381,0,1,1,Null,0,0,1,1,1,0
-        # D,U106,1,1,1,1,0,1,1,1,1,0
-        # E,Z301,Null,Null,1,Null,Null,0,Null,1,Null,Null
-        # F,Z18,1,0,0,0,0,1,0,0,0,0
-        # G,Z156,0,1,0,0,0,0,1,0,0,0
-        # H,L11,1,1,1,1,1,Null,1,1,1,1
-        # I,Z28,0,0,0,1,0,Null,0,0,1,0
-        # J,P312,0,0,0,0,1,0,0,0,0,1
-        # K,Z8,0,0,0,1,0,0,0,0,0,0
-        # L,A297,0,Null,0,1,0,0,1,0,Null,0
-        # M,M269,1,1,1,1,1,1,1,1,1,1
-        # N,Z306,0,1,0,0,0,0,0,0,0,0
-        # O,L48,0,0,1,1,0,0,0,1,1,0
-
-        #}}}
-        # HIDE-ME: processed raw results: {{{
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        # D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        # E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        # F|{mix: [], pos: [A,D,H,M], neg: [B,C,E,G,I,J,K,L,N,O]}
-        # G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        # H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        # I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        # J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        # K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-        # L|{mix: [B,G,I,K,O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        # M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        # O|{mix: [B,I,K,L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-
-        #}}}
-        # HIDE-ME: rules {{{
-
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        #      "sibling" - to 2. (differ to dupe in cases where there's no other clues)
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-
-        # }}}
         # HIDE-ME: results when applying these rules manually:{{{
 
         # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
