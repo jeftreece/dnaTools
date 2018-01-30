@@ -58,6 +58,7 @@ class Sort(object):
         self.REF = None
         self.MATRIX_MODE = config['MATRIX_MODE']
         self.TREE_MODE = config['TREE_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
+        self.TDATA = None
 
         #matrix attributes
         self.KITS = None
@@ -65,6 +66,7 @@ class Sort(object):
         self.DATA = None
         self.CNTS = {}
         self.NP = None
+        self.NONES = []
 
     # schema / sample data
 
@@ -143,6 +145,7 @@ class Sort(object):
         #1st tbl out
         self.stdout_tbl_matrix()
 
+
         #2nd tbl prep 
         self.sort_step1()
 
@@ -157,6 +160,12 @@ class Sort(object):
         self.sort_step2()
 
         #2nd tbl out
+        self.stdout_tbl_matrix()
+
+        #3rd tbl prep
+        self.sort_step3()
+
+        #3rd tbl out
         self.stdout_tbl_matrix()
 
         sys.exit()
@@ -219,6 +228,19 @@ class Sort(object):
         self.NP = np.matrix(list(DATA.values()))
         self.NP = np.transpose(self.NP)
         
+    def sort_step3(self):
+        for non in ((np.argwhere(self.NP == None)).tolist()):
+            for itm in list(self.VARIANTS.items()):
+                if itm[1][1] == non[0]:
+                    variant = itm[0]
+                    break
+            for itm in list(self.KITS.items()):
+                if itm[1][1] == non[1]:
+                    kit = itm[0]
+                    break
+            print("kit:"+str(kit)+",variant:"+str(variant))
+        sys.exit()
+        
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
         
@@ -263,7 +285,6 @@ class Sort(object):
             table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
         debug_chk('DEBUG_MATRIX',table,1)
         debug_chk('DEBUG_MATRIX',"",1)
-        
 
     # tree
     # TODO: set up a random approach to pushing data into the sort. troubleshoot results
@@ -378,41 +399,6 @@ class Sort(object):
 
         #}}}
     #}}}
-    def sort_tree(self):
-
-        #prep data
-        DATA = self.sort_tree_prep_data()
-                    
-        #end collapse vim marker
-        debug_chk('DEBUG_TREE',"}"+"}}",2)
-
-        #build unsorted tree with all nodes under top
-        self.TREE = {}
-        self.TREE['_'] = Node("_")
-        self.TREE['top'] = Node('top', parent=self.TREE['_'])
-        self.TREE['dupes'] = Node('dupes', parent=self.TREE['_'])
-        for key, value in DATA.items():
-            self.TREE[key] = Node(key, parent=self.TREE['top'])
-
-        #sort it
-        STASH = self.sort_variant_tree(DATA,run_mix=True,run=1)
-        STASH = self.sort_variant_tree(DATA,run_mix=True,run=2)
-        STASH = self.sort_variant_tree(DATA,run_pos=True,run=3)
-        STASH = self.sort_variant_tree(DATA,run_pos=True,run=4)
-        STASH = self.sort_variant_tree(DATA,run_neg=True,run=5)
-        STASH = self.sort_variant_tree(DATA,run_all=True,run=6)
-        STASH = self.sort_variant_tree(DATA,run_all=True,run=7)
-        #cnt = 2 
-        #while cnt < config['TREE_SORT_RUN_CNT']:
-        #    STASH = self.sort_variant_tree(STASH,run_all=True,run=cnt)
-        #    cnt = cnt + 1
-
-        sys.exit()
-
-        #json/stdout a variable (debugging)
-        self.stdout_dump_var(newV2)
-        sys.exit()
-        
     def sort_tree_prep_data(self):
 
         #db
@@ -453,7 +439,6 @@ class Sort(object):
         debug_chk('DEBUG_TREE',"---",5)
         debug_chk('DEBUG_TREE',"all unique variants",5)
         debug_chk('DEBUG_TREE',VARIANTS,5)
-        #sys.exit()
         #print("---")
         #print("all unique variants - pos+neg")
         #print(VARIANTSa)
@@ -470,7 +455,6 @@ class Sort(object):
         debug_chk('DEBUG_TREE',"---",5)
         debug_chk('DEBUG_TREE',"kits with positive negative variant calls",5)
         debug_chk('DEBUG_TREE',Fn,5)
-        #sys.exit()
 
         #per all the kits with positive variants (build new dict)
         debug_chk('DEBUG_TREE',"---",5)
@@ -480,7 +464,6 @@ class Sort(object):
             Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
             #['A+', 'D+', 'F+', 'H+', 'M+']
             debug_chk('DEBUG_TREE',k+" "+str(Kp),5)
-            #sys.exit()
             KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
 
         #per all the kits with negative variants (build new dict)
@@ -520,10 +503,10 @@ class Sort(object):
 
         #build variant relationship data that we need for sorting
         debug_chk('DEBUG_TREE',"---",2)
-        DATA = {}
+        self.TDATA = {}
         for VX in VARIANTS:
             #DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
-            DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[]}
+            self.TDATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[]}
             VXP = '+'+VX
             for VY in VARIANTS:
                 VYP = '+'+VY
@@ -538,42 +521,69 @@ class Sort(object):
                             if chk2 is False and VYN in d['variants']:
                                 chk2 = True
                         if chk1 is True and chk2 is True:
-                            DATA[VX]['mix'].append(VY)
+                            self.TDATA[VX]['mix'].append(VY)
                             break
                     if chk1 is True and chk2 is False:
-                        DATA[VX]['pos'].append(VY)
+                        self.TDATA[VX]['pos'].append(VY)
                     if chk2 is True and chk1 is False:
-                        DATA[VX]['neg'].append(VY)
-
-        #return prepped data
-        return DATA
+                        self.TDATA[VX]['neg'].append(VY)
           
-    def sort_variant_tree (self,DATA,run_mix=False,run_pos=False,run_neg=False,run_all=None,run=1):
+    def sort_tree(self):
+
+        #prep data
+        self.sort_tree_prep_data()
+                    
+        #end collapse vim marker
+        debug_chk('DEBUG_TREE',"}"+"}}",2)
+
+        #build unsorted tree with all nodes under top
+        self.TREE = {}
+        self.TREE['_'] = Node("_")
+        self.TREE['top'] = Node('top', parent=self.TREE['_'])
+        self.TREE['dupes'] = Node('dupes', parent=self.TREE['_'])
+        for key, value in self.TDATA.items():
+            self.TREE[key] = Node(key, parent=self.TREE['top'])
+
+        #sort it
+        self.sort_variant_tree(run_mix=True,run=1)
+        self.sort_variant_tree(run_mix=True,run=2)
+        self.sort_variant_tree(run_pos=True,run=3)
+
+        #self.sort_variant_tree(run_neg=True,run=3)
+        #self.sort_variant_tree(run_all=True,run=4)
+        #self.sort_variant_tree(run_neg=True,run=5)
+        #self.sort_variant_tree(run_all=True,run=6)
+        #self.sort_variant_tree(run_all=True,run=7)
+        #cnt = 2 
+        #while cnt < config['TREE_SORT_RUN_CNT']:
+        #    self.sort_variant_tree(run_all=True,run=cnt)
+        #    cnt = cnt + 1
+
+        sys.exit()
+
+        #json/stdout a variable (debugging)
+        self.stdout_dump_var(newV2)
+        sys.exit()
+        
+    def sort_variant_tree (self,run_mix=False,run_pos=False,run_neg=False,run_all=None,run=1):
 
         #init sort logging and var prep
-        STASH = {}
         debug_chk('DEBUG_TREE',"===",1)
-        debug_chk('DEBUG_TREE',"variant tree sort start",1)
+        debug_chk('DEBUG_TREE',"RUN:"+str(run),1)
 
         #show pre-proc default data 
         if config['DEBUG_TREE']>3:
-            self.stdout_variant_relations_data(DATA,'STASH pre-proc',run)
-        #prep stash
-        for key, value in DATA.items():
-            #STASH[key] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
-            STASH[key] = {'mix':[],'pos':[],'neg':[],'dup':[]}
+            self.stdout_variant_relations_data(self.TDATA,'STASH pre-proc',run)
 
         #prep ref
         if self.REF is None:
             self.REF = {}
-            for key, value in DATA.items():
-                #self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
+            for key, value in self.TDATA.items():
                 self.REF[key] = {'mix':[],'pos':[],'neg':[],'dup':[]}
 
-        STASH = self.mix_rule_chks(DATA,STASH,run_mix or run_all,run)
-        STASH = self.pos_rule_chks(DATA,STASH,run_pos or run_all,run)
-        STASH = self.neg_rule_chks(DATA,STASH,run_neg or run_all,run)
-        STASH = self.neg_rule_chks(DATA,STASH,run_neg or run_all,run)
+        self.mix_rule_chks(run_mix or run_all,run)
+        self.pos_rule_chks(run_pos or run_all,run)
+        self.neg_rule_chks(run_neg or run_all,run)
 
         #show the final tree diagram after run completion
         debug_chk('DEBUG_TREE',"---",1)
@@ -588,18 +598,16 @@ class Sort(object):
 
         #show post-proc remaining data that didn't get complete (now in STASH)
         if config['DEBUG_TREE']>3:
-            self.stdout_variant_relations_data(STASH,'STASH post-proc',run)
+            self.stdout_variant_relations_data(self.TDATA,'STASH post-proc',run)
             self.stdout_variant_relations_data(self.REF,'REF post-proc',run)
         #debug_chk('DEBUG_TREE',"---",3)
-
-        return STASH
         
-    def mix_rule_chks(self,DATA,STASH,run_flg,run):
+    def mix_rule_chks(self,run_flg,run,hardFlg=False):
         debug_chk('DEBUG_TREE',"---",2)
         debug_chk('DEBUG_TREE',"mix-checks {"+"{{",2) #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
-        for key, value in DATA.items():
-            if run_flg:
+        if run_flg:
+            for key, value in self.TDATA.items():
                 for Vz in value['mix']:
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent and self.TREE[key].parent != self.TREE['dupes'] :
@@ -612,126 +620,128 @@ class Sort(object):
                             self.TREE[Vz].parent.children = tuple(ch1)
                         self.TREE[Vz] = Node(Vz, parent=self.TREE[key])
                         self.TREE[Vz].children = ch2
+                        self.TDATA[key]['mix'].remove(Vz)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key,4)
+                        self.TDATA[key]['mix'].remove(Vz)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk3 - if there's one dupe and there is already a good direct line established, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
                         debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
+                        self.TDATA[key]['mix'].remove(Vz)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk4 - if there's one dupe and there is already a good direct line established, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"MIX-CHK4 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
+                        self.TDATA[key]['mix'].remove(Vz)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk5 - if both are dupes and there is already a good direct line established, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
                         debug_chk('DEBUG_TREE',"MIX-CHK5 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
+                        self.TDATA[key]['mix'].remove(Vz)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk6 - if anything else, then: STASH
                     else:
                         debug_chk('DEBUG_TREE',"MIX-CHK6 - "+key+"|"+Vz+" - parents not same level and not direct lineage - put in STASH",2)
-                        STASH[key]['mix'].append(Vz)
 
-            else:
-                #since we're skipping "mix" relations, they need to go to STASH
-                STASH[key]['mix'] = value['mix']
+        #self.stdout_variant_relations_data(self.TDATA,'DEBUG','5')
+        #sys.exit()
         debug_chk('DEBUG_TREE',"}"+"}}",2)  #end collapse vim marker
-        return STASH
         
-    def pos_rule_chks(self,DATA,STASH,run_flg,run):
+    def pos_rule_chks(self,run_flg,run):
         debug_chk('DEBUG_TREE',"pos-checks {"+"{{",2)  #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
-        for key, value in DATA.items():
-            if run_flg:
+        if run_flg:
+            for key, value in self.TDATA.items():
                 for Vz in value['pos']:
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk2a - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK2a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk2b - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[key]['dup'][0]] in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK2b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk3a - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and self.TREE[key] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK3a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk3b - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK3b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk4 - if both nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and len(self.REF[Vz]['dup']) > 0:
                         if self.TREE[self.REF[key]['dup'][0]] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
                             debug_chk('DEBUG_TREE',"POS-CHK4a - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                            self.TDATA[key]['pos'].remove(Vz)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
                         if self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
                             debug_chk('DEBUG_TREE',"POS-CHK4b - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
+                            self.TDATA[key]['pos'].remove(Vz)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
                     #chk5 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
                     elif run>1 and self.dupe_variant_check(key,Vz):
                         #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"POS-CHK5 - "+key+"|"+Vz+" - dupe relation found",4)
+                        self.TDATA[key]['pos'].remove(Vz)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk6 - other situations 
                     else:
                         debug_chk('DEBUG_TREE',"POS-CHK6 - "+key+"|"+Vz+" - other situations - put in STASH",2)
-                        STASH[key]['pos'].append(Vz)
-            else:
-                #since we're skipping "pos" relations, they need to go to STASH
-                STASH[key]['pos'] = value['pos']
+
         debug_chk('DEBUG_TREE',"}"+"}}",2)  #end collapse vim marker
-        return STASH
         
-    def neg_rule_chks(self,DATA,STASH,run_flg,run):
+    def neg_rule_chks(self,run_flg,run):
         debug_chk('DEBUG_TREE',"neg-checks {"+"{{",2)  #beg collapse vim marker
         debug_chk('DEBUG_TREE',"---",2)
-        for key, value in DATA.items():
-            if run_flg:
+        if run_flg:
+            for key, value in self.TDATA.items():
                 for Vz in value['neg']:
-                    #print ("key:"+str(key)+" Vz: "+str(Vz))
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
                         debug_chk('DEBUG_TREE',"NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found",4)
+                        self.TDATA[key]['neg'].remove(Vz)
                         if key not in self.REF[Vz]['neg']:
                             self.REF[Vz]['neg'].append(key)
                     #chk2 - if the two nodes don't have direct line relation, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
                         debug_chk('DEBUG_TREE',"NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found",4)
+                        self.TDATA[key]['neg'].remove(Vz)
                         if key not in self.REF[Vz]['neg']:
                             self.REF[Vz]['neg'].append(key)
                     #chk3 - if anything else, then: STASH
                     else:
                         debug_chk('DEBUG_TREE',"NEG-CHK3 - "+key+"|"+Vz+" - direct lineage found - put in STASH",2)
-                        STASH[key]['neg'].append(Vz)
-                        #print('key-desc: '+str(self.TREE[key].descendants))
-                        #print('Vz-desz:'+str(self.TREE[Vz].descendants))
-                        #print(STASH)
-                        #sys.exit()
             else:
                 #since we're skipping "neg" relations, they need to go to STASH
-                STASH[key]['neg'] = value['neg']
+                self.TDATA[key]['neg'] = value['neg']
         debug_chk('DEBUG_TREE',"}"+"}}",2) #end collapse vim marker
-        return STASH
+        #return STASH
         
     def stdout_variant_relations_data(self,DATA,dataStr,run=1):
 
@@ -772,9 +782,12 @@ class Sort(object):
             mixList1 = []
             mixList2 = []
             chk = 0
+            #check processed variants
             for k,v in self.REF.items():
+                #nothing processed previously had variant1 as a child
                 if k not in [variant1,variant2] and variant1 in v['mix']:
                     mixList1.append(k)
+                #nothing processed previously had variant2 as a child
                 if k not in [variant1,variant2] and variant2 in v['mix']:
                     mixList2.append(k)
             if len(mixList1) == 0 and len(mixList2)>0: #variant1 references
