@@ -291,9 +291,10 @@ class Sort(object):
         #sort it
         #STASH = self.sort_variant_tree(DATA,run_mix=True,run_pos=True,run_neg=True,run=1)
         STASH = self.sort_variant_tree(DATA,run_all=True,run=1)
-        STASH = self.sort_variant_tree(STASH,run_all=True,run=2)
-        STASH = self.sort_variant_tree(STASH,run_all=True,run=3)
-        STASH = self.sort_variant_tree(STASH,run_all=True,run=4)
+        cnt = 2 
+        while cnt < config['TREE_SORT_RUN_CNT']:
+            STASH = self.sort_variant_tree(STASH,run_all=True,run=cnt)
+            cnt = cnt + 1
 
         sys.exit()
 
@@ -577,7 +578,7 @@ class Sort(object):
                 for Vz in value['mix']:
                     #chk1 - if the two nodes are on the same level, then: create a default parental relation + don't STASH
                     if self.TREE[Vz].parent == self.TREE[key].parent and self.TREE[key].parent != self.TREE['dupes'] :
-                        debug_chk('DEBUG_TREE',"MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key,3)
+                        debug_chk('DEBUG_TREE',"MIX-CHK1 - "+key+"|"+Vz+" - parents are same level - so put "+Vz+" under "+key,4)
                         ch1 = list(self.TREE[Vz].parent.children).remove(self.TREE[Vz])
                         ch2 = self.TREE[Vz].children
                         if ch1 is None:
@@ -590,17 +591,17 @@ class Sort(object):
                             self.REF[Vz]['mix'].append(key)
                     #chk2 - if there is already a good direct line established, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        debug_chk('DEBUG_TREE',"MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key,3)
+                        debug_chk('DEBUG_TREE',"MIX-CHK2 - "+key+"|"+Vz+" - condition satisfied - "+Vz+" already under "+key,4)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk3 - if there's one dupe and there is already a good direct line established, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,3)
+                        debug_chk('DEBUG_TREE',"MIX-CHK3 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk4 - if both are dupes and there is already a good direct line established, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and len(self.REF[key]['dup']) > 0 and self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"MIX-CHK4 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,3)
+                        debug_chk('DEBUG_TREE',"MIX-CHK4 - "+key+"|"+Vz+" - (dupe) condition satisfied - "+Vz+" already under "+key,4)
                         if key not in self.REF[Vz]['mix']:
                             self.REF[Vz]['mix'].append(key)
                     #chk4 - if anything else, then: STASH
@@ -623,33 +624,33 @@ class Sort(object):
                 for Vz in value['pos']:
                     #chk1 - if the two nodes have direct line relation, then: don't STASH
                     if self.TREE[Vz] in self.TREE[key].descendants or self.TREE[key] in self.TREE[Vz].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",3)
+                        debug_chk('DEBUG_TREE',"POS-CHK1 - "+key+"|"+Vz+" - direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk2 - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and self.TREE[Vz] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK2 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                        debug_chk('DEBUG_TREE',"POS-CHK2 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk3 - if one of the two nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[Vz]['dup']) > 0 and self.TREE[key] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                        debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk3 - if both nodes have direct line relation via dupe, then: don't STASH
                     elif len(self.REF[key]['dup']) > 0 and len(self.REF[Vz]['dup']) > 0:
                         if self.TREE[self.REF[key]['dup'][0]] in self.TREE[self.REF[Vz]['dup'][0]].descendants:
-                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
                         if self.TREE[self.REF[Vz]['dup'][0]] in self.TREE[self.REF[key]['dup'][0]].descendants:
-                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",3)
+                            debug_chk('DEBUG_TREE',"POS-CHK3 - "+key+"|"+Vz+" - (via dupe) direct lineage relation found",4)
                             if key not in self.REF[Vz]['pos']:
                                 self.REF[Vz]['pos'].append(key)
                     #chk4 - if the two nodes don't have direct line relation ... are they perhaps dupes? if so, don't STASH 
                     elif run>1 and self.dupe_variant_check(key,Vz):
                         #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
-                        debug_chk('DEBUG_TREE',"POS-CHK4 - "+key+"|"+Vz+" - dupe relation found",3)
+                        debug_chk('DEBUG_TREE',"POS-CHK4 - "+key+"|"+Vz+" - dupe relation found",4)
                         if key not in self.REF[Vz]['pos']:
                             self.REF[Vz]['pos'].append(key)
                     #chk5 - other situations 
@@ -673,15 +674,15 @@ class Sort(object):
         for key, value in DATA.items():
             if run_all or run_neg:
                 for Vz in value['neg']:
-                    print ("key:"+str(key)+" Vz: "+str(Vz))
+                    #print ("key:"+str(key)+" Vz: "+str(Vz))
                     #chk1 - if the two nodes don't have direct line relation, then: don't STASH
                     if self.TREE[Vz] not in self.TREE[key].descendants and self.TREE[key] not in self.TREE[Vz].descendants:
-                        debug_chk('DEBUG_TREE',"NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found",3)
+                        debug_chk('DEBUG_TREE',"NEG-CHK1 - "+key+"|"+Vz+" - no direct lineage relation found",4)
                         if key not in self.REF[Vz]['neg']:
                             self.REF[Vz]['neg'].append(key)
                     #chk2 - if the two nodes don't have direct line relation, then: don't STASH
                     elif self.TREE[Vz] in self.TREE[key].descendants:
-                        debug_chk('DEBUG_TREE',"NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found",3)
+                        debug_chk('DEBUG_TREE',"NEG-CHK2 - "+key+"|"+Vz+" - anc to dec relation found",4)
                         if key not in self.REF[Vz]['neg']:
                             self.REF[Vz]['neg'].append(key)
                     #chk3 - if anything else, then: STASH
