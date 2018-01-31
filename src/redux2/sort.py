@@ -102,6 +102,7 @@ class Sort(object):
                     vv = str(row['v'])
                     #s_calls
                     self.dbo.sql_exec("insert into s_calls (kit_id,variant_loc,assigned) values ('k"+str(k)+"','"+vv+"',"+kv+");")
+
     # matrix
 
     def sort_matrix(self):
@@ -171,27 +172,7 @@ class Sort(object):
         self.stdout_tbl_matrix()
 
         sys.exit()
-        
-    def sort_cnts(self):
-        #vars
-        self.CNTS = {}
-        sqlc = {}
-        #sql - cnt variants
-        sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-        sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-        sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
-        #sql - cnt kits
-        sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-        sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-        sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
-        #get all cnts
-        for key, sql in sqlc.items():
-            self.CNTS[key] = {}
-            self.dbo.sql_exec(sql)
-            F = self.dbo.fetchall()
-            for itm in F:
-                self.CNTS[key][itm[1]] = itm[0]
-        
+
     def sort_step1(self):
 
         DATA = OrderedDict()
@@ -255,43 +236,7 @@ class Sort(object):
 
         print("")
         sys.exit()
-        
-    def get_cur_kit_list(self):
-        return self.get_axis('kits',keysOnly=True)
-        
-    def get_cur_variant_list(self):
-        return self.get_axis('variants',keysOnly=True)
-        
-    def get_numpy_matrix_row_as_list(self,rownum,noneToStr=True):
-        if noneToStr:
-            return ['None' if v is None else v for v in self.NP[rownum,:].tolist()[0]]
-        else:
-            return self.NP[rownum,:].tolist()[0]
-        
-    def get_axis(self,orderByType=None,keysOnly=False):
-        if orderByType in ['variants','kits']:
-            if orderByType == 'variants' : SCH = self.VARIANTS
-            if orderByType == 'kits' : SCH = self.KITS
-            if keysOnly:
-                return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
-            else:
-                return sorted(SCH.items(), key=lambda e: e[1][1])
-        if orderByType in ['kp','kn','kx','vp','vn','vx']:
-            if keysOnly:
-                return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-            else:
-                listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-                if orderByType in ['vp','vn','vx']:
-                    return [(key, self.VARIANTS[key]) for key in listByCount]
-                if orderByType in ['kp','kn','kx']:
-                    return [(key, self.KITS[key]) for key in listByCount]
-        
-    def set_new_order(self,val,cnt,kitType=False,variantType=False):
-        if kitType:
-            self.KITS[val][1] = cnt
-        if variantType:
-            self.VARIANTS[val][1] = cnt
-        
+
     def stdout_tbl_matrix(self):
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',"big_matrix view{{"+"{",1)
@@ -317,6 +262,42 @@ class Sort(object):
         print("k|v: "+str(kit)+"|"+(variant))
         if moreInfo:
             print("value:"+str(self.NP[Y,X]))
+
+    def get_cur_kit_list(self):
+        return self.get_axis('kits',keysOnly=True)
+        
+    def get_numpy_matrix_row_as_list(self,rownum,noneToStr=True):
+        if noneToStr:
+            return ['None' if v is None else v for v in self.NP[rownum,:].tolist()[0]]
+        else:
+            return self.NP[rownum,:].tolist()[0]
+        
+    def get_cur_variant_list(self):
+        return self.get_axis('variants',keysOnly=True)
+        
+    def get_axis(self,orderByType=None,keysOnly=False):
+        if orderByType in ['variants','kits']:
+            if orderByType == 'variants' : SCH = self.VARIANTS
+            if orderByType == 'kits' : SCH = self.KITS
+            if keysOnly:
+                return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
+            else:
+                return sorted(SCH.items(), key=lambda e: e[1][1])
+        if orderByType in ['kp','kn','kx','vp','vn','vx']:
+            if keysOnly:
+                return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+            else:
+                listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+                if orderByType in ['vp','vn','vx']:
+                    return [(key, self.VARIANTS[key]) for key in listByCount]
+                if orderByType in ['kp','kn','kx']:
+                    return [(key, self.KITS[key]) for key in listByCount]
+        
+    def set_new_order(self,val,cnt,kitType=False,variantType=False):
+        if kitType:
+            self.KITS[val][1] = cnt
+        if variantType:
+            self.VARIANTS[val][1] = cnt
         
     def get_Y_val_by_order(self,Y): #variant
         variant = None
@@ -333,6 +314,26 @@ class Sort(object):
                 kit = itm[0]
                 break
         return kit
+        
+    def sort_cnts(self):
+        #vars
+        self.CNTS = {}
+        sqlc = {}
+        #sql - cnt variants
+        sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+        sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+        sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+        #sql - cnt kits
+        sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
+        sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
+        sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+        #get all cnts
+        for key, sql in sqlc.items():
+            self.CNTS[key] = {}
+            self.dbo.sql_exec(sql)
+            F = self.dbo.fetchall()
+            for itm in F:
+                self.CNTS[key][itm[1]] = itm[0]
         
     def get_matrix_relations_data(self):
 
@@ -416,7 +417,6 @@ class Sort(object):
         print(F)
 
         #}}}
-        
 
     def _bak_sort_step3(self):
         print("")
