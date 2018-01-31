@@ -339,9 +339,10 @@ class Sort(object):
         for super_v in np.delete(VAR3, idx): # here we use idx
             tmp_name = self.get_variant_name_by_order(super_v)
             #print(self.CNTS['vp'][name])
-            if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
-                min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
-                min_superset_variant = tmp_name
+            if self.CNTS['vp'][tmp_name] > len(pos_conditions): #has to be bigger than the default
+                if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
+                    min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
+                    min_superset_variant = tmp_name
         return min_superset_variant
 
     def get_matrix_data(self):
