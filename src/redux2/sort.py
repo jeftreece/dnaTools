@@ -299,6 +299,10 @@ class Sort(object):
                 DATA[row[1]] = []
             DATA[row[1]].append(row[2])
         
+        #create numpy version of data
+        for key,value in DATA.items():
+            self.NP = np.matrix(list(DATA.values()))
+
         #all unique kits
         self.KITS = {}
         cnt=0
