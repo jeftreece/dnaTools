@@ -334,7 +334,7 @@ class Sort(object):
         VAR2 = np.asarray((unique_elements, counts_elements)).T
         VAR3 = VAR2[VAR2[:,1]==len(pos_conditions)][:,0] #has to have at least what the incoming variant had in count
         idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
-        min_superset_pos_cnt = 0 # #default for loop coming up
+        min_superset_pos_cnt = 0 #default for loop coming up
         min_superset_variant = None #default for loop coming up
         for super_v in np.delete(VAR3, idx): # here we use idx (mentioned above)
             tmp_name = self.get_variant_name_by_order(super_v)
