@@ -329,21 +329,20 @@ class Sort(object):
         if name is not None:
             order = self.get_variant_order_by_name(name)
         pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order)
-        VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0]
+        VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
         unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
         VAR2 = np.asarray((unique_elements, counts_elements)).T
-        VAR3 = VAR2[VAR2[:,1]==len(pos_conditions)][:,0]
+        VAR3 = VAR2[VAR2[:,1]==len(pos_conditions)][:,0] #has to have at least what the incoming variant had in count
         idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
-        min_superset_pos_cnt = 0 # #default
-        min_superset_variant = None #default
-        for super_v in np.delete(VAR3, idx): # here we use idx
+        min_superset_pos_cnt = 0 # #default for loop coming up
+        min_superset_variant = None #default for loop coming up
+        for super_v in np.delete(VAR3, idx): # here we use idx (mentioned above)
             tmp_name = self.get_variant_name_by_order(super_v)
-            #print(self.CNTS['vp'][name])
             if self.CNTS['vp'][tmp_name] > len(pos_conditions): #has to be bigger than the default
                 if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
                     min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
-                    min_superset_variant = tmp_name
-        return min_superset_variant
+                    min_superset_variant = tmp_name # we have a candidate!
+        return min_superset_variant #yes, there is one, return it
 
     def get_matrix_data(self):
 
