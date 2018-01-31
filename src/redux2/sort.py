@@ -196,7 +196,8 @@ class Sort(object):
                 #        break
                 #print("kit:"+str(kit)+",variant:"+str(variant))
 
-        print(self.NEGA) 
+        print("")
+        print(self.MIXA)
         print("")
         sys.exit()
 
@@ -384,7 +385,6 @@ class Sort(object):
             self.dbo.sql_exec(sql)
             F = self.dbo.fetchall()
             for itm in F:
-                print(itm[1])
                 self.CNTS[key][itm[1]] = itm[0]
         
     def get_matrix_relations_data(self):
