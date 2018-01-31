@@ -137,17 +137,17 @@ class Sort(object):
 
     def sort_step1(self):
 
-        print("...")
-        print('kB')
-        print(self.get_matrix_col_data(name='kB'))
-        print("...")
-        print('Z381')
-        print(self.get_matrix_row_data(name='Z381'))
-        print("...")
-        print(self.get_matrix_row_indices_by_val(1,name='Z381'))
-        print("...")
-        print(self.get_lowest_possible_superset_of_variant(name='Z381'))
-        sys.exit()
+        #print("...")
+        #print('kB')
+        #print(self.get_matrix_col_data(name='kB'))
+        #print("...")
+        #print('Z381')
+        #print(self.get_matrix_row_data(name='Z381'))
+        #print("...")
+        #print(self.get_matrix_row_indices_by_val(1,name='Z381'))
+        #print("...")
+        #print(self.get_lowest_superset_variant(name='Z381'))
+        #sys.exit()
 
         DATA = OrderedDict()
         cnt = 0 
@@ -191,7 +191,7 @@ class Sort(object):
     def sort_step3(self):
         print("")
         #print(self.get_matrix_row(1))
-        sys.exit()
+        #sys.exit()
         print("Processing Nones:")
         print("----------------")
         #variant list that have kits with negative (zero) values
@@ -199,7 +199,7 @@ class Sort(object):
         #iterate all None situations
         for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
-                self.stdout_coord(non[1],non[0])
+                print(self.stdout_coord(non[1],non[0]) + "("+str(self.get_lowest_superset_variant(order=non[0]))+")")
                 #for itm in list(self.VARIANTS.items()):
                 #    if itm[1][1] == non[0]:
                 #        variant = itm[0]
@@ -233,13 +233,15 @@ class Sort(object):
         debug_chk('DEBUG_MATRIX',"",1)
         
     def stdout_coord(self,X,Y,moreInfo=False):
+        buf = ""
         if moreInfo:
-            print("coord: "+str(X)+","+str(Y))
+            buf = "coord: "+str(X)+","+str(Y)
         kit = self.get_kit_name_by_order(X)
         variant = self.get_variant_name_by_order(Y)
-        print("k|v: "+str(kit)+"|"+(variant))
+        buf = buf +  "k|v: "+str(kit)+"|"+(variant)
         if moreInfo:
-            print("value:"+str(self.NP[Y,X]))
+            buf = buf + "value:"+str(self.NP[Y,X])
+        return buf
 
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
@@ -323,41 +325,24 @@ class Sort(object):
         if col_order is not None:
             return np.argwhere(self.NP[:,col_order] == val)
 
-    def get_lowest_possible_superset_of_variant(self,order=None,name=None): #order is variant's order in matrix, name is variant name
-        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order,name=name)
-        print("...")
-        print("pos cond")
-        print("...")
-        print(pos_conditions)
-        #count total pos among req cols
-        #VAR = np.argwhere(self.NP[:,pos_conditions]==1) #[:,0]
-        VAR = np.argwhere(self.NP[:,pos_conditions]==1)[:,0]
-        unique_elements, counts_elements = np.unique(VAR, return_counts=True)
-        VAR2 = np.asarray((unique_elements, counts_elements))
-        print(".1..")
-        print(VAR2)
-        print(".2..")
-        print(self.CNTS['vp'])
-        print(".3..")
-        print(np.argwhere(VAR2[1,]==len(pos_conditions))[0,])
-        print(".4..")
-        #print(VAR)
-        #VAR1 = VAR[:,0]
-        #print(VAR.sum(1)==1) #[:,0])
-        #print("...")
-        #print("bef.argwhere")
-        #B = np.argwhere(self.NP==1)[:,0]
-        #print("aft.argwhere-prt")
-        #print(B)
-        #print("...")
-        #print("intersect")
-        #print(np.intersect1d(B, pos_conditions))
-        #print("...")
-        sys.exit()
-        #https://www.w3resource.com/python-exercises/numpy/python-numpy-exercise-94.php
-        #https://stackoverflow.com/questions/3797158/counting-non-zero-elements-within-each-row-and-within-each-column-of-a-2d-numpy
-        #https://stackoverflow.com/questions/25438420/indexes-of-elements-in-numpy-array-that-satisfy-conditions-on-the-value-and-the
-        #https://stackoverflow.com/questions/25438420/indexes-of-elements-in-numpy-array-that-satisfy-conditions-on-the-value-and-the
+    def get_lowest_superset_variant(self,order=None,name=None): #order is variant's order in matrix, name is variant name
+        if name is not None:
+            order = self.get_variant_order_by_name(name)
+        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order)
+        VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0]
+        unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
+        VAR2 = np.asarray((unique_elements, counts_elements)).T
+        VAR3 = VAR2[VAR2[:,1]==len(pos_conditions)][:,0]
+        idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
+        min_superset_pos_cnt = 0 # #default
+        min_superset_variant = None #default
+        for super_v in np.delete(VAR3, idx): # here we use idx
+            tmp_name = self.get_variant_name_by_order(super_v)
+            #print(self.CNTS['vp'][name])
+            if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
+                min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
+                min_superset_variant = tmp_name
+        return min_superset_variant
 
     def get_matrix_data(self):
 
