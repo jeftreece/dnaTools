@@ -146,8 +146,8 @@ class Sort(object):
         #print("...")
         #print(self.get_matrix_row_indices_by_val(1,name='Z381'))
         #print("...")
-        #print(self.get_lowest_superset_variant(name='Z381'))
-        #sys.exit()
+        print(self.get_max_subset_variants(name='Z381'))
+        sys.exit()
 
         DATA = OrderedDict()
         cnt = 0 
@@ -199,7 +199,7 @@ class Sort(object):
         #iterate all None situations
         for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
-                print(self.stdout_coord(non[1],non[0]) + "("+str(self.get_lowest_superset_variant(order=non[0]))+")")
+                print(self.stdout_coord(non[1],non[0]) + "("+str(self.get_min_superset_variant(order=non[0]))+")")
                 #for itm in list(self.VARIANTS.items()):
                 #    if itm[1][1] == non[0]:
                 #        variant = itm[0]
@@ -279,13 +279,27 @@ class Sort(object):
         if variantType:
             self.VARIANTS[val][1] = cnt
         
-    def get_variant_name_by_order(self,Y): #get variant name
-        variant = None
-        for itm in list(self.VARIANTS.items()):
-            if itm[1][1] == Y:
-                variant = itm[0]
-                break
-        return variant
+    def get_variant_name_by_order(self,Y): #get variant name (can also take a list)
+        intFlg = True
+        try:
+            value = int(Y)
+        except:
+            intFlg = False
+        if intFlg: #typically, it's just the order number it's placed in the matrix
+            variant = None
+            for itm in list(self.VARIANTS.items()):
+                if itm[1][1] == Y:
+                    variant = itm[0]
+                    break
+            return variant
+        else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
+            variantList = []
+            for y in list(Y):
+                for itm in list(self.VARIANTS.items()):
+                    if itm[1][1] == y:
+                        variantList.append(itm[0])
+                        break
+            return(variantList)
         
     def get_kit_name_by_order(self,X): #get kit name
         kit = None
@@ -325,13 +339,14 @@ class Sort(object):
         if col_order is not None:
             return np.argwhere(self.NP[:,col_order] == val)
 
-    def get_lowest_superset_variant(self,order=None,name=None): #order is variant's order in matrix, name is variant name
+    def get_min_superset_variant(self,order=None,name=None): #order is variant's order in matrix, name is variant name
         if name is not None:
             order = self.get_variant_order_by_name(name)
         pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order)
         VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
         unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
         VAR2 = np.asarray((unique_elements, counts_elements)).T
+        #...
         VAR3 = VAR2[VAR2[:,1]==len(pos_conditions)][:,0] #has to have at least what the incoming variant had in count
         idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
         min_superset_pos_cnt = 0 #default for loop coming up
@@ -343,6 +358,21 @@ class Sort(object):
                     min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
                     min_superset_variant = tmp_name # we have a candidate!
         return min_superset_variant #yes, there is one, return it
+        
+    def get_max_subset_variants(self,order=None,name=None): #order is variant's order in matrix, name is variant name
+        if name is not None:
+            order = self.get_variant_order_by_name(name)
+        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order)
+        VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+        unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
+        VAR2 = np.asarray((unique_elements, counts_elements)).T
+        VAR3 = VAR2[:,1]
+        VAR4 = self.get_variant_name_by_order(VAR2[:,1])
+        VAR5 = np.asarray((VAR3,VAR4))
+        print(VAR5)
+        #TODO : need to figure this out
+        sys.exit()
+        return
 
     def get_matrix_data(self):
 
@@ -400,6 +430,8 @@ class Sort(object):
         self.get_matrix_relations_data()
         
     def get_matrix_count_data(self):
+
+        #NOTE: this could be done with numpy - which is better? does it matter?
 
         #vars
         self.CNTS = {}
