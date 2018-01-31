@@ -111,46 +111,8 @@ class Sort(object):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
 
-        #self.get_matrix_relations_data()
-        #sys.exit()
-
-        #get counts
-        self.sort_cnts()
-
-        #sql
-        sql = "select C.kit_id,V.name,C.assigned,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 4"
-        sql1 = "select distinct V.name,V.variant_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 2"
-
-        #all unique variants
-        self.dbo.sql_exec(sql1)
-        F = self.dbo.fetchall()
-        self.VARIANTS = {}
-        cnt=0
-        for itm in F:
-            self.VARIANTS[itm[0]]=[cnt,cnt] #default sort,custom sort 
-            cnt = cnt + 1
-
         #get data
-        self.dbo.sql_exec(sql)
-        F = self.dbo.fetchall()
-        
-        #all unique kits
-        self.KITS = {}
-        cnt=0
-        for k in sorted(list(set([itm[0] for itm in F]))):
-            self.KITS[k]=[cnt,cnt] #default sort,custom sort 
-            cnt = cnt + 1
-
-        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
-        DATA = OrderedDict()
-        for row in F:
-            if row[1] not in DATA:
-                DATA[row[1]] = []
-            DATA[row[1]].append(row[2])
-
-        #numpy version of data
-        for key,value in DATA.items():
-            self.NP = np.matrix(list(DATA.values()))
+        self.get_matrix_data()
 
         #step 0
         debug_chk('DEBUG_MATRIX',"data - step 0 (default)",1)
@@ -234,6 +196,7 @@ class Sort(object):
                 #        break
                 #print("kit:"+str(kit)+",variant:"+str(variant))
 
+        print(self.NEGA) 
         print("")
         sys.exit()
 
@@ -314,25 +277,110 @@ class Sort(object):
                 kit = itm[0]
                 break
         return kit
+
+    def get_matrix_data(self):
+
+        #sql 
+        sql2 = '''
+            SELECT C.kit_id, V.name, C.assigned, V.variant_id
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc
+            ORDER by 4
+            '''
+
+        #get data
+        self.dbo.sql_exec(sql2)
+        F = self.dbo.fetchall()
+
+        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
+        DATA = OrderedDict()
+        for row in F:
+            if row[1] not in DATA:
+                DATA[row[1]] = []
+            DATA[row[1]].append(row[2])
         
-    def sort_cnts(self):
+        #all unique kits
+        self.KITS = {}
+        cnt=0
+        for k in sorted(list(set([itm[0] for itm in F]))):
+            self.KITS[k]=[cnt,cnt] #default sort,custom sort 
+            cnt = cnt + 1
+
+        if 1 == 1: # hack - to get variants default sort just like Iain's PDF
+            sql1 = '''
+                SELECT distinct V.name, V.variant_id
+                FROM s_calls C, s_variants V
+                WHERE C.variant_loc = V.variant_loc
+                ORDER by 2
+                '''
+            self.dbo.sql_exec(sql1)
+            F = self.dbo.fetchall()
+
+        #all unique variants
+        self.VARIANTS = {}
+        cnt=0
+        for itm in F:
+            self.VARIANTS[itm[0]]=[cnt,cnt] #default sort,custom sort 
+            cnt = cnt + 1
+
+        #get count data
+        self.get_matrix_count_data()
+
+        #get relations data
+        self.get_matrix_relations_data()
+        
+    def get_matrix_count_data(self):
+
         #vars
         self.CNTS = {}
         sqlc = {}
+
         #sql - cnt variants
-        sqlc['vp'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-        sqlc['vn'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-        sqlc['vx'] = "select count(V.name),V.name from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+        sqlc['vp'] = '''
+            SELECT count(V.name), V.name
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = 1 
+            group by 2;
+            '''
+        sqlc['vn'] = '''
+            SELECT count(V.name), V.name
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = -1
+            group by 2;
+            '''
+        sqlc['vx'] = '''
+            SELECT count(V.name), V.name
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = 0
+            group by 2;
+            '''
+
         #sql - cnt kits
-        sqlc['kp'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=1 group by 2"
-        sqlc['kn'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned=0 group by 2"
-        sqlc['kx'] = "select count(C.kit_id),C.kit_id from s_calls C,s_variants V where C.variant_loc=V.variant_loc and C.assigned is null group by 2"
+        sqlc['kp'] = '''
+            SELECT count(C.kit_id), C.kit_id
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = 1 
+            group by 2;
+            '''
+        sqlc['kn'] = '''
+            SELECT count(C.kit_id), C.kit_id
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = -1
+            group by 2;
+            '''
+        sqlc['kx'] = '''
+            SELECT count(C.kit_id), C.kit_id
+            FROM s_calls C, s_variants V
+            WHERE C.variant_loc = V.variant_loc and C.assigned = 0
+            group by 2;
+            '''
         #get all cnts
         for key, sql in sqlc.items():
             self.CNTS[key] = {}
             self.dbo.sql_exec(sql)
             F = self.dbo.fetchall()
             for itm in F:
+                print(itm[1])
                 self.CNTS[key][itm[1]] = itm[0]
         
     def get_matrix_relations_data(self):
@@ -383,7 +431,6 @@ class Sort(object):
             '''
         self.dbo.sql_exec(sql)
         self.POSA = self.dbo.fetchall()
-        print(F)
 
         #}}}
         #sql - get mixes (without kits){{{
@@ -414,7 +461,6 @@ class Sort(object):
 
         self.dbo.sql_exec(sql)
         self.MIXA = self.dbo.fetchall()
-        print(F)
 
         #}}}
 
@@ -618,247 +664,7 @@ class Sort(object):
         #}}}
 
     # tree
-    # TODO: set up a random approach to pushing data into the sort. troubleshoot results
 
-    #NOTES{{{
-        # HIDE-ME: rules {{{
-        # -----------------------------------
-        # mix: (1|2) means 1 is above 2
-        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
-        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
-        # -----------------------------------
-        #note: next -- attempt to automate the "rules" to sort the "blocks" data
-        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # -----------------------------------
-        #TODO: need to track +/- in the tree nodes???
-        # ----------------------------------- }}}
-        # HIDE-ME: results when applying these rules manually:{{{
-
-        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
-        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
-        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
-        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
-        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
-        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
-        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
-        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
-        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
-        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
-        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
-        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
-        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
-        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
-        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
-
-        #}}}
-        # HIDE-ME: disputes: {{{
-        # (1) L:mix-O vs. O:mix-L 
-        #
-        # resolutions: 
-        # (1) winning rule is L:mix-O
-        #
-        # reasons for (1) resolution:
-        #   (1) L-mix-I
-        #   (2) L-mix-B
-        #   (3) L-mix-K
-        #   (4) B-pos-L
-        #   (5) K-pos-L
-        #   (6) I-pos-L
-
-        #}}}
-        # HIDE-ME: sample output (at the moment) {{{
-
-        # top
-        # ├── (A) M343(=)
-        # │   ├── (D) U106 (ok)
-        # │   │   ├── (C) Z381 (ok)
-        # │   │   │   └── (L) A297 (!!!) <--- recurrent rule (see Iain notes)
-        # │   │   │       ├── (G) Z156 (ok)
-        # │   │   │       │   └── (N) Z306 (ok)
-        # │   │   │       └── (O) L48 (ok)
-        # │   │   │           ├── (B) Z9 (ok)
-        # │   │   │           │   └── (K) Z8 (ok)
-        # │   │   │           └── (I) Z28 (!!!) <-- Iain says this is equiv to Z9
-        # │   │   ├── (E) Z301 (!!!) <-- should be under (C) Z381 (known Problem#1)
-        # │   │   └── (F) Z18 (ok)
-        # │   └── (J) P312 (ok)
-        # ├── (H) L11 (=)
-        # └── (M) M269 (=)
-
-        # TODO: Z301+ exists, but you don't have any Z381+ Z301- tests in the example, 
-        # so you have to treat Z381 and Z301 as equivalent]
-
-        # TODO: A297 is a recurrent SNP that doesn't fit into the phylogeny, so
-        # could either be dumped or listed as recurrent.
-
-        # TODO: Z28 is equivalent to Z9
-
-        #}}}
-        # HIDE-ME: PROBLEM 1: {{{
-
-        # POS C|E
-        # POS O|E
-
-        # C,O have positive E values (and not seeing E in direct line when under D directly)
-        # the C could actually be ok, if it's a dupe. but the O -- no.
-
-        # how to come up with other ideas?
-
-        # (1) what is the last mix node for E 
-        #     (answer: D)
-        # (2) what are other desc of D that have direct lines (or are dupes # with) with C and O
-        #     (answer: C,L,O,B,I,K)
-        #     Arch Need: keep ref of what's been processed like so:
-        #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
-        # (3) are there any neg for E in those results? (if so -- it can't be
-        #     one of them ... or any of their direct lines)
-        #     (answer: No)
-        # (4  what is the first possibility? ... use dupe options last
-        #     (answer: E is C's parent)
-        # (5) (ISSUE) what about E's children if it has any -- and their possible conflicts 
-        #     if move E?
-
-        # }}}
-        # HIDE-ME: the ones I missed: {{{
-
-        # ------------------------
-        # OK - F should be under D
-        # #1 - E should be under C like this D>C>E
-        # (fixed by #1) L should be under E like this D>C>E>L ...
-        # B should be under I (B and I should be dupes -- my manual work was wrong)
-        # ------------------------
-
-        #}}}
-    #}}}
-    def sort_tree_prep_data(self):
-
-        #db
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
-
-        #beg collapse vim marker
-        debug_chk('DEBUG_TREE',"PREP {"+"{{",2)
-
-        #all kits, variant, assignment mixes 
-
-        #Letters 
-        if self.TREE_MODE == 1:
-            sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
-        #Names
-        if self.TREE_MODE == 2:
-            sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
-        #Combo - Names+Letters
-        if self.TREE_MODE == 3:
-            sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
-
-        self.dbo.sql_exec(sql)
-        F = self.dbo.fetchall()
-        #print(F)
-        #sys.exit()
-
-        #all unique kits
-        #print("---")
-        #print("all unique kits")
-        #KITS = sorted(list(set([itm[0] for itm in F])))
-        #print(KITS)
-
-        #all unique variants
-        VARIANTS = sorted(list(set([itm[1] for itm in F])))
-        #VARIANTSp = ['+'+itm[1] for itm in F]
-        #VARIANTSn = ['-'+itm[1] for itm in F]
-        #VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"all unique variants",5)
-        debug_chk('DEBUG_TREE',VARIANTS,5)
-        #print("---")
-        #print("all unique variants - pos+neg")
-        #print(VARIANTSa)
-        #sys.exit()
-        
-        #kits with positive assignments
-        Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"kits with positive assignment variant calls",5)
-        debug_chk('DEBUG_TREE',Fp,5)
-
-        #kits with negative assignments
-        Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"kits with positive negative variant calls",5)
-        debug_chk('DEBUG_TREE',Fn,5)
-
-        #per all the kits with positive variants (build new dict)
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"dict of kits with their positive assignment variant calls",5)
-        KA={}
-        for k in Fp:
-            Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
-            #['A+', 'D+', 'F+', 'H+', 'M+']
-            debug_chk('DEBUG_TREE',k+" "+str(Kp),5)
-            KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
-
-        #per all the kits with negative variants (build new dict)
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"dict of kits with their negative assignment variant calls",5)
-        for k in Fn:
-            Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
-            debug_chk('DEBUG_TREE',k+" "+str(Kn),5)
-            if k in KA.keys():
-                KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
-                KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
-            else:
-                KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
-
-        #loop dict to create list version of the data
-        newV1 = []
-        for key, value in KA.items():
-            newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
-
-        #sort this new list
-        cnt = 0
-        for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
-            d.update((k, cnt) for k, v in d.items() if k == "sort")
-            cnt = cnt + 1
-
-        #create a var for the sorted version (not necessary)
-        newV2 = sorted(newV1, key=lambda k: (k['sort']))
-
-        #print to stdout so I can see what I'm doing
-        debug_chk('DEBUG_TREE',"---",5)
-        debug_chk('DEBUG_TREE',"combined dict of kits with pos+neg variant calls - sorted",5)
-        #newV3 = {}
-        for d in newV2:
-            #newV3[d['kit']] = d['variants']
-            STR = d['kit']+':'+str(d['variants'])
-            debug_chk('DEBUG_TREE',STR.replace("'",""),5)
-
-        #build variant relationship data that we need for sorting
-        debug_chk('DEBUG_TREE',"---",2)
-        self.TDATA = {}
-        for VX in VARIANTS:
-            #DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
-            self.TDATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[]}
-            VXP = '+'+VX
-            for VY in VARIANTS:
-                VYP = '+'+VY
-                if VXP != VYP:
-                    VYN = '-'+VY
-                    chk1 = False
-                    chk2 = False
-                    for d in newV2:
-                        if VXP in d['variants']:
-                            if chk1 is False and VYP in d['variants']:
-                                chk1 = True
-                            if chk2 is False and VYN in d['variants']:
-                                chk2 = True
-                        if chk1 is True and chk2 is True:
-                            self.TDATA[VX]['mix'].append(VY)
-                            break
-                    if chk1 is True and chk2 is False:
-                        self.TDATA[VX]['pos'].append(VY)
-                    if chk2 is True and chk1 is False:
-                        self.TDATA[VX]['neg'].append(VY)
-          
     def sort_tree(self):
 
         #prep data
@@ -933,6 +739,7 @@ class Sort(object):
             self.stdout_variant_relations_data(self.REF,'REF post-proc',run)
         #debug_chk('DEBUG_TREE',"---",3)
         
+
     def mix_rule_chks(self,run_flg,run,hardFlg=False):
         debug_chk('DEBUG_TREE',"---",2)
         debug_chk('DEBUG_TREE',"mix-checks {"+"{{",2) #beg collapse vim marker
@@ -1074,35 +881,6 @@ class Sort(object):
         debug_chk('DEBUG_TREE',"}"+"}}",2) #end collapse vim marker
         #return STASH
         
-    def stdout_variant_relations_data(self,DATA,dataStr,run=1):
-
-        mixlen = 0
-        poslen = 0
-        neglen = 0
-        duplen = 0
-
-        #print the counts
-        print("---")
-        print(dataStr+"{{"+"{") #beg vim marker
-        for key, value in DATA.items():
-            mixlen = mixlen+len(value['mix'])
-            poslen = poslen+len(value['pos'])
-            neglen = neglen+len(value['neg'])
-            duplen = neglen+len(value['dup'])
-            #DUPlen = neglen+len(value['DUP'])
-        print("RUN:"+str(run)+"("+dataStr+") - mix cnt:"+str(mixlen))
-        print("RUN:"+str(run)+"("+dataStr+") - pos cnt:"+str(poslen))
-        print("RUN:"+str(run)+"("+dataStr+") - neg cnt:"+str(neglen))
-        print("RUN:"+str(run)+"("+dataStr+") - dup cnt:"+str(duplen))
-        #print("RUN:"+str(run)+"("+dataStr+") - DUP cnt:"+str(DUPlen))
-        print("")
-
-        #print the data
-        print("RUN:"+str(run)+"("+dataStr+") - data")
-        for key, value in DATA.items():
-            print(key+'|'+str(value).replace("'","").replace(" ",""))
-        print("}}"+"}") #end vim marker
-        
     def dupe_variant_check(self,variant1,variant2): #requires run > 1
         if self.REF[variant2]['dup'] == [variant1]:
             return True #don't stash
@@ -1169,6 +947,279 @@ class Sort(object):
         #...
         sys.exit()
         #self.TREE[Vz] not in self.TREE[key].descendants and not in self.TREE[key] in self.TREE[Vz].descendants:
+
+    def stdout_variant_relations_data(self,DATA,dataStr,run=1):
+
+        mixlen = 0
+        poslen = 0
+        neglen = 0
+        duplen = 0
+
+        #print the counts
+        print("---")
+        print(dataStr+"{{"+"{") #beg vim marker
+        for key, value in DATA.items():
+            mixlen = mixlen+len(value['mix'])
+            poslen = poslen+len(value['pos'])
+            neglen = neglen+len(value['neg'])
+            duplen = neglen+len(value['dup'])
+            #DUPlen = neglen+len(value['DUP'])
+        print("RUN:"+str(run)+"("+dataStr+") - mix cnt:"+str(mixlen))
+        print("RUN:"+str(run)+"("+dataStr+") - pos cnt:"+str(poslen))
+        print("RUN:"+str(run)+"("+dataStr+") - neg cnt:"+str(neglen))
+        print("RUN:"+str(run)+"("+dataStr+") - dup cnt:"+str(duplen))
+        #print("RUN:"+str(run)+"("+dataStr+") - DUP cnt:"+str(DUPlen))
+        print("")
+
+        #print the data
+        print("RUN:"+str(run)+"("+dataStr+") - data")
+        for key, value in DATA.items():
+            print(key+'|'+str(value).replace("'","").replace(" ",""))
+        print("}}"+"}") #end vim marker
+        
+
+    def sort_tree_prep_data(self):
+
+        #db
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+
+        #beg collapse vim marker
+        debug_chk('DEBUG_TREE',"PREP {"+"{{",2)
+
+        #all kits, variant, assignment mixes 
+
+        #Letters 
+        if self.TREE_MODE == 1:
+            sql = "select C.kit_id,C.variant_loc,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #Names
+        if self.TREE_MODE == 2:
+            sql = "select C.kit_id,V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+        #Combo - Names+Letters
+        if self.TREE_MODE == 3:
+            sql = "select C.kit_id,'('||C.variant_loc||') '||V.name,C.assigned from s_calls C,s_variants V where C.variant_loc=V.variant_loc order by 1,2,3"
+
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+        #print(F)
+        #sys.exit()
+
+        #all unique kits
+        #print("---")
+        #print("all unique kits")
+        #KITS = sorted(list(set([itm[0] for itm in F])))
+        #print(KITS)
+
+        #all unique variants
+        VARIANTS = sorted(list(set([itm[1] for itm in F])))
+        #VARIANTSp = ['+'+itm[1] for itm in F]
+        #VARIANTSn = ['-'+itm[1] for itm in F]
+        #VARIANTSa = sorted(list(set(VARIANTSp+VARIANTSn)))
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"all unique variants",5)
+        debug_chk('DEBUG_TREE',VARIANTS,5)
+        #print("---")
+        #print("all unique variants - pos+neg")
+        #print(VARIANTSa)
+        #sys.exit()
+        
+        #kits with positive assignments
+        Fp = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==1, F))])))
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"kits with positive assignment variant calls",5)
+        debug_chk('DEBUG_TREE',Fp,5)
+
+        #kits with negative assignments
+        Fn = sorted(list(set([i[0] for i in list(filter(lambda x: x[2]==0, F))])))
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"kits with positive negative variant calls",5)
+        debug_chk('DEBUG_TREE',Fn,5)
+
+        #per all the kits with positive variants (build new dict)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"dict of kits with their positive assignment variant calls",5)
+        KA={}
+        for k in Fp:
+            Kp = sorted(list(set(['+'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==1, F))])))
+            #['A+', 'D+', 'F+', 'H+', 'M+']
+            debug_chk('DEBUG_TREE',k+" "+str(Kp),5)
+            KA[k] = {'len':len(Kp),'plen':len(Kp),'sort':0,'variants':Kp}
+
+        #per all the kits with negative variants (build new dict)
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"dict of kits with their negative assignment variant calls",5)
+        for k in Fn:
+            Kn = sorted(list(set(['-'+i[1] for i in list(filter(lambda x: x[0]==k and x[2]==0, F))])))
+            debug_chk('DEBUG_TREE',k+" "+str(Kn),5)
+            if k in KA.keys():
+                KA[k]['len'] = len(KA[k]['variants'])+len(Kn)
+                KA[k]['variants'] = sorted(KA[k]['variants']+Kn)
+            else:
+                KA[k] = {'len':len(Kn),'plen':0,'sort':0,'variants':Kn}
+
+        #loop dict to create list version of the data
+        newV1 = []
+        for key, value in KA.items():
+            newV1.append({'kit':key,'variants':value['variants'],'sort':value['sort'],'len':value['len'],'plen':value['plen']})
+
+        #sort this new list
+        cnt = 0
+        for d in sorted(newV1, key=lambda k: (k['plen'],k['len']), reverse=True):
+            d.update((k, cnt) for k, v in d.items() if k == "sort")
+            cnt = cnt + 1
+
+        #create a var for the sorted version (not necessary)
+        newV2 = sorted(newV1, key=lambda k: (k['sort']))
+
+        #print to stdout so I can see what I'm doing
+        debug_chk('DEBUG_TREE',"---",5)
+        debug_chk('DEBUG_TREE',"combined dict of kits with pos+neg variant calls - sorted",5)
+        #newV3 = {}
+        for d in newV2:
+            #newV3[d['kit']] = d['variants']
+            STR = d['kit']+':'+str(d['variants'])
+            debug_chk('DEBUG_TREE',STR.replace("'",""),5)
+
+        #build variant relationship data that we need for sorting
+        debug_chk('DEBUG_TREE',"---",2)
+        self.TDATA = {}
+        for VX in VARIANTS:
+            #DATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[],'DUP':[]}
+            self.TDATA[VX] = {'mix':[],'pos':[],'neg':[],'dup':[]}
+            VXP = '+'+VX
+            for VY in VARIANTS:
+                VYP = '+'+VY
+                if VXP != VYP:
+                    VYN = '-'+VY
+                    chk1 = False
+                    chk2 = False
+                    for d in newV2:
+                        if VXP in d['variants']:
+                            if chk1 is False and VYP in d['variants']:
+                                chk1 = True
+                            if chk2 is False and VYN in d['variants']:
+                                chk2 = True
+                        if chk1 is True and chk2 is True:
+                            self.TDATA[VX]['mix'].append(VY)
+                            break
+                    if chk1 is True and chk2 is False:
+                        self.TDATA[VX]['pos'].append(VY)
+                    if chk2 is True and chk1 is False:
+                        self.TDATA[VX]['neg'].append(VY)
+          
+
+    # TODO: set up a random approach to pushing data into the sort. troubleshoot results
+
+    #NOTES{{{
+        # HIDE-ME: rules {{{
+        # -----------------------------------
+        # mix: (1|2) means 1 is above 2
+        # pos: (1|2) means 1 is a direct ancestor or direct descendant or dupe, not a "cousin", "uncle", or 
+        # neg: (1|2) means 1 is a "cousin" or "uncle" or "sibling" or direct ancestor of 2
+        # -----------------------------------
+        #note: next -- attempt to automate the "rules" to sort the "blocks" data
+        #sample data:A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # -----------------------------------
+        #TODO: need to track +/- in the tree nodes???
+        # ----------------------------------- }}}
+        # HIDE-ME: results when applying these rules manually:{{{
+
+        # A|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [H,M], neg: []}
+        # =M|{mix: [B,C,D,E,F,G,I,J,K,L,N,O], pos: [A,H], neg: []}
+        # =H|{mix: [B,C,D,F,G,I,J,K,L,N,O], pos: [A,E,M], neg: []}
+        #     1-J|{mix: [], pos: [A,H,M], neg: [B,C,D,F,G,I,K,L,N,O]}
+        #     2-D|{mix: [B,C,E,F,G,I,K,L,N,O], pos: [A,H,M], neg: [J]}
+        #         1-F|{mix: [], pos: [A,D,H,M],neg: [B,C,E,G,I,J,K,L,N,O]}
+        #         2-C|{mix: [B,G,I,L,N,O], pos: [A,D,E,H,M], neg: [F,J,K]}
+        #             1-E|{mix: [], pos: [A,C,D,H,M,O], neg: [B,F,G,I,J,K,L,N]}
+        #                 1-L|{mix: [B,G,I,K,?O], pos: [A,C,D,H,M], neg: [F,J,N]}
+        #                     1-G|{mix: [N], pos: [A,C,D,H,L,M], neg: [B,F,I,J,K,O]}
+        #                         1-N|{mix: [], pos: [A,C,D,G,H,M], neg: [B,F,I,J,K,O]}
+        #                     2-O|{mix: [B,I,K,?L], pos: [A,C,D,E,H,M], neg: [F,G,J,N]}
+        #                         1-I|{mix: [K], pos: [A,B,C,D,H,L,M,O], neg: [F,G,J,N]}
+        #                             1-B|{mix: [K], pos: [A,C,D,H,I,L,M,O], neg: [F,G,J,N]}
+        #                                 1-K|{mix: [], pos: [A,B,D,H,I,L,M,O], neg: [F,G,J,N]}
+
+        #}}}
+        # HIDE-ME: disputes: {{{
+        # (1) L:mix-O vs. O:mix-L 
+        #
+        # resolutions: 
+        # (1) winning rule is L:mix-O
+        #
+        # reasons for (1) resolution:
+        #   (1) L-mix-I
+        #   (2) L-mix-B
+        #   (3) L-mix-K
+        #   (4) B-pos-L
+        #   (5) K-pos-L
+        #   (6) I-pos-L
+
+        #}}}
+        # HIDE-ME: sample output (at the moment) {{{
+
+        # top
+        # ├── (A) M343(=)
+        # │   ├── (D) U106 (ok)
+        # │   │   ├── (C) Z381 (ok)
+        # │   │   │   └── (L) A297 (!!!) <--- recurrent rule (see Iain notes)
+        # │   │   │       ├── (G) Z156 (ok)
+        # │   │   │       │   └── (N) Z306 (ok)
+        # │   │   │       └── (O) L48 (ok)
+        # │   │   │           ├── (B) Z9 (ok)
+        # │   │   │           │   └── (K) Z8 (ok)
+        # │   │   │           └── (I) Z28 (!!!) <-- Iain says this is equiv to Z9
+        # │   │   ├── (E) Z301 (!!!) <-- should be under (C) Z381 (known Problem#1)
+        # │   │   └── (F) Z18 (ok)
+        # │   └── (J) P312 (ok)
+        # ├── (H) L11 (=)
+        # └── (M) M269 (=)
+
+        # TODO: Z301+ exists, but you don't have any Z381+ Z301- tests in the example, 
+        # so you have to treat Z381 and Z301 as equivalent]
+
+        # TODO: A297 is a recurrent SNP that doesn't fit into the phylogeny, so
+        # could either be dumped or listed as recurrent.
+
+        # TODO: Z28 is equivalent to Z9
+
+        #}}}
+        # HIDE-ME: PROBLEM 1: {{{
+
+        # POS C|E
+        # POS O|E
+
+        # C,O have positive E values (and not seeing E in direct line when under D directly)
+        # the C could actually be ok, if it's a dupe. but the O -- no.
+
+        # how to come up with other ideas?
+
+        # (1) what is the last mix node for E 
+        #     (answer: D)
+        # (2) what are other desc of D that have direct lines (or are dupes # with) with C and O
+        #     (answer: C,L,O,B,I,K)
+        #     Arch Need: keep ref of what's been processed like so:
+        #     E {'ref-mix': [A,D], 'ref-pos': [], 'ref-neg': [E]}
+        # (3) are there any neg for E in those results? (if so -- it can't be
+        #     one of them ... or any of their direct lines)
+        #     (answer: No)
+        # (4  what is the first possibility? ... use dupe options last
+        #     (answer: E is C's parent)
+        # (5) (ISSUE) what about E's children if it has any -- and their possible conflicts 
+        #     if move E?
+
+        # }}}
+        # HIDE-ME: the ones I missed: {{{
+
+        # ------------------------
+        # OK - F should be under D
+        # #1 - E should be under C like this D>C>E
+        # (fixed by #1) L should be under E like this D>C>E>L ...
+        # B should be under I (B and I should be dupes -- my manual work was wrong)
+        # ------------------------
+
+        #}}}
+    #}}}
 
     # misc
 
