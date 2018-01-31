@@ -137,6 +137,18 @@ class Sort(object):
 
     def sort_step1(self):
 
+        print("...")
+        print('kB')
+        print(self.get_matrix_col_data(name='kB'))
+        print("...")
+        print('Z381')
+        print(self.get_matrix_row_data(name='Z381'))
+        print("...")
+        print(self.get_matrix_row_indices_by_val(1,name='Z381'))
+        print("...")
+        print(self.get_lowest_possible_superset_of_variant(name='Z381'))
+        sys.exit()
+
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
@@ -178,6 +190,8 @@ class Sort(object):
         
     def sort_step3(self):
         print("")
+        #print(self.get_matrix_row(1))
+        sys.exit()
         print("Processing Nones:")
         print("----------------")
         #variant list that have kits with negative (zero) values
@@ -221,8 +235,8 @@ class Sort(object):
     def stdout_coord(self,X,Y,moreInfo=False):
         if moreInfo:
             print("coord: "+str(X)+","+str(Y))
-        kit = self.get_X_val_by_order(X)
-        variant = self.get_Y_val_by_order(Y)
+        kit = self.get_kit_name_by_order(X)
+        variant = self.get_variant_name_by_order(Y)
         print("k|v: "+str(kit)+"|"+(variant))
         if moreInfo:
             print("value:"+str(self.NP[Y,X]))
@@ -239,7 +253,7 @@ class Sort(object):
     def get_cur_variant_list(self):
         return self.get_axis('variants',keysOnly=True)
         
-    def get_axis(self,orderByType=None,keysOnly=False):
+    def get_axis(self,orderByType=None,keysOnly=False): # gets the variant/col or kit/row names (and optionally order info too)
         if orderByType in ['variants','kits']:
             if orderByType == 'variants' : SCH = self.VARIANTS
             if orderByType == 'kits' : SCH = self.KITS
@@ -263,7 +277,7 @@ class Sort(object):
         if variantType:
             self.VARIANTS[val][1] = cnt
         
-    def get_Y_val_by_order(self,Y): #variant
+    def get_variant_name_by_order(self,Y): #get variant name
         variant = None
         for itm in list(self.VARIANTS.items()):
             if itm[1][1] == Y:
@@ -271,13 +285,79 @@ class Sort(object):
                 break
         return variant
         
-    def get_X_val_by_order(self,X): #kit
+    def get_kit_name_by_order(self,X): #get kit name
         kit = None
         for itm in list(self.KITS.items()):
             if itm[1][1] == X:
                 kit = itm[0]
                 break
         return kit
+        
+    def get_variant_order_by_name(self,y_val): #get variant order from its name
+        return self.VARIANTS[y_val][1]
+        
+    def get_kit_order_by_name(self,x_val): #get kit order from its name
+        return self.KITS[x_val][1]
+        
+    def get_matrix_row_data(self,row_order=None,name=None): #get same type variant data for each kit
+        if name is not None:
+            row_order = self.get_variant_order_by_name(name)
+        if row_order is not None:
+            return self.NP[row_order,]
+        
+    def get_matrix_col_data(self,col_order=None,name=None): #get all type variant data for one kit
+        if name is not None:
+            col_order = self.get_kit_order_by_name(name)
+        if col_order is not None:
+            return self.NP[:,col_order].T
+        
+    def get_matrix_row_indices_by_val(self,val,row_order=None,name=None): #like get_matrix_row_data but retrieves index info for given val
+        if name is not None:
+            row_order = self.get_variant_order_by_name(name)
+        if row_order is not None:
+            return np.argwhere(self.NP[row_order,] == val).T[1,]
+        
+    def get_matrix_col_indices_by_val(self,val,col_order=None,name=None): #like get_matrix_col_data but retrieves index info for given val
+        if name is not None:
+            col_order = self.get_kit_order_by_name(name)
+        if col_order is not None:
+            return np.argwhere(self.NP[:,col_order] == val)
+
+    def get_lowest_possible_superset_of_variant(self,order=None,name=None): #order is variant's order in matrix, name is variant name
+        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order,name=name)
+        print("...")
+        print("pos cond")
+        print("...")
+        print(pos_conditions)
+        #count total pos among req cols
+        #VAR = np.argwhere(self.NP[:,pos_conditions]==1) #[:,0]
+        VAR = np.argwhere(self.NP[:,pos_conditions]==1)[:,0]
+        unique_elements, counts_elements = np.unique(VAR, return_counts=True)
+        VAR2 = np.asarray((unique_elements, counts_elements))
+        print(".1..")
+        print(VAR2)
+        print(".2..")
+        print(self.CNTS['vp'])
+        print(".3..")
+        print(np.argwhere(VAR2[1,]==len(pos_conditions))[0,])
+        print(".4..")
+        #print(VAR)
+        #VAR1 = VAR[:,0]
+        #print(VAR.sum(1)==1) #[:,0])
+        #print("...")
+        #print("bef.argwhere")
+        #B = np.argwhere(self.NP==1)[:,0]
+        #print("aft.argwhere-prt")
+        #print(B)
+        #print("...")
+        #print("intersect")
+        #print(np.intersect1d(B, pos_conditions))
+        #print("...")
+        sys.exit()
+        #https://www.w3resource.com/python-exercises/numpy/python-numpy-exercise-94.php
+        #https://stackoverflow.com/questions/3797158/counting-non-zero-elements-within-each-row-and-within-each-column-of-a-2d-numpy
+        #https://stackoverflow.com/questions/25438420/indexes-of-elements-in-numpy-array-that-satisfy-conditions-on-the-value-and-the
+        #https://stackoverflow.com/questions/25438420/indexes-of-elements-in-numpy-array-that-satisfy-conditions-on-the-value-and-the
 
     def get_matrix_data(self):
 
@@ -658,10 +738,10 @@ class Sort(object):
         #negY = list(list(np.where(self.NP == 0))[0])
         #loop pos values 
         #for cnt1 in range(len(posX)):
-        #    V1 = self.get_Y_val_by_order(posY[cnt1])
+        #    V1 = self.get_variant_name_by_order(posY[cnt1])
         #    X1 = posX[cnt]
         #    for cnt2 in range(len(negX)):
-        #        V2 = self.get_Y_val_by_order(negY[cnt2])
+        #        V2 = self.get_variant_name_by_order(negY[cnt2])
         #        X2 = negX[cnt2]
         #        if X1==X2 and V1 != V2:
         #            self.MDATA[V1]['mix'].append(V2)
