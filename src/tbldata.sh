@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd $REDUX_ENV
+cd $REDUX_PATH
 
 DB="variant"
 TB="$1"

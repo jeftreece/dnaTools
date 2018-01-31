@@ -10,6 +10,7 @@
 
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
 from beautifultable import BeautifulTable
+import itertools
 from anytree import Node, RenderTree
 import copy #only used for STASHprint (debugging)
 from collections import OrderedDict
@@ -31,9 +32,16 @@ def debug_chk(var,msg,lev=0):
     if config[var] > lev:
         print(msg)
 
+def sql_on():
+    config['DEBUG_SQL'] = True
+    
+def sql_off():
+    config['DEBUG_SQL'] = False
+
 #}}}
 # conf {{{
 
+global config
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
     #print(conf)
@@ -67,6 +75,7 @@ class Sort(object):
         self.CNTS = {}
         self.NP = None
         self.NONES = []
+        self.MDATA = None
 
     # schema / sample data
 
@@ -93,7 +102,6 @@ class Sort(object):
                     vv = str(row['v'])
                     #s_calls
                     self.dbo.sql_exec("insert into s_calls (kit_id,variant_loc,assigned) values ('k"+str(k)+"','"+vv+"',"+kv+");")
-
     # matrix
 
     def sort_matrix(self):
@@ -101,6 +109,9 @@ class Sort(object):
         #db
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
+
+        #self.get_matrix_relations_data()
+        #sys.exit()
 
         #get counts
         self.sort_cnts()
@@ -140,32 +151,23 @@ class Sort(object):
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
 
-        debug_chk('DEBUG_MATRIX',"data - default",1)
-
-        #1st tbl out
+        #step 0
+        debug_chk('DEBUG_MATRIX',"data - step 0 (default)",1)
         self.stdout_tbl_matrix()
 
-
-        #2nd tbl prep 
-        self.sort_step1()
-
+        #step 1
         debug_chk('DEBUG_MATRIX',"data - step 1",1)
-
-        #2nd tbl out
+        self.sort_step1()
         self.stdout_tbl_matrix()
 
+        #step 2
         debug_chk('DEBUG_MATRIX',"data - step 2",1)
-
-        #2nd tbl prep
         self.sort_step2()
-
-        #2nd tbl out
         self.stdout_tbl_matrix()
 
-        #3rd tbl prep
+        #step 3
+        debug_chk('DEBUG_MATRIX',"data - step 3",1)
         self.sort_step3()
-
-        #3rd tbl out
         self.stdout_tbl_matrix()
 
         sys.exit()
@@ -196,17 +198,20 @@ class Sort(object):
         cnt = 0 
         new_orders = []
         for K,V in self.get_axis('variants'):
-            if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
+            #if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 not in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('vp'):
-            if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
+            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 not in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('variants'):
-            if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
+            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 in self.get_numpy_matrix_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
@@ -233,19 +238,21 @@ class Sort(object):
         print("Processing Nones:")
         print("----------------")
         #variant list that have kits with negative (zero) values
-        zlist = np.unique(np.argwhere(self.NP ==0)[:,0]).tolist()
+        zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
         #iterate all None situations
-        for non in ((np.argwhere(self.NP == None)).tolist()):
+        for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
-                for itm in list(self.VARIANTS.items()):
-                    if itm[1][1] == non[0]:
-                        variant = itm[0]
-                        break
-                for itm in list(self.KITS.items()):
-                    if itm[1][1] == non[1]:
-                        kit = itm[0]
-                        break
-                print("kit:"+str(kit)+",variant:"+str(variant))
+                self.stdout_coord(non[1],non[0])
+                #for itm in list(self.VARIANTS.items()):
+                #    if itm[1][1] == non[0]:
+                #        variant = itm[0]
+                #        break
+                #for itm in list(self.KITS.items()):
+                #    if itm[1][1] == non[1]:
+                #        kit = itm[0]
+                #        break
+                #print("kit:"+str(kit)+",variant:"+str(variant))
+
         print("")
         sys.exit()
         
@@ -287,12 +294,328 @@ class Sort(object):
         
     def stdout_tbl_matrix(self):
         debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',"big_matrix view{{"+"{",1)
         table = BeautifulTable()
         table.column_headers = ['top']+self.get_cur_kit_list()
         for K,V in self.get_axis('variants'):
             table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
+        #table = table.replace(" 0 ","\033[1;31m 0 \033[1;37m")
         debug_chk('DEBUG_MATRIX',table,1)
+        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
         debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',self.get_axis('kits',keysOnly=True),1)
+        debug_chk('DEBUG_MATRIX',self.get_axis('variants',keysOnly=True),1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',self.NP,1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        
+    def stdout_coord(self,X,Y,moreInfo=False):
+        if moreInfo:
+            print("coord: "+str(X)+","+str(Y))
+        kit = self.get_X_val_by_order(X)
+        variant = self.get_Y_val_by_order(Y)
+        print("k|v: "+str(kit)+"|"+(variant))
+        if moreInfo:
+            print("value:"+str(self.NP[Y,X]))
+        
+    def get_Y_val_by_order(self,Y): #variant
+        variant = None
+        for itm in list(self.VARIANTS.items()):
+            if itm[1][1] == Y:
+                variant = itm[0]
+                break
+        return variant
+        
+    def get_X_val_by_order(self,X): #kit
+        kit = None
+        for itm in list(self.KITS.items()):
+            if itm[1][1] == X:
+                kit = itm[0]
+                break
+        return kit
+        
+    def get_matrix_relations_data(self):
+
+        #sql - get negatives (without kits){{{
+
+        sql = '''
+            SELECT distinct V1.name, V2.name
+            FROM s_calls C1, s_calls C2,
+            s_variants V1, s_variants V2
+            WHERE
+            C1.kit_id = C2.kit_id AND
+            C1.assigned = 1 AND
+            C2.assigned = -1 AND
+            C1.variant_loc = V1.variant_loc AND
+            C2.variant_loc = V2.variant_loc
+            ORDER by 1,2;
+            '''
+
+        self.dbo.sql_exec(sql)
+        self.NEGA = self.dbo.fetchall()
+
+        #}}}
+        #sql - get positives (without kits) {{{
+
+        sql = '''
+            SELECT distinct V1.name, V2.name
+            FROM s_calls C1, s_calls C2,
+            s_variants V1, s_variants V2
+            WHERE
+            C1.kit_id = C2.kit_id AND
+            C1.assigned = 1 AND
+            C2.assigned = 1 AND
+            C1.variant_loc = V1.variant_loc AND
+            C2.variant_loc = V2.variant_loc AND
+            V1.variant_loc != V2.variant_loc AND
+            V1.name||'|'||V2.name NOT IN (
+                SELECT distinct QV1.name||'|'||QV2.name as name
+                FROM s_calls QC1, s_calls QC2,
+                s_variants QV1, s_variants QV2
+                WHERE
+                QC1.kit_id = QC2.kit_id AND
+                QC1.assigned = 1 AND
+                QC2.assigned = -1 AND
+                QC1.variant_loc = QV1.variant_loc AND
+                QC2.variant_loc = QV2.variant_loc)
+            ORDER by 1,2;
+            '''
+        self.dbo.sql_exec(sql)
+        self.POSA = self.dbo.fetchall()
+        print(F)
+
+        #}}}
+        #sql - get mixes (without kits){{{
+
+        sql = '''
+            SELECT distinct V1.name, V2.name
+            FROM s_calls C1, s_calls C2,
+            s_variants V1, s_variants V2
+            WHERE
+            C1.kit_id = C2.kit_id AND
+            C1.assigned = 1 AND
+            C2.assigned = 1 AND
+            C1.variant_loc = V1.variant_loc AND
+            C2.variant_loc = V2.variant_loc AND
+            V1.variant_loc != V2.variant_loc AND
+            V1.name||'|'||V2.name IN (
+                SELECT distinct QV1.name||'|'||QV2.name as name
+                FROM s_calls QC1, s_calls QC2,
+                s_variants QV1, s_variants QV2
+                WHERE
+                QC1.kit_id = QC2.kit_id AND
+                QC1.assigned = 1 AND
+                QC2.assigned = -1 AND
+                QC1.variant_loc = QV1.variant_loc AND
+                QC2.variant_loc = QV2.variant_loc)
+            ORDER by 1,2;
+            '''
+
+        self.dbo.sql_exec(sql)
+        self.MIXA = self.dbo.fetchall()
+        print(F)
+
+        #}}}
+        
+
+    def _bak_sort_step3(self):
+        print("")
+        print("Processing Nones:")
+        print("----------------")
+        #variant list that have kits with negative (zero) values
+        zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
+        #iterate all None situations
+        for non in ((np.argwhere(self.NP == -1)).tolist()):
+            if non[0] in zlist:
+                for itm in list(self.VARIANTS.items()):
+                    if itm[1][1] == non[0]:
+                        variant = itm[0]
+                        break
+                for itm in list(self.KITS.items()):
+                    if itm[1][1] == non[1]:
+                        kit = itm[0]
+                        break
+                print("kit:"+str(kit)+",variant:"+str(variant))
+
+        print("")
+
+        #print(np.nonzero(self.NP == 1)[:1])
+        #print(np.nonzero(self.NP == 1))
+        #print(((np.argwhere(self.NP == 1)))
+        #sys.exit()
+        #print(np.where(self.NP == 0))
+        #np.multiply(a,b)
+        #>>> a = np.array([[1,2],[3,4]])
+        #>>> b = np.array([[5],[7]])
+        #>>> np.multiply(a,b)
+
+        #class myarray(np.ndarray):
+        #    def __new__(cls, *args, **kwargs):
+        #        return np.array(*args, **kwargs).view(myarray)
+        #    def index(self, value):
+        #        return np.where(self==value)
+
+        #prep
+        NP = np.copy(self.NP.T)
+        N10 = np.arange(1,16)
+        NX = N10*NP
+        #NXt = np.copy(NX.T)
+        print(list(itertools.permutations(NX, 2)))
+
+        sys.exit()
+        print(NX)
+        sys.exit()
+        print("")
+
+        #(beg)is this really getting me combinations?
+        m,n = NX.shape
+        #x = np.array([x for i in range(m) for x in itertools.product(NX[i, 0 : 1], NX[i, 1 : n])])
+        x = np.array([x for i in range(m) for x in itertools.product(NX[i, 0 : n], NX[i, 1 : n])])
+        #(end)is this really getting me combinations?
+
+        print(x)
+        sys.exit()
+
+        NA = x[np.all(x != 0, axis=1)] #remove zeros
+
+        #print(np.unique(NA), axis=0) #dupes
+        print(np.unique(NA)) #dupes
+
+        #(beg)what is this doing?
+        #b = np.ascontiguousarray(NA).view(np.dtype((np.void, NA.dtype.itemsize * NA.shape[1])))
+        #_, idx = np.unique(b, return_index=True)
+        #unique_a = NA[idx]
+        #print(unique_a)
+        #(end)what is this doing?
+
+        #y = np.ascontiguousarray(x).view(np.dtype((np.void, x.dtype.itemsize * x.shape[1])))
+        #_, idx = np.unique(y, return_index=True)
+        #print(y)
+
+        #https://exceptionshub.com/permutations-with-unique-values.html
+        #https://stackoverflow.com/questions/19744542/itertools-product-eliminating-repeated-elements
+        #https://stackoverflow.com/questions/20764926/combinations-without-using-itertools-combinations
+        #https://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array
+        #https://www.w3resource.com/python-exercises/numpy/python-numpy-exercise-87.php
+        #https://stackoverflow.com/questions/38187286/find-unique-pairs-in-list-of-pairs
+        #https://stackoverflow.com/questions/29585379/efficient-way-of-making-a-list-of-pairs-from-an-array-in-numpy    
+
+        #print(NXt)
+        #print(NP.shape)
+        #print(NP.shape[1])
+
+        #m * c[:, np.newaxis]
+        #https://stackoverflow.com/questions/18522216/multiplying-across-in-a-numpy-array
+        #NP
+        #NP[NP > 0] = 5
+        #print(NP)
+
+        #self.get_matrix_relations_data()
+        #Note: these return in two arrays Array-Y(Variant-Axis),Array-X(kitAxis)
+        #print(np.nonzero(self.NP == 1))
+        #print(np.where(self.NP == 0))
+        #print(self.NP)
+        sys.exit()
+        
+    def _bak_get_matrix_relations_data(self):
+        self.MDATA = {}
+        
+        '''
+        for K,V in self.get_axis('variants'):
+
+            posY = list(list(np.nonzero(self.NP == 1))[0])
+
+            (1) grab all ones (x,y) coords
+            (2) what are the unique y's in that (these are the known positive variants)
+            (3) per row ... isolate those situations where we see a
+            (4) what are the unique combos of 1,1's (per row)
+            (5) what are the unique combos of 1,0's (per row)
+
+            3 is k1
+            4 is k2
+
+            6 is A col
+            7 is B col
+
+            0 is false
+            1 is true
+
+            k = A+, k = B-
+            k = A+, k = B-
+
+            convert matrix to -1,1,None 
+            then multiple 1/-1 by variant order num (+1)
+            may not need -> P = get uniq k+
+            P = get uniq k1+,k2+ combos (as names or order ids) --> at least one pos num (no Nones)
+            rP = get reverse P combos (as names or order ids)
+            uP = uniq(P + rP)
+            N = get uniq k1+,k2- combos (as names or order ids)
+            intersection(uP + N) = mix
+            outside(uP + N - favor uP) = pos
+            outside(uP + N - favor N) = neg
+            
+            ----
+            v,k,b
+            ----
+            get uniq x|6|0
+             A:-
+            get uniq x|6|1
+             A:3|6|1 > what 3|(not 6)|0 exist?
+             A:4|6|1 > what 4|(not 6)|0 exist? (first case, ... becomes mix for 6 -- and 6 locked down)
+             A:5|6|1 > what 5|(not 6)|0 exist?
+            get uniq x|7|0
+             A:3|7|0
+            get uniq x|7|1
+             A:4|7|1
+            3,6,1  4,6,1    3,7,1    4,7,0
+            A+     A+       B+       B-
+            ----
+            A mix{B}
+            filter on all 6's ... is there a 0|1?
+
+            ----
+            v,k,b
+            ----
+            3,6,1  4,6,1    3,7,1    4,7,1
+            A+     A+       B+       B+
+            ----
+            A pos{B}
+
+            https://stackoverflow.com/questions/38187286/find-unique-pairs-in-list-of-pairs
+            https://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array/16973510#16973510
+            https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
+
+            find unique(pos-pos in same kits)
+            find unique(pos-neg in same kits)
+        '''
+
+        #mix ->A+ on k5,k6,k7 .... B- k5, B+ k7
+        #for each variant:
+        #    get me the set of kit rows where we see positive vals
+        #        for these combo of rows:
+        #            what are the unique other pos variants
+        #              - is there at least one pos, no neg: pos
+        #              - is there at least one pos, one neg: mix
+        #            what are the unique neg variants that we haven't seen yet?
+        #              - these are all negs
+
+        #{{{
+        #Note: these return in two arrays Array-Y(Variant-Axis),Array-X(kitAxis)
+        #like this: (array([ 0,x,x,x...]),array([x,x,,...]))
+        #posX = list(list(np.nonzero(self.NP == 1))[1])
+        #posY = list(list(np.nonzero(self.NP == 1))[0])
+        #negX = list(list(np.where(self.NP == 0))[1])
+        #negY = list(list(np.where(self.NP == 0))[0])
+        #loop pos values 
+        #for cnt1 in range(len(posX)):
+        #    V1 = self.get_Y_val_by_order(posY[cnt1])
+        #    X1 = posX[cnt]
+        #    for cnt2 in range(len(negX)):
+        #        V2 = self.get_Y_val_by_order(negY[cnt2])
+        #        X2 = negX[cnt2]
+        #        if X1==X2 and V1 != V2:
+        #            self.MDATA[V1]['mix'].append(V2)
+        #}}}
 
     # tree
     # TODO: set up a random approach to pushing data into the sort. troubleshoot results

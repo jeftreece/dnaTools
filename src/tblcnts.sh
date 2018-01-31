@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd $REDUX_ENV
+cd $REDUX_PATH
 
 if [ "$1" == "clades" ]; then
     cd ../clades
