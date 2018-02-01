@@ -114,6 +114,9 @@ class Sort(object):
         #get data
         self.get_matrix_data()
 
+        #stdout relations data
+        self.stdout_matrix_relations_data()
+
         #step 0
         debug_chk('DEBUG_MATRIX',"data - step 0 (default)",1)
         self.stdout_tbl_matrix()
@@ -137,19 +140,15 @@ class Sort(object):
 
     def sort_step1(self):
 
-        #print("...")
+        #(beg)debugging
         #print('kB')
         #print(self.get_matrix_col_data(name='kB'))
-        #print("...")
         #print('Z381')
         #print(self.get_matrix_row_data(name='Z381'))
-        #print("...")
         #print(self.get_matrix_row_indices_by_val(1,name='Z381'))
-        #print("...")
         #print(self.get_max_subset_variants(name='Z381'))
-        #sys.exit()
-        self.stdout_matrix_relations_data()
-        sys.exit()
+        #(end)debugging
+
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
@@ -197,11 +196,16 @@ class Sort(object):
         print("----------------")
         #variant list that have kits with negative (zero) values
         zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
+        #print((np.argwhere(self.NP == -1)).tolist())
+        #sys.exit()
         #iterate all None situations
         for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
-                print(self.get_coord(non[1],non[0]) + "("+str(self.get_min_superset_variant(order=non[0]))+")")
-                print("  - "+self.get_max_subset_variants(order=non[0]))
+                coord = self.get_coord(non[1],non[0])
+                superset = str(self.get_min_superset_variant(order=non[0]))
+                subsets = ",".join(self.get_max_subset_variants(order=non[0]))
+                #print(self.get_coord(non[1],non[0]) + "("+str(=non[0]))+")")
+                print("%s (%s) (%s)" % (coord, superset, subsets))
                 #for itm in list(self.VARIANTS.items()):
                 #    if itm[1][1] == non[0]:
                 #        variant = itm[0]
@@ -227,11 +231,14 @@ class Sort(object):
         #table = table.replace(" 0 ","\033[1;31m 0 \033[1;37m")
         debug_chk('DEBUG_MATRIX',table,1)
         debug_chk('DEBUG_MATRIX',"}}"+"}",1)
+        debug_chk('DEBUG_MATRIX',"small_matrix view{{"+"{",1)
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',self.get_axis('kits',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',self.get_axis('variants',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',self.NP,1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
         debug_chk('DEBUG_MATRIX',"",1)
         
     def stdout_matrix_relations_data(self,dataStr='',run=0):
@@ -245,6 +252,7 @@ class Sort(object):
         print("mix:"+str(len(self.MIXA)))
         print("pos:"+str(len(self.POSA)))
         print("neg:"+str(len(self.NEGA)))
+        print("unk:"+str(len(self.UNKA)))
         print("")
         #print data
         print("relation data:")
@@ -253,7 +261,8 @@ class Sort(object):
             M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
             P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
             N = ",".join(sorted([itm2[1] for itm2 in self.NEGA if itm2[0] == K]))
-            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"]")
+            U = ",".join(sorted([itm2[1] for itm2 in self.UNKA if itm2[0] == K]))
+            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"], unk:["+str(U.lower())+"]")
         print("")
         if dataStr != '' and run != 0:
             print("}}"+"}") #end vim marker
@@ -377,7 +386,7 @@ class Sort(object):
         idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
         min_superset_pos_cnt = 0 #default for loop coming up
         min_superset_variant = None #default for loop coming up
-        for super_v in np.delete(VAR3, idx): # here we use idx (mentioned above)
+        for super_v in np.delete(VAR3, idx): # here we exclude idx (mentioned above)
             tmp_name = self.get_variant_name_by_order(super_v)
             if self.CNTS['vp'][tmp_name] > len(pos_conditions): #has to be bigger than the default
                 if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
@@ -389,32 +398,47 @@ class Sort(object):
         if name is not None:
             order = self.get_variant_order_by_name(name)
         pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=order)
-        VAR1 = np.argwhere(self.NP[:,pos_conditions]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
-        unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
-        VAR2 = np.asarray((unique_elements, counts_elements)).T
-        VAR3 = VAR2[:,1]
-        VAR4 = self.get_variant_name_by_order(VAR2[:,1])
-        VAR5 = np.asarray((VAR3,VAR4))
-        #...(working here)
-        idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
-        min_superset_pos_cnt = 0 #default for loop coming up
-        min_superset_variant = None #default for loop coming up
-        for sub_v in np.delete(VAR3, idx): # here we use idx (mentioned above)
-            tmp_name = self.get_variant_name_by_order(sub_v)
-            if self.CNTS['vp'][tmp_name] > len(pos_conditions): #has to be less than the default
-                if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
-                    min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
-                    min_superset_variant = tmp_name # we have a candidate!
-        sys.exit()
-        return min_superset_variant #yes, there is one, return it
-        print("VAR2")
-        print(VAR2)
-        print("VAR5")
-        print(VAR5)
-        #TODO : need to figure this out
-        print("")
-        sys.exit()
-        return
+        VAR1p = np.argwhere(self.NP[:,pos_conditions]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
+        VAR1u = np.argwhere(self.NP[:,pos_conditions]==0)[:,0] #looking for variants w/unk assignments like the incoming variant's pos conditions
+        unique_elements_p, counts_elements_p = np.unique(VAR1p, return_counts=True)
+        unique_elements_u, counts_elements_u = np.unique(VAR1u, return_counts=True)
+        VAR2p = np.asarray((unique_elements_p, counts_elements_p)).T
+        VAR2u = np.asarray((unique_elements_u, counts_elements_u)).T
+        VAR2x = np.concatenate((VAR2p,VAR2u), axis=0)
+        #Note: for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
+        #beg - adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
+        unq, unq_inv = np.unique(VAR2x[:,0], return_inverse=True)
+        out = np.zeros((len(unq), VAR2x.shape[1]), dtype=VAR2x.dtype) #create empty array to put the added values
+        out[:, 0] = unq #fill the first column
+        np.add.at(out[:, 1:], unq_inv, VAR2x[:, 1:])
+        #end - adding technique
+        #print("1---...")
+        #print(out)
+        #print("2---...")
+        #print(pos_conditions)
+        #print("3---...")
+        VAR2x = list(filter(lambda row: row[1]<len(pos_conditions), out)) #has to have less than what the incoming variant had in count
+        if len(VAR2x) == 0:
+            return [] #there are no subsets according to the filter
+        VAR2 = np.array(VAR2x)[:,0] #has to have less than what the incoming variant had in count
+        #print(VAR2)
+        #print("5---...")
+        #VAR4 = self.get_variant_name_by_order(VAR2[:,1]) #so I can read what they are (optional)
+        #VAR5 = np.asarray((VAR3,VAR4)) #again, to help me see what's going on (optional)
+        idx = np.argwhere(VAR2==order) # idx - make sure we exclude this routine's incoming variant
+        max_subset_variant = [] #default for loop coming up
+        #print("...")
+        #print(VAR3)
+        #print("...")
+        #print(VAR4)
+        #print("...")
+        #print(VAR5)
+        #print("...")
+        #print(VAR2)
+        for sub_v in np.delete(VAR2, idx): # here we exclude idx (mentioned above)
+            max_subset_variant.append(self.get_variant_name_by_order(sub_v))
+        #print(max_subset_variant)
+        return max_subset_variant
 
     def get_matrix_data(self):
 
@@ -606,6 +630,35 @@ class Sort(object):
         self.MIXA = self.dbo.fetchall()
 
         #}}}
+        #sql - get unknowns (without kits) {{{
+
+        sql = '''
+            SELECT distinct V1.name, V2.name
+            FROM s_calls C1, s_calls C2,
+            s_variants V1, s_variants V2
+            WHERE
+            C1.kit_id = C2.kit_id AND
+            C1.assigned = 1 AND
+            C2.assigned = 0 AND
+            C1.variant_loc = V1.variant_loc AND
+            C2.variant_loc = V2.variant_loc AND
+            V1.variant_loc != V2.variant_loc AND
+            V1.name||'|'||V2.name NOT IN (
+                SELECT distinct QV1.name||'|'||QV2.name as name
+                FROM s_calls QC1, s_calls QC2,
+                s_variants QV1, s_variants QV2
+                WHERE
+                QC1.kit_id = QC2.kit_id AND
+                QC1.assigned = 1 AND
+                (QC2.assigned = -1 OR QC2.assigned == 1) AND
+                QC1.variant_loc = QV1.variant_loc AND
+                QC2.variant_loc = QV2.variant_loc)
+            ORDER by 1,2;
+            '''
+        self.dbo.sql_exec(sql)
+        self.UNKA = self.dbo.fetchall()
+
+        #}}}
 
     def _bak_sort_step3(self):
         print("")
@@ -614,6 +667,8 @@ class Sort(object):
         #variant list that have kits with negative (zero) values
         zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
         #iterate all None situations
+        print((np.argwhere(self.NP == -1)).tolist())
+        sys.exit()
         for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
                 for itm in list(self.VARIANTS.items()):
