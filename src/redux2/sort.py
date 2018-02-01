@@ -240,12 +240,15 @@ class Sort(object):
             print(str(dataStr)+"{{"+"{") #beg vim marker
         print("")
         #print counts
-        print("mix cnt:"+str(len(self.MIXA)))
-        print("pos cnt:"+str(len(self.POSA)))
-        print("neg cnt:"+str(len(self.NEGA)))
+        print("relation counts:")
+        print("-------------------------")
+        print("mix:"+str(len(self.MIXA)))
+        print("pos:"+str(len(self.POSA)))
+        print("neg:"+str(len(self.NEGA)))
         print("")
         #print data
-        print("relations data:")
+        print("relation data:")
+        print("-------------------------")
         for K in sorted(list(set([itm1[0] for itm1 in self.MIXA]+[itm1[0] for itm1 in self.POSA]+[itm1[0] for itm1 in self.NEGA]))):
             M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
             P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
