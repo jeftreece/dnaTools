@@ -146,9 +146,10 @@ class Sort(object):
         #print("...")
         #print(self.get_matrix_row_indices_by_val(1,name='Z381'))
         #print("...")
-        print(self.get_max_subset_variants(name='Z381'))
+        #print(self.get_max_subset_variants(name='Z381'))
+        #sys.exit()
+        self.stdout_matrix_relations_data()
         sys.exit()
-
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
@@ -199,7 +200,8 @@ class Sort(object):
         #iterate all None situations
         for non in ((np.argwhere(self.NP == -1)).tolist()):
             if non[0] in zlist:
-                print(self.stdout_coord(non[1],non[0]) + "("+str(self.get_min_superset_variant(order=non[0]))+")")
+                print(self.get_coord(non[1],non[0]) + "("+str(self.get_min_superset_variant(order=non[0]))+")")
+                print("  - "+self.get_max_subset_variants(order=non[0]))
                 #for itm in list(self.VARIANTS.items()):
                 #    if itm[1][1] == non[0]:
                 #        variant = itm[0]
@@ -232,7 +234,28 @@ class Sort(object):
         debug_chk('DEBUG_MATRIX',self.NP,1)
         debug_chk('DEBUG_MATRIX',"",1)
         
-    def stdout_coord(self,X,Y,moreInfo=False):
+    def stdout_matrix_relations_data(self,dataStr='',run=0):
+        if dataStr != '' and run != 0:
+            print("---")
+            print(str(dataStr)+"{{"+"{") #beg vim marker
+        print("")
+        #print counts
+        print("mix cnt:"+str(len(self.MIXA)))
+        print("pos cnt:"+str(len(self.POSA)))
+        print("neg cnt:"+str(len(self.NEGA)))
+        print("")
+        #print data
+        print("relations data:")
+        for K in sorted(list(set([itm1[0] for itm1 in self.MIXA]+[itm1[0] for itm1 in self.POSA]+[itm1[0] for itm1 in self.NEGA]))):
+            M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
+            P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
+            N = ",".join(sorted([itm2[1] for itm2 in self.NEGA if itm2[0] == K]))
+            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"]")
+        print("")
+        if dataStr != '' and run != 0:
+            print("}}"+"}") #end vim marker
+
+    def get_coord(self,X,Y,moreInfo=False):
         buf = ""
         if moreInfo:
             buf = "coord: "+str(X)+","+str(Y)
@@ -242,7 +265,7 @@ class Sort(object):
         if moreInfo:
             buf = buf + "value:"+str(self.NP[Y,X])
         return buf
-
+        
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
         
@@ -369,8 +392,24 @@ class Sort(object):
         VAR3 = VAR2[:,1]
         VAR4 = self.get_variant_name_by_order(VAR2[:,1])
         VAR5 = np.asarray((VAR3,VAR4))
+        #...(working here)
+        idx = np.argwhere(VAR3==order) # idx - make sure we exclude the incoming variant
+        min_superset_pos_cnt = 0 #default for loop coming up
+        min_superset_variant = None #default for loop coming up
+        for sub_v in np.delete(VAR3, idx): # here we use idx (mentioned above)
+            tmp_name = self.get_variant_name_by_order(sub_v)
+            if self.CNTS['vp'][tmp_name] > len(pos_conditions): #has to be less than the default
+                if min_superset_pos_cnt == 0 or self.CNTS['vp'][tmp_name] < min_superset_pos_cnt:
+                    min_superset_pos_cnt = self.CNTS['vp'][tmp_name]
+                    min_superset_variant = tmp_name # we have a candidate!
+        sys.exit()
+        return min_superset_variant #yes, there is one, return it
+        print("VAR2")
+        print(VAR2)
+        print("VAR5")
         print(VAR5)
         #TODO : need to figure this out
+        print("")
         sys.exit()
         return
 
