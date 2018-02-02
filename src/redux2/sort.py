@@ -202,21 +202,21 @@ class Sort(object):
         print("Processing Nones:")
         print("----------------")
         #variant list that have kits with negative (zero) values
-        zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
+        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
         #print((np.argwhere(self.NP == -1)).tolist())
         #sys.exit()
         #iterate all None situations
-        for non in ((np.argwhere(self.NP == -1)).tolist()):
+        for non in ((np.argwhere(self.NP == 0)).tolist()):
             if non[0] in zlist: #non[0] = variant_order, non[1] = kit_order
                 coord = self.get_coord(non[1],non[0])
+                print(coord)
                 superset = str(self.get_min_superset_variant(variant_order=non[0]))
-                #print(coord)
                 #print(superset)
-                #print(non[0])
-                #print(coord)
                 subsets = ",".join(self.get_subset_variants(override_val=1,variant_order=non[0],kit_order=non[1]))
+                print("...")
+                #print(subsets)
                 #print(self.get_coord(non[1],non[0]) + "("+str(=non[0]))+")")
-                print("---%s (%s) (%s)" % (coord, superset, subsets))
+                #print("---%s (%s) (%s)" % (coord, superset, subsets))
                 #for itm in list(self.VARIANTS.items()):
                 #    if itm[1][1] == non[0]:
                 #        variant = itm[0]
@@ -406,73 +406,31 @@ class Sort(object):
         def get_subsets(pc,vo):
             VAR1p = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
             VAR1u = np.argwhere(self.NP[:,pc]==0)[:,0] #looking for variants w/unk assignments like the incoming variant's pos conditions
-            #...
             idxP = np.argwhere(VAR1p==vo) #idx make sure we exclude the incoming variant
             idxU = np.argwhere(VAR1u==vo) #idx make sure we exclude the incoming variant
-            #...
             VAR2p = np.delete(VAR1p, idxP)
             VAR2u = np.delete(VAR1u, idxU)
-            #...
             unique_elements_p, counts_elements_p = np.unique(VAR2p, return_counts=True)
             unique_elements_u, counts_elements_u = np.unique(VAR2u, return_counts=True)
-            #...
             VAR3p = np.asarray((unique_elements_p, counts_elements_p)).T
             VAR3u = np.asarray((unique_elements_u, counts_elements_u)).T
-            #...
             VAR3x = np.concatenate((VAR3p,VAR3u), axis=0)
-            #print("...1....")
-            #print(VAR3x)
             #Note: for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
             #beg - adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
             unq, unq_inv = np.unique(VAR3x[:,0], return_inverse=True)
             out = np.zeros((len(unq), VAR3x.shape[1]), dtype=VAR3x.dtype) #create empty array to put the added values
             out[:, 0] = unq #fill the first column
             np.add.at(out[:, 1:], unq_inv, VAR3x[:, 1:])
-            #print(out)
-            #sys.exit()
             #end - adding technique
-            #...
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
             out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-            #print("...2....")
-            #print(out1)
-            #sys.exit()
-            #out[out[:,1].argsort()] #normal sort (2nd col)
-            #VAR4 = list(filter(lambda row: row[1]<len(pc), out1)) #has to have less than what the incoming variant had in count
-            print("...1...")
-            print(out1)
-            print("...1b...")
-            print(pc)
             VAR4 = np.argwhere(out1[:,1]<len(pc)) #[:,0]
-            print("...2...")
-            print(list(VAR4.T[0]))
-            out2 = out1[:,0]
-            print("...3...")
-            print(out2)
-            VAR5 = out2[:,list(VAR4.T[0])]
-            #TODO: (working) ... the reason I'm refactoring here is so I can
-            #get multiple subsets out. And Ordered. BAsically like the superset
-            #routine. I also want to be able to work with override data.
-            #(line42 is where I'm currently at, debugging) 
-            print("...4...")
-            print(VAR5)
-            sys.exit()
-            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
-            out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-            sys.exit()
-            #print("...3....")
-            print("...3...")
-            print(VAR4)
-            sys.exit()
-            if len(VAR4) == 0: return [] #there are no subsets according to the filter
-            VAR5 = np.array(VAR4)[:,0] #strip the count col
-            print("...4....")
-            print(VAR5)
-            #idx = np.argwhere(VAR5==vo) # idx - make sure we exclude this routine's incoming variant
-            #subsets = [] #default for loop coming up
-            #for sub_v in np.delete(VAR5, idx): # here we exclude idx (mentioned above)
-            #    subsets.append(self.get_variant_name_by_order(sub_v))
-            return VAR5
+            out2a = out1[:,0]
+            out2b = out1[:,1]
+            VAR5a = out2a[list(VAR4.T[0])] #these are the superset variant orders ids (in order, max first)
+            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant order ids (in order, max first)
+            VAR6 = np.asarray((VAR5a,VAR5b)).T #merged for return
+            return VAR6
         
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
@@ -481,33 +439,26 @@ class Sort(object):
 
         overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
         #...
-        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #defualt pos conditions
+        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #default pos conditions
         pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         #...
-        #subs = get_subsets(pos_conditions,variant_order)
-        #subsP = get_subsets(pos_conditionsP,variant_order)
-        #subsN = get_subsets(pos_conditionsN,variant_order)
-        #...
-        subs = self.get_superset_variants(variant_order=get_subsets(pos_conditions,variant_order))
-        subsP = self.get_superset_variants(variant_order=get_subsets(pos_conditionsP,variant_order))
-        subsN = self.get_superset_variants(variant_order=get_subsets(pos_conditionsN,variant_order))
+        #subs = self.get_superset_variants(variant_order=get_subsets(pos_conditions,variant_order))
+        #subsP = self.get_superset_variants(variant_order=get_subsets(pos_conditionsP,variant_order))
+        #subsN = self.get_superset_variants(variant_order=get_subsets(pos_conditionsN,variant_order))
+        subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0])
+        subsP = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsP,variant_order)[:,0])
+        subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0])
         sups = self.get_superset_variants(variant_order=variant_order)
-        #...
-        #sups = get_supersets(pos_conditions,variant_order)[:,0] #take out the counts
-        #return self.get_variant_name_by_order(variant_order=sups)
-        #...
-        print("...")
-        print("[subsetsP]")
-        print(subsP)
-        print("[subsets]")
+        print("- subsets:")
         print(subs)
-        print("[subsetsN]")
+        print("- subsetsP:")
+        print(subsP)
+        print("- subsetsN:")
         print(subsN)
-        print("[supsets]")
+        print("- sups:")
         print(sups)
-        print("...")
-        sys.exit()
+        #sys.exit()
         #...
         maxListD = list(set(subsP)-set(sups)) #take out the supersets (not preserving order)
 
@@ -800,11 +751,11 @@ class Sort(object):
         print("Processing Nones:")
         print("----------------")
         #variant list that have kits with negative (zero) values
-        zlist = np.unique(np.argwhere(self.NP == 0)[:,0]).tolist()
+        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
         #iterate all None situations
-        print((np.argwhere(self.NP == -1)).tolist())
-        sys.exit()
-        for non in ((np.argwhere(self.NP == -1)).tolist()):
+        #print((np.argwhere(self.NP == 0)).tolist())
+        #sys.exit()
+        for non in ((np.argwhere(self.NP == 0)).tolist()):
             if non[0] in zlist:
                 for itm in list(self.VARIANTS.items()):
                     if itm[1][1] == non[0]:
