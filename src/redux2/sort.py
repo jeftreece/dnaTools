@@ -479,17 +479,23 @@ class Sort(object):
 
         overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
         #...
-        #pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #defualt pos conditions
+        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #defualt pos conditions
         pos_conditionsO = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         #...
-        #maxList = get_subsets(pos_conditions,variant_order)
-        maxListO = get_subsets(pos_conditionsO,variant_order)
+        subsets = get_subsets(pos_conditions,variant_order)
+        subsetsO = get_subsets(pos_conditionsO,variant_order)
         #...
         #maxListD = list(set(maxListO)-set(maxList))
         #print("O:%s" % maxListO)
         #print("-:%s" % maxList)
-        (pc,superset) = self.get_superset_variants(variant_order=variant_order) #we don't need the resulting pc
-        maxListD = list(set(maxListO)-set(superset)) #take out the supersets
+        (pc,sup) = self.get_superset_variants(variant_order=variant_order) #we don't need the resulting pc
+        superset = self.get_variant_name_by_order(variant_order=sup)
+        print(subsetsO)
+        print(subsets)
+        print("x2xx")
+        print(superset)
+        print("x3xx")
+        maxListD = list(set(subsetsO)-set(superset)) #take out the supersets
 
         return maxListD
 
