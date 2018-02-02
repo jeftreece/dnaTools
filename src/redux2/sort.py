@@ -402,6 +402,9 @@ class Sort(object):
     def get_superset_variants(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
 
         def get_supersets(pc,vo):
+            allPos = np.argwhere(self.NP==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+            print(allPos)
+            sys.exit()
             #Note: (working) ... what I need to do ... is create a VAR0 that
             #does the argwhere without the pc condition... and then run VAR1
             #type command with VAR3 result; then sort that ... and then that
@@ -411,6 +414,8 @@ class Sort(object):
             #override the point... then follow all the steps. not sure about row
             #grab though
             VAR1 = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+            print(VAR1)
+            sys.exit()
             unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
             VAR2 = np.asarray((unique_elements, counts_elements)).T
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
@@ -567,18 +572,6 @@ class Sort(object):
         #print(rowO)
         #sys.exit()
         return rowO
-        
-    #def get_col_when_value_override_coord(self,override_val,kit_order=None,variant_order=None,kit_name=None,variant_name=None):
-    #    #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-    #    col = self.get_matrix_col_data(row_order=variant_order)
-    #    #(beg) this technique found here: https://stackoverflow.com/questions/6431973/how-to-copy-data-from-a-numpy-array-to-another
-    #    #note: this is necessary because otherwise, it seems to be working from
-    #    #      the same memory pointer when I push the override test value in
-    #    colO = np.empty_like(col)
-    #    colO[:] = col
-    #    #(end)
-    #    colO[variant_order,0] = override_val
-    #    return colO
 
     def get_matrix_data(self):
 
