@@ -206,7 +206,7 @@ class Sort(object):
                 #print(coord)
                 #print(superset)
                 #print(non[0])
-                print(coord)
+                #print(coord)
                 subsets = ",".join(self.get_max_subset_variants(override_val=1,variant_order=non[0],kit_order=non[1]))
                 #print(self.get_coord(non[1],non[0]) + "("+str(=non[0]))+")")
                 print("---%s (%s) (%s)" % (coord, superset, subsets))
