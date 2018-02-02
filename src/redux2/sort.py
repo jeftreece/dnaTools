@@ -51,6 +51,13 @@ except:
 sys.path.append(config['REDUX_PATH'])
 
 #}}}
+#colors {{{
+
+RED = '\033[31m' #Z=1,N=1
+GREEN = '\033[32m'
+WHITE = '\033[37m'
+
+# }}}
 
 class Sort(object):
     
@@ -240,7 +247,7 @@ class Sort(object):
         debug_chk('DEBUG_MATRIX',self.get_axis('kits',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',self.get_axis('variants',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX',self.NP,1)
+        debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',"}}"+"}",1)
         debug_chk('DEBUG_MATRIX',"",1)
