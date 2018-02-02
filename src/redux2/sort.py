@@ -430,6 +430,7 @@ class Sort(object):
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
             out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
             VAR4 = np.argwhere(out1[:,1]<len(pc)) #[:,0]
+            #end - sorting technique
             out2a = out1[:,0]
             out2b = out1[:,1]
             VAR5a = out2a[list(VAR4.T[0])] #these are the superset variant orders ids (in order, max first)
@@ -448,13 +449,11 @@ class Sort(object):
         pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         #...
-        #subs = self.get_superset_variants(variant_order=get_subsets(pos_conditions,variant_order))
-        #subsP = self.get_superset_variants(variant_order=get_subsets(pos_conditionsP,variant_order))
-        #subsN = self.get_superset_variants(variant_order=get_subsets(pos_conditionsN,variant_order))
         subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0])
         subsP = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsP,variant_order)[:,0])
         subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0])
-        sups = self.get_superset_variants(variant_order=variant_order)
+        sups = self.get_supset_variants(variant_order=variant_order)
+        #...
         print("- subsets:")
         print(subs)
         print("- subsetsP:")
@@ -463,14 +462,13 @@ class Sort(object):
         print(subsN)
         print("- sups:")
         print(sups)
-        #sys.exit()
         #...
         maxListD = list(set(subsP)-set(sups)) #take out the supersets (not preserving order)
 
         return maxListD
-    def get_superset_variants(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
+    def get_supset_variants(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
 
-        def get_supersets(pc,vo):
+        def get_supsets(pc,vo):
             VAR1 = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
             unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
             VAR2 = np.asarray((unique_elements, counts_elements)).T
@@ -492,13 +490,13 @@ class Sort(object):
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
         pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order)
-        sups = get_supersets(pos_conditions,variant_order)[:,0] #take out the counts
+        sups = get_supsets(pos_conditions,variant_order)[:,0] #take out the counts
         return self.get_variant_name_by_order(variant_order=sups)
         
     def get_min_superset_variant(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
-        sups = self.get_superset_variants(variant_order=variant_order)
+        sups = self.get_supset_variants(variant_order=variant_order)
         if len(sups) is 0:
             return None
         else:
