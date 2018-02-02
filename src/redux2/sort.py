@@ -402,84 +402,38 @@ class Sort(object):
     def get_superset_variants(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
 
         def get_supersets(pc,vo):
-            allPos = np.argwhere(self.NP==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
-            print(allPos)
-            sys.exit()
-            #Note: (working) ... what I need to do ... is create a VAR0 that
-            #does the argwhere without the pc condition... and then run VAR1
-            #type command with VAR3 result; then sort that ... and then that
-            #gets me superset variants (ordered)
-            #Note: need to think about this, but I think perhaps with the
-            #override ... I create a copy of VAR0 ...(no pointers) ... then
-            #override the point... then follow all the steps. not sure about row
-            #grab though
             VAR1 = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
-            print(VAR1)
-            sys.exit()
             unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
             VAR2 = np.asarray((unique_elements, counts_elements)).T
-            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
-            #VAR2x = VAR2[VAR2[:,1].argsort()] #normal sort (2nd col)
-            #VAR2x = VAR2[VAR2[:,1].argsort()[::-1]] #reverse sort (2nd col)
-            #VAR3 = VAR2x[VAR2[:,1]==len(pc)][:,0] #has to have at least what the incoming variant had in count
-            print(VAR2)
             VAR2x = VAR2[VAR2[:,1]==len(pc)] #has to have at least what the incoming variant had in count
-            VAR3 = VAR2x[:,0] #shave off the counts col
-            #VAR2x = list(filter(lambda row: row[1]==len(pc), out1)) #has to have less than what the incoming variant had in count
+            idx = np.argwhere(VAR2x[:,0]==vo) # idx - do last - make sure we exclude the incoming variant
+            VAR3 = np.delete(VAR2x[:,0], idx) #do this last
             if len(VAR3) == 0: return [] #there are no supsets according to the filter
-            row = self.get_matrix_row_data(row_order=variant_order)
-            rowC = np.empty_like(row) #copy the original row, we don't want to mess with memory pointers
-            rowC[:] = row #also needed for copy
-            #supsets = np.empty_like(VAR2x) #default for loop coming up
-            supsets = []  #default for loop coming up
-            #print(VAR2x)
-            #[[ 1  5]
-            # [ 2  5]
-            # [ 3  5]
-            # [11  5]]
-            print(VAR3) #[ 1  2  3 11]
-            print(rowC) #[[ 0  1  1  1  1  1 -1 -1 -1 -1]]
-            sys.exit()
-            for sup_v in VAR3:
-                supsets.append(rowC[sup_v])
-            print(supsets) #Note: I think this might be what I want? (exluding idx?)
-            sys.exit()
-            #======
-            #Note: I also might want to have the ability to do overrides here too (both here and in the previous section)
-            #VAR3[0,vo] = override_val
-            #rowO[0,kit_order] = override_val
-            #======
-            #idx = np.argwhere(VAR3==vo) # idx - make sure we exclude the incoming variant
-            idx = np.argwhere(VAR3[:,0]==vo) # idx - do last - make sure we exclude the incoming variant
-            VAR4 = np.delete(VAR3, idx) #do this last
-            return supsets
+            #(beg) master list of all positives
+            allPos = np.argwhere(self.NP==1)[:,0]
+            unique_elements, counts_elements = np.unique(allPos, return_counts=True)
+            AP = np.asarray((unique_elements, counts_elements))[1,]
+            #(end) master list of all positives
+            VAR5 = AP[list(VAR3),] #extrapolate the right subset mix to master list of all positives
+            VAR6 = np.asarray((VAR3,VAR5)).T
+            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
+            VAR7 = VAR6[VAR6[:,1].argsort()] #normal sort (2nd col) - so we can get the minimum ones first
+            return VAR7
 
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
-        #...
         pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order)
-        sups = get_supersets(pos_conditions,variant_order)
-        supersets = self.get_variant_name_by_order(variant_order=sups)
-        #...
-        #Note: here we want to return a sorted list (so requires putting in overrides,sorting)
-        #Note: do the get variant name by order thing last ... on an array
-        #Note: working here
-        vn = self.get_variant_name_by_order(superset_vo)
-        return (superset_variants,pos_conditions) #returns ord  
+        sups = get_supersets(pos_conditions,variant_order)[:,0] #take out the counts
+        return self.get_variant_name_by_order(variant_order=sups)
         
     def get_min_superset_variant(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
-        (superset_variants,pos_conditions) = self.get_superset_variants(variant_order=variant_order)
-        min_superset_pos_cnt = 0 #default for loop coming up
-        min_superset_variant = None #default for loop coming up
-        for vo in superset_variants: # here we exclude idx (mentioned above)
-            vn = self.get_variant_name_by_order(variant_order=vo)
-            if self.CNTS['vp'][vn] > len(pos_conditions): #has to be bigger than the default
-                if min_superset_pos_cnt == 0 or self.CNTS['vp'][vn] < min_superset_pos_cnt:
-                    min_superset_pos_cnt = self.CNTS['vp'][vn]
-                    min_superset_variant = vn # we have a candidate!
-        return min_superset_variant #yes, there is one, return it
+        sups = self.get_superset_variants(variant_order=variant_order)
+        if len(sups) is 0:
+            return None
+        else:
+            return sups[0]
         
     def get_subset_variants(self,override_val,variant_order=None,variant_name=None,kit_order=None,kit_name=None):
         #variant_order: is variant's order in matrix, name is variant name
@@ -530,8 +484,7 @@ class Sort(object):
         #maxListD = list(set(maxListO)-set(maxList))
         #print("O:%s" % maxListO)
         #print("-:%s" % maxList)
-        (pc,sup) = self.get_superset_variants(variant_order=variant_order) #we don't need the resulting pc
-        superset = self.get_variant_name_by_order(variant_order=sup)
+        supsets = self.get_superset_variants(variant_order=variant_order)
         print("...")
         print("[subsetsP]")
         print(subsetsP)
@@ -539,10 +492,10 @@ class Sort(object):
         print(subsets)
         print("[subsetsN]")
         print(subsetsN)
-        print("[superset]")
-        print(superset)
+        print("[supsets]")
+        print(supsets)
         print("...")
-        maxListD = list(set(subsetsP)-set(superset)) #take out the supersets
+        maxListD = list(set(subsetsP)-set(supsets)) #take out the supersets (not preserving order)
 
         return maxListD
 
