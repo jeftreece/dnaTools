@@ -228,26 +228,31 @@ class Sort(object):
                 #print("kit:"+str(kit)+",variant:"+str(variant))
 
         print("")
-        print(self.MIXA)
+        #stdout relations data
+        self.stdout_matrix_relations_data()
         print("")
         sys.exit()
 
     def stdout_tbl_matrix(self):
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',"big_matrix view{{"+"{",1)
+        debug_chk('DEBUG_MATRIX',"",1)
         table = BeautifulTable()
         table.column_headers = ['top']+self.get_cur_kit_list()
         for K,V in self.get_axis('variants'):
             table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
-        #table = table.replace(" 0 ","\033[1;31m 0 \033[1;37m")
         debug_chk('DEBUG_MATRIX',table,1)
+        debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',"}}"+"}",1)
         debug_chk('DEBUG_MATRIX',"small_matrix view{{"+"{",1)
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',self.get_axis('kits',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',self.get_axis('variants',keysOnly=True),1)
         debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+        if config['MATRIX_COLORS']:
+            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+        else:
+            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -"),1)
         debug_chk('DEBUG_MATRIX',"",1)
         debug_chk('DEBUG_MATRIX',"}}"+"}",1)
         debug_chk('DEBUG_MATRIX',"",1)
