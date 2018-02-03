@@ -469,20 +469,14 @@ class Sort(object):
             subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0],listFlg=1)
         #...
         #sups = self.get_supset_variants(variant_order=variant_order)
-        #...
-        #print("- subsets:")
-        #print(subs)
+        #print(sups)
         #...
         if overrideData is not None and kit_order is not None:
             print("- subsetsP: "+",".join(subsP))
             print("- subsetsN: "+",".join(subsN))
         #...
-        #print("1.FOOOOO")
         subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0],listFlg=1)
-        #print("- subsets: "+",".join(subs))
-        #print("2.FOOOOO")
-        #print("- sups:")
-        #print(sups)
+        print("- subsets: "+",".join(subs))
         #...
         #maxListD = list(set(subsP)-set(sups)) #take out the supersets (not preserving order)
         #return maxListD
