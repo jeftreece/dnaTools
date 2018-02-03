@@ -330,7 +330,8 @@ class Sort(object):
         if variantType:
             self.VARIANTS[val][1] = cnt
         
-    def get_variant_name_by_order(self,variant_order): #get variant name (can also take a list)
+    def get_variant_name_by_order(self,variant_order,listFlg=False): #get variant name (can also take a list)
+        #listFlg: force listFlg as return data type
         intFlg = True
         try:
             value = int(variant_order)
@@ -340,7 +341,10 @@ class Sort(object):
             variant = None
             for itm in list(self.VARIANTS.items()):
                 if itm[1][1] == variant_order:
-                    variant = itm[0]
+                    if listFlg:
+                        variant = [itm[0]]
+                    else:
+                        variant = itm[0]
                     break
             return variant
         else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
@@ -461,29 +465,29 @@ class Sort(object):
             overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
             pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
             pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            subsP = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsP,variant_order)[:,0])
-            subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0])
+            subsP = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsP,variant_order)[:,0],listFlg=1)
+            subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0],listFlg=1)
         #...
-        subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0])
         #sups = self.get_supset_variants(variant_order=variant_order)
         #...
         #print("- subsets:")
         #print(subs)
         #...
         if overrideData is not None and kit_order is not None:
-            print("- subsetsP:")
-            print(subsP)
-            print("- subsetsN:")
-            print(subsN)
+            print("- subsetsP: "+",".join(subsP))
+            print("- subsetsN: "+",".join(subsN))
         #...
-        print("- subs:")
-        print(subs)
+        #print("1.FOOOOO")
+        subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0],listFlg=1)
+        #print("- subsets: "+",".join(subs))
+        #print("2.FOOOOO")
         #print("- sups:")
         #print(sups)
         #...
         #maxListD = list(set(subsP)-set(sups)) #take out the supersets (not preserving order)
         #return maxListD
         return subs
+        
     def get_supset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None):
         #variant order: is variant's order in matrix, name is variant name
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
@@ -520,17 +524,14 @@ class Sort(object):
             overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
             pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
             pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            supsP = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsP,variant_order)[:,0])
-            supsN = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsN,variant_order)[:,0])
+            supsP = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsP,variant_order)[:,0],listFlg=1)
+            supsN = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsN,variant_order)[:,0],listFlg=1)
         #...
-        sups = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditions,variant_order)[:,0])
+        sups = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditions,variant_order)[:,0],listFlg=1)
         if overrideData is not None and kit_order is not None:
-            print("- supsetsP:")
-            print(supsP)
-            print("- supsetsN:")
-            print(supsN)
-        print("- sups:")
-        print(sups)
+            print("- supsetsP: "+",".join(supsP))
+            print("- supsetsN: "+",".join(supsN))
+        print("- supsets: "+",".join(sups))
         return sups
         
     def get_min_superset_variant(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
