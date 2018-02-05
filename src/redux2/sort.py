@@ -88,6 +88,7 @@ class Sort(object):
         self.imperfect_variants = None
         self.imperfect_known_variants = None
         self.imperfect_unknown_variants = None
+        self.resolved_variants = []
 
     # schema / sample data
 
@@ -200,26 +201,45 @@ class Sort(object):
         self.imperfect_variants = self.get_imperfect_variants_idx()
         self.imperfect_known_variants = self.get_imperfect_known_variants_idx()
         self.imperfect_unknown_variants = self.get_imperfect_unknown_variants_idx()
-        print(self.imperfect_known_variants)
+        #variant list that have kits with negative (zero) values
+        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
+        #iterate all None situations
+        self.unk_variants = ((np.argwhere(self.NP == 0)).tolist())
+        #unresolved list
+        #print(self.unk_variants)
+        print("")
+        print("unresolved")
+        print(self.unk_variants)
+        print("...")
         #(end)stash these 
         print("")
         print("Processing Nones:")
         print("----------------")
-        #variant list that have kits with negative (zero) values
-        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
-        #iterate all None situations
-        for non in ((np.argwhere(self.NP == 0)).tolist()):
-            if non[0] in zlist: #non[0] = variant_order, non[1] = kit_order
-                coord = self.get_coord(non[1],non[0])
+        #loop unk variants
+        for unk in self.unk_variants:
+            if unk[0] in zlist: #unk[0] = variant_order, unk[1] = kit_order
+                coord = self.get_coord(unk[1],unk[0])
                 print(coord)
-                superset = str(self.get_supset_variants(override_val=1,variant_order=non[0],kit_order=non[1]))
-                #print(superset)
-                subsets = ",".join(self.get_subset_variants(override_val=1,variant_order=non[0],kit_order=non[1]))
+                supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1])
+                #supsetsN = self.get_supset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
+                supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1])
+                #print(supset)
+                #sys.exit()
+                subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1])
+                #subsetsN = self.get_subset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
+                subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1])
                 #print(subsets)
-                #print(self.get_coord(non[1],non[0]) + "("+str(=non[0]))+")")
+                #sys.exit()
+                print("- subset test: "+str(self.test_variant_subsets(unk_variant=unk,subsets=subsets)))
+                #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
                 print("...")
-        print("")
+        #unresolved list
+        print("unresolved")
+        print(self.unk_variants)
+        #resolved list
+        print("resolved")
+        print(self.resolved_variants)
         #stdout relations data
         self.stdout_matrix_relations_data()
         print("")
@@ -406,36 +426,36 @@ class Sort(object):
     def get_variant_order_by_name(self,variant_name): #get variant order from its name
         return self.VARIANTS[variant_name][1]
         
-    def get_kit_order_by_name(self,x_val): #get kit order from its name
-        return self.KITS[x_val][1]
+    def get_kit_order_by_name(self,kit_name): #get kit order from its name
+        return self.KITS[kit_name][1]
         
-    def get_matrix_row_data(self,row_order=None,name=None): #get same type variant data for each kit
-        if name is not None:
-            row_order = self.get_variant_order_by_name(name)
-        if row_order is not None:
-            return self.NP[row_order,]
+    def get_matrix_row_data(self,variant_order=None,variant_name=None): #get same type variant data for each kit
+        if variant_name is not None:
+            variant_order = self.get_variant_order_by_name(variant_name)
+        if variant_order is not None:
+            return self.NP[variant_order,]
         
-    def get_matrix_col_data(self,col_order=None,name=None): #get all type variant data for one kit
-        if name is not None:
-            col_order = self.get_kit_order_by_name(name)
-        if col_order is not None:
-            return self.NP[:,col_order].T
+    def get_matrix_col_data(self,kit_order=None,kit_name=None): #get all type variant data for one kit
+        if kit_name is not None:
+            kit_order = self.get_kit_order_by_name(kit_name)
+        if kit_order is not None:
+            return self.NP[:,kit_order].T
         
-    def get_matrix_row_indices_by_val(self,val,row_order=None,name=None,overrideData=None): #like get_matrix_row_data but retrieves index info for given val
-        if name is not None:
-            row_order = self.get_variant_order_by_name(name)
-        if row_order is not None and overrideData is not None: # we're sending in a custom evaluation
+    def get_matrix_row_indices_by_val(self,val,variant_order=None,variant_name=None,overrideData=None): #like get_matrix_row_data but retrieves index info for given val
+        if variant_name is not None:
+            variant_order = self.get_variant_order_by_name(variant_name)
+        if variant_order is not None and overrideData is not None: # we're sending in a custom evaluation
             return np.argwhere(overrideData[0,] == val).T[1,] #with override data, there's only one line evaluated - 1d datset
-        if row_order is not None: #no override -- use self.NP (all data)
-            return np.argwhere(self.NP[row_order,] == val).T[1,] #default data, it's the entire matrix - 2d dataset 
+        if variant_order is not None: #no override -- use self.NP (all data)
+            return np.argwhere(self.NP[variant_order,] == val).T[1,] #default data, it's the entire matrix - 2d dataset 
         
-    def get_matrix_col_indices_by_val(self,val,col_order=None,name=None,overrideData=None): #like get_matrix_col_data but retrieves index info for given val
-        if name is not None:
-            col_order = self.get_kit_order_by_name(name)
-        if col_order is not None and overrideData is not None:
-            return np.argwhere(overrideData[:,0] == val) #with override data, there's only one line evaluated - 1d dataset
-        if col_order is not None: #no override -- use self.NP (all data)
-            return np.argwhere(self.NP[:,col_order] == val) #default data, it's the entire matrix - 2d dataset
+    def get_matrix_col_indices_by_val(self,val,kit_order=None,kit_name=None,overrideData=None): #like get_matrix_col_data but retrieves index info for given val
+        if kit_name is not None:
+            kit_order = self.get_kit_order_by_name(kit_name)
+        if kit_order is not None and overrideData is not None:
+            return np.argwhere(overrideData[:,0] == val).T[0,] #with override data, there's only one line evaluated - 1d dataset
+        if kit_order is not None: #no override -- use self.NP (all data)
+            return np.argwhere(self.NP[:,kit_order] == val).T[0,] #default data, it's the entire matrix - 2d dataset
 
     def get_perfect_variants(self):
         neg_idx = np.argwhere(self.NP==-1) #get index to negative data
@@ -539,28 +559,20 @@ class Sort(object):
             variant_order = self.get_variant_order_by_name(variant_name)
         if kit_name is not None:
             kit_order = self.get_kit_order_by_name(kit_name)
-        #...
-        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #default pos conditions
-        #...
         if override_val is not None and kit_order is not None:
             overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
-            pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            subsP = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsP,variant_order)[:,0],impKnownFlg=True,listFlg=1)
-            subsN = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditionsN,variant_order)[:,0],impKnownFlg=True,listFlg=1)
-        #...
-        #sups = self.get_supset_variants(variant_order=variant_order)
-        #print(sups)
-        #...
-        if overrideData is not None and kit_order is not None:
-            print("- subsetsP: "+",".join(subsP))
-            print("- subsetsN: "+",".join(subsN))
-        #...
-        subs = self.get_variant_name_by_order(variant_order=get_subsets(pos_conditions,variant_order)[:,0],impKnownFlg=True,listFlg=1)
-        print("- subsets: "+",".join(subs))
-        #...
-        #maxListD = list(set(subsP)-set(sups)) #take out the supersets (not preserving order)
-        #return maxListD
+            pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
+        else:
+            pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order) #default pos conditions
+        subs = self.get_variant_name_by_order(variant_order=get_subsets(pc,variant_order)[:,0],impKnownFlg=True,listFlg=1)
+        if override_val is not None and kit_order is not None:
+            if override_val==1:
+                #print("- subsetsP: "+",".join(subs)+" pc:"+str(pc))
+                print("- subsetsP: "+",".join(subs) +" pc:"+str(pc))
+            else:
+                print("- subsetsN: "+",".join(subs) +" pc:"+str(pc))
+        else:
+            print("- subsets: "+",".join(subs) +" pc:"+str(pc))
         return subs
         
     def get_supset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None):
@@ -592,21 +604,19 @@ class Sort(object):
             variant_order = self.get_variant_order_by_name(variant_name)
         if kit_name is not None:
             kit_order = self.get_kit_order_by_name(kit_name)
-        #...
-        pos_conditions = self.get_matrix_row_indices_by_val(1,row_order=variant_order) #default pos conditions
-        #...
         if override_val is not None and kit_order is not None:
             overrideData = self.get_row_when_value_override_coord(override_val,kit_order=kit_order,variant_order=variant_order)
-            pos_conditionsP = self.get_matrix_row_indices_by_val(1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            pos_conditionsN = self.get_matrix_row_indices_by_val(-1,row_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
-            supsP = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsP,variant_order)[:,0],impKnownFlg=False,listFlg=1)
-            supsN = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditionsN,variant_order)[:,0],impKnownFlg=False,listFlg=1)
-        #...
-        sups = self.get_variant_name_by_order(variant_order=get_supsets(pos_conditions,variant_order)[:,0],impKnownFlg=False,listFlg=1)
-        if overrideData is not None and kit_order is not None:
-            print("- supsetsP: "+",".join(supsP))
-            print("- supsetsN: "+",".join(supsN))
-        print("- supsets: "+",".join(sups))
+            pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
+        else:
+            pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order) #default pos conditions
+        sups = self.get_variant_name_by_order(variant_order=get_supsets(pc,variant_order)[:,0],impKnownFlg=True,listFlg=1)
+        if override_val is not None and kit_order is not None:
+            if override_val==1:
+                print("- supsetsP: "+",".join(sups) +" pc:"+str(pc))
+            else:
+                print("- supsetsN: "+",".join(sups) +" pc:"+str(pc))
+        else:
+            print("- supsets: "+",".join(sups) +" pc:"+str(pc))
         return sups
         
     def get_min_superset_variant(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
@@ -628,7 +638,7 @@ class Sort(object):
         
     def get_row_when_value_override_coord(self,override_val,kit_order=None,variant_order=None,kit_name=None,variant_name=None):
         #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-        row = self.get_matrix_row_data(row_order=variant_order)
+        row = self.get_matrix_row_data(variant_order=variant_order)
         #print("*****beg:This is the val we're overriding -kit/variant")
         #print(kit_order)
         #print(variant_order)
@@ -864,6 +874,28 @@ class Sort(object):
         self.UNKA = self.dbo.fetchall()
 
         #}}}
+
+    def test_variant_subsets(self,subsets,unk_variant=None,kit_order=None,kit_name=None):
+        if kit_name is not None:
+            kit_order = self.get_kit_order_by_name(kit_name=kit_name)
+        elif kit_order is not None:
+            kit_name = self.get_kit_name_by_order(kit_order=kit_order)
+        elif unk_variant is not None:
+            kit_order = unk_variant[1]
+            kit_name = self.get_kit_name_by_order(kit_order=kit_order)
+        else:
+            return False
+        #kit_data = self.matrix_col_data(kit_order=kit_order)
+        pos_idx = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
+        #print(pos_idx)
+        #sys.exit()
+        for sv in subsets:
+            if sv in self.get_variant_name_by_order(variant_order=pos_idx):
+                self.unk_variants.remove(unk_variant)
+                self.NP[unk_variant[0],unk_variant[1]]=1
+                self.resolved_variants.append((unk_variant,True))
+                return 'True:>%s'%(sv)
+        return False
 
     # tree
 
