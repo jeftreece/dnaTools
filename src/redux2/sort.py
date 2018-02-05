@@ -236,9 +236,11 @@ class Sort(object):
                 print("- diff branch test: %s"%self.test_for_diff_supset_branches(unk_variant=unk))
                 #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
-                if unk[0] == 13:
-                    sys.exit()
+                #if unk[0] == 13:
+                #    sys.exit()
         #unresolved list
+        print("----------------")
+        print("")
         print("unresolved")
         print(self.unk_variants)
         #resolved list
