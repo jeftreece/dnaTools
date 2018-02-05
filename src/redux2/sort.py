@@ -230,6 +230,7 @@ class Sort(object):
                 print("%s {{%s"%(coord,"{")) #beg vim marker
                 print("unk-0: %s"%unk[0])
                 print("unk-1: %s"%unk[1])
+                print("")
                 supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1])
                 #supsetsN = self.get_supset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
                 supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1])
@@ -238,7 +239,8 @@ class Sort(object):
                 #subsetsN = self.get_subset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
                 subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1])
                 #print(subsets)
-                print("- subset test: %s"%self.test_for_variant_subsets(unk_variant=unk,subsets=subsets))
+                print("- subset test: %s"%self.test_for_normal_variant_subsets(unk_variant=unk,subsets=subsets))
+                print("")
                 print("- diff branch test: %s"%self.test_for_diff_supset_branches(unk_variant=unk))
                 #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
@@ -429,6 +431,10 @@ class Sort(object):
             intFlg = False
         if intFlg: #typically, it's just the order number it's placed in the matrix
             variant = None
+            #hack to have an artifial top
+            if variant_order == -999: #top
+                return 'top'
+            #normal variants in the matrix
             for itm in list(self.VARIANTS.items()):
                 if itm[1][1] == variant_order:
                     #print (".1..")
@@ -456,26 +462,24 @@ class Sort(object):
         else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
             variantList = []
             for vo in list(variant_order):
-                for itm in list(self.VARIANTS.items()):
-                    #print (".1..")
-                    #print (itm[0])
-                    #print (self.imperfect_known_variants)
-                    #print (".2..")
-                    if itm[1][1] == vo:
-                        if impKnownFlg is False or self.imperfect_known_variants is None:
-                            variantList.append(itm[0])
-                        elif itm[1][1] in self.imperfect_known_variants:
-                            variantList.append(itm[0])
-                        break
+                #hack to have an artificial top
+                if vo == -999: #top
+                    variantList.append(itm[0])
+                #normal variants in the matrix
+                else:
+                    for itm in list(self.VARIANTS.items()):
+                        #print (".1..")
+                        #print (itm[0])
+                        #print (self.imperfect_known_variants)
+                        #print (".2..")
+                        if itm[1][1] == vo:
+                            if impKnownFlg is False or self.imperfect_known_variants is None:
+                                variantList.append(itm[0])
+                            elif itm[1][1] in self.imperfect_known_variants:
+                                variantList.append(itm[0])
+                            break
             return(variantList)
         
-    #def get_kit_name_by_order(self,kit_order): #get kit name
-    #    kit = None
-    #    for itm in list(self.KITS.items()):
-    #        if itm[1][1] == kit_order:
-    #            kit = itm[0]
-    #            break
-    #    return kit
         
     def get_variant_order_by_name(self,variant_name): #get variant order from its name
         return self.VARIANTS[variant_name][1]
@@ -649,17 +653,33 @@ class Sort(object):
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
 
         def get_supsets(pc,vo):
-            VAR1 = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
-            unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
-            VAR2 = np.asarray((unique_elements, counts_elements)).T
-            VAR2x = VAR2[VAR2[:,1]==len(pc)] #has to have at least what the incoming variant had in count
-            idx = np.argwhere(VAR2x[:,0]==vo) #idx make sure we exclude the incoming variant
-            VAR3 = np.delete(VAR2x[:,0], idx) #idx again/delete
+            VAR1p = np.argwhere(self.NP[:,pc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+            unqP, cntP = np.unique(VAR1p, return_counts=True)
+            VAR2p = np.asarray((unqP, cntP)).T
+            #VAR2xP = VAR2p[VAR2p[:,1]==len(pc)] #has to have at least what the incoming variant had in count
+            #idxP = np.argwhere(VAR2xP[:,0]==vo) #idx make sure we exclude the incoming variant
+            #VAR3p = np.delete(VAR2xP[:,0], idxP) #idx again/delete
+            #...
+            if 1 == 2: # this code allows for unks to be considered (not sure this is good code)
+                VAR1u = np.argwhere(self.NP[:,pc]==0)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+                unqU, cntU = np.unique(VAR1u, return_counts=True)
+                VAR2u = np.asarray((unqU, cntU)).T
+                #VAR2xU = VAR2u[VAR2u[:,1]==len(pc)] #has to have at least what the incoming variant had in count
+                #idxU = np.argwhere(VAR2xU[:,0]==vo) #idx make sure we exclude the incoming variant
+                #VAR3u = np.delete(VAR2xU[:,0], idxU) #idx again/delete
+                VAR2x = np.concatenate((VAR2p,VAR2u), axis=0)
+            else:
+                VAR2x = VAR2p
+                VAR2y = VAR2x[VAR2x[:,1]==len(pc)] #has to have at least what the incoming variant had in count
+                idxU = np.argwhere(VAR2y[:,0]==vo) #idx make sure we exclude the incoming variant
+                VAR3 = np.delete(VAR2y[:,0], idxU) #idx again/delete
+            #...
             if len(VAR3) == 0: return [] #there are no supsets according to the filter
             #(beg) master list of all positives
             allPos = np.argwhere(self.NP==1)[:,0]
-            unique_elements, counts_elements = np.unique(allPos, return_counts=True)
-            AP = np.asarray((unique_elements, counts_elements))[1,]
+
+            unqA, cntA = np.unique(allPos, return_counts=True)
+            AP = np.asarray((unqA, cntA))[1,]
             #(end) master list of all positives
             VAR5 = AP[list(VAR3),] #extrapolate the right subset mix to master list of all positives
             VAR6 = np.asarray((VAR3,VAR5)).T
@@ -950,9 +970,24 @@ class Sort(object):
 
         #}}}
 
-    def test_for_variant_subsets(self,unk_variant,subsets):
+    def test_for_normal_variant_subsets(self,unk_variant,subsets):
         kit_order = unk_variant[1]
         pos_idx = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
+        #normal subset test
+        for sv in subsets:
+            if sv in self.get_variant_name_by_order(variant_order=pos_idx):
+                #self.unk_variants.remove(unk_variant)
+                #self.NP[unk_variant[0],unk_variant[1]]=1
+                #self.resolved_variants.append((unk_variant,True))
+                return 'True:>%s'%(sv)
+        #TODO: need to do a more flexible (ambigious) subset test 
+        return False
+        
+    def test_for_ambiguous_variant_subsets(self,unk_variant,subsets):
+        #TODO: ...
+        kit_order = unk_variant[1]
+        pos_idx = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
+        #normal subset test
         for sv in subsets:
             if sv in self.get_variant_name_by_order(variant_order=pos_idx):
                 #self.unk_variants.remove(unk_variant)
@@ -963,6 +998,8 @@ class Sort(object):
         
     def test_for_diff_supset_branches(self,unk_variant):
         #TODO: supsets could be an arg into the function
+        #TODO: I need to allow for unknowns when doing checks somehow... the problem with Z301
+        #TODO: this check needs to exhaust the possibilities of subset matches first if sees other unknowns
 
         variant_order = unk_variant[0]
         kit_order = unk_variant[1]
@@ -977,8 +1014,8 @@ class Sort(object):
         if config['DEBUG_RULE2'] == True:
             print("[1]!!! variant_order: %s" %self.get_variant_name_by_order(variant_order))
             print("[2]!!! supsets: %s" %self.get_variant_name_by_order(supsets))
-            print("[3]!!! vi: %s" %self.get_variant_name_by_order(vi))
-            print("[4]!!! ki: %s" %self.get_kit_name_by_order(ki))
+            print("[3]!!! vi (imperfect knowns when set coord to pos): %s" %self.get_variant_name_by_order(vi))
+            print("[4]!!! ki (related kits when set coord to pos): %s" %self.get_kit_name_by_order(ki))
             print("")
 
         #Note: first deal with the variant that might might share the unknown variant we're wondering about
@@ -1018,6 +1055,7 @@ class Sort(object):
 
                 #Does it have any supersets?
                 if len(sups4V) == 0:
+                    #sups4V.append(-999) #top
                     if config['DEBUG_RULE2'] == True:
                         print("sups Chk: sups not in sups4V (don't continue with V=%s)"%self.get_variant_name_by_order(V))
                         print("")
