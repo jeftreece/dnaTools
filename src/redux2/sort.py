@@ -897,6 +897,7 @@ class Sort(object):
         return False
         
     def test_for_diff_supset_branches(self,unk_variant):
+        #TODO: make sure it's truly supset variants that is being evaluated here
         variant_order = unk_variant[0]
         kit_order = unk_variant[1]
         vi = self.use_imperfect_known_variants_only(self.get_matrix_col_indices_by_val(1,kit_order=kit_order))
