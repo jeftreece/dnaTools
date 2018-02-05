@@ -230,7 +230,8 @@ class Sort(object):
                 subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1])
                 #print(subsets)
                 #sys.exit()
-                print("- subset test: "+str(self.test_variant_subsets(unk_variant=unk,subsets=subsets)))
+                print("- subset test: %s"%self.test_for_variant_subsets(unk_variant=unk,subsets=subsets))
+                print("- diff branch test: %s"%self.test_for_diff_supset_branches(unk_variant=unk))
                 #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
                 print("...")
@@ -456,6 +457,15 @@ class Sort(object):
             return np.argwhere(overrideData[:,0] == val).T[0,] #with override data, there's only one line evaluated - 1d dataset
         if kit_order is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[:,kit_order] == val).T[0,] #default data, it's the entire matrix - 2d dataset
+
+    def use_imperfect_known_variants_only(self,variants):
+        if self.imperfect_known_variants == None:
+            return variants
+        newList = []
+        for v in variants:
+            if v in self.imperfect_known_variants:
+                newList.append(v)
+        return newList
 
     def get_perfect_variants(self):
         neg_idx = np.argwhere(self.NP==-1) #get index to negative data
@@ -875,20 +885,9 @@ class Sort(object):
 
         #}}}
 
-    def test_variant_subsets(self,subsets,unk_variant=None,kit_order=None,kit_name=None):
-        if kit_name is not None:
-            kit_order = self.get_kit_order_by_name(kit_name=kit_name)
-        elif kit_order is not None:
-            kit_name = self.get_kit_name_by_order(kit_order=kit_order)
-        elif unk_variant is not None:
-            kit_order = unk_variant[1]
-            kit_name = self.get_kit_name_by_order(kit_order=kit_order)
-        else:
-            return False
-        #kit_data = self.matrix_col_data(kit_order=kit_order)
+    def test_for_variant_subsets(self,unk_variant,subsets):
+        kit_order = unk_variant[1]
         pos_idx = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
-        #print(pos_idx)
-        #sys.exit()
         for sv in subsets:
             if sv in self.get_variant_name_by_order(variant_order=pos_idx):
                 self.unk_variants.remove(unk_variant)
@@ -896,6 +895,29 @@ class Sort(object):
                 self.resolved_variants.append((unk_variant,True))
                 return 'True:>%s'%(sv)
         return False
+        
+    def test_for_diff_supset_branches(self,unk_variant):
+        variant_order = unk_variant[0]
+        kit_order = unk_variant[1]
+        vi = self.use_imperfect_known_variants_only(self.get_matrix_col_indices_by_val(1,kit_order=kit_order))
+        ki = self.get_matrix_row_indices_by_val(1,variant_order=variant_order)
+        KA = []
+        for V in vi:
+            ki2 = self.get_matrix_row_indices_by_val(1,variant_order=V).tolist()
+            if unk_variant[1] in ki2:
+                ki2.remove(unk_variant[1])
+            for K2 in ki2: #loop the relations' pc idxs
+                if K2 not in ki:
+                    KA.append((K2,ki2))
+                    break
+        for K3 in ki:
+            for K4 in KA:
+                if K3 not in K4[1]:
+                    msg = "%s-%s: %s-%s" % (K3,K4[1],K4[0],ki)
+                    #self.unk_variants.remove(unk_variant)
+                    #self.NP[unk_variant[0],unk_variant[1]]=-1
+                    self.resolved_variants.append((unk_variant,False))
+                    return "False:%s" % msg
 
     # tree
 
