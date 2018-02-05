@@ -196,48 +196,55 @@ class Sort(object):
         self.NP = np.transpose(self.NP)
         
     def sort_step3(self):
+        #TODO: need to do something about how I remove these so doesn't mess up the order of processing
         #(beg)stash these 
         self.perfect_variants = self.get_perfect_variants_idx()
         self.imperfect_variants = self.get_imperfect_variants_idx()
         self.imperfect_known_variants = self.get_imperfect_known_variants_idx()
         self.imperfect_unknown_variants = self.get_imperfect_unknown_variants_idx()
         #variant list that have kits with negative (zero) values
+        #print(self.NP)
         zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
         #iterate all None situations
         self.unk_variants = ((np.argwhere(self.NP == 0)).tolist())
         #unresolved list
-        #print(self.unk_variants)
+        #print(zlist)
         print("")
         print("unresolved")
         print(self.unk_variants)
         print("...")
         #(end)stash these 
         print("")
+        #missing: kd|M301
+        #missing: kb|A297
+        #print(self.unk_variants)
         print("Processing Nones:")
         #loop unk variants
         for unk in self.unk_variants:
+            #print("- %s" %unk)
             if unk[0] in zlist: #unk[0] = variant_order, unk[1] = kit_order
                 print("----------------")
+                #print(unk)
                 coord = self.get_coord(unk[1],unk[0])
+                #print(coord)
+                print("%s {{%s"%(coord,"{")) #beg vim marker
                 print("unk-0: %s"%unk[0])
                 print("unk-1: %s"%unk[1])
-                print(coord)
                 supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1])
                 #supsetsN = self.get_supset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
                 supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1])
                 #print(supset)
-                #sys.exit()
                 subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1])
                 #subsetsN = self.get_subset_variants(override_val=-1,variant_order=unk[0],kit_order=unk[1])
                 subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1])
                 #print(subsets)
-                #sys.exit()
                 print("- subset test: %s"%self.test_for_variant_subsets(unk_variant=unk,subsets=subsets))
                 print("- diff branch test: %s"%self.test_for_diff_supset_branches(unk_variant=unk))
                 #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
                 #if unk[0] == 13:
                 #    sys.exit()
+                print("}}"+"}") #end vim marker
         #unresolved list
         print("----------------")
         print("")
@@ -948,9 +955,9 @@ class Sort(object):
         pos_idx = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
         for sv in subsets:
             if sv in self.get_variant_name_by_order(variant_order=pos_idx):
-                self.unk_variants.remove(unk_variant)
-                self.NP[unk_variant[0],unk_variant[1]]=1
-                self.resolved_variants.append((unk_variant,True))
+                #self.unk_variants.remove(unk_variant)
+                #self.NP[unk_variant[0],unk_variant[1]]=1
+                #self.resolved_variants.append((unk_variant,True))
                 return 'True:>%s'%(sv)
         return False
         
