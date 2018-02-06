@@ -138,7 +138,8 @@ class Sort(object):
         self.get_matrix_data()
 
         #stdout relations data
-        self.stdout_matrix_relations_data()
+        if config['DEBUG_RELATIONS']:
+            self.stdout_matrix_relations_data()
 
         #step 0
         debug_chk('DEBUG_MATRIX',"data - step 0 (default)",1)
@@ -229,10 +230,10 @@ class Sort(object):
             if unk[0] in zlist: #unk[0] = variant_order, unk[1] = kit_order
                 print("----------------")
                 coord = self.get_coord(unk[1],unk[0])
-                print(coord)
+                print("%s:[%s,%s] " % (coord,unk[0],unk[1]))
                 print("{{"+"{") #beg vim marker
-                print("unk-0: %s"%unk[0])
-                print("unk-1: %s"%unk[1])
+                #print("unk-0: %s"%unk[0])
+                #print("unk-1: %s"%unk[1])
                 print("")
                 supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
                 supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
@@ -256,7 +257,8 @@ class Sort(object):
         print("resolved")
         print(self.resolved_variants)
         #stdout relations data
-        self.stdout_matrix_relations_data()
+        if config['DEBUG_RELATIONS']:
+            self.stdout_matrix_relations_data()
         print("")
         sys.exit()
 
@@ -670,10 +672,13 @@ class Sort(object):
             pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         else:
             pc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order) #default pos conditions
-        if convertToNames is True:
-            sups = self.get_variant_name_by_order(variant_order=get_supsets(pc,variant_order)[:,0],impKnownFlg=impKnownFlg,listFlg=1)
+        supsX = get_supsets(pc,variant_order)
+        if len(supsX) == 0:
+            sups = supsX
+        elif convertToNames is True:
+            sups = self.get_variant_name_by_order(variant_order=supsX[:,0],impKnownFlg=impKnownFlg,listFlg=1)
         else:
-            sups = get_supsets(pc,variant_order)[:,0]
+            sups = supsX[:,0]
                 
         if override_val is not None and kit_order is not None:
             if override_val==1:
@@ -954,14 +959,15 @@ class Sort(object):
                     print("!!!sub: ")
                     print(self.get_variant_name_by_order(variant_order=sub))
                 #self.unk_variants.remove(unk_variant)
-                #self.NP[unk_variant[0],unk_variant[1]]=1
-                #self.resolved_variants.append((unk_variant,True))
-                print("")
+                self.NP[unk_variant[0],unk_variant[1]]=1
+                self.resolved_variants.append((unk_variant,True))
+                if config['DEBUG_RULE1'] == True:
+                    print("")
                 return 'RULE1: True: sub of %s' % self.get_variant_name_by_order(variant_order=sub)
         #Note: if get here -- go to rule 2
-        return self.test_rule2_supsets(unk_variant=unk_variant,supsets=supsets)
+        return self.test_rule2_supsets(unk_variant=unk_variant,subsets=subsets,supsets=supsets)
         
-    def test_rule2_supsets(self,unk_variant,supsets):
+    def test_rule2_supsets(self,unk_variant,subsets,supsets):
         #Note: I think the rule goes like this:  if there is an
         #existing perfect variant (now that I understand the definition) has the
         #same (or superset of the) known +/-'s to then imperfect variant when
@@ -1001,21 +1007,23 @@ class Sort(object):
                 print("lenNeg: %s" % lenNeg)
             if lenPos == len(kpc) and lenNeg == len(knc):
                 #self.unk_variants.remove(unk_variant)
-                #self.NP[unk_variant[0],unk_variant[1]]=1
-                #self.resolved_variants.append((unk_variant,True))
-                print("")
+                self.NP[unk_variant[0],unk_variant[1]]=1
+                self.resolved_variants.append((unk_variant,True))
+                if config['DEBUG_RULE2'] == True:
+                    print("")
                 return 'RULE2: True - ambiguous: equivalent/subset of %s'%(self.get_variant_name_by_order(variant_order=sup))
 
         #if we get here ... go to rule 3
-        return self.test_rule3_diff_branches(unk_variant,supsets)
+        return self.test_rule3_diff_branches(unk_variant,subsets,supsets)
         
-    def test_rule3_diff_branches(self,unk_variant,supsets):
+    def test_rule3_diff_branches(self,unk_variant,subsets,supsets):
         variant_order = unk_variant[0]
         kit_order = unk_variant[1]
-        supsets = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
+        #supsets = self.get_supset_variants(variant_order=unk_variant[0],convertToNames=False) #superset of given coord
         #supsets.append(-999) #top
-        subsets = self.use_imperfect_known_variants_only(self.get_subset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
-        vi = self.use_imperfect_known_variants_only(self.get_matrix_col_indices_by_val(1,kit_order=kit_order))
+        #subsets = self.use_imperfect_known_variants_only(self.get_subset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
+        #vi = self.use_imperfect_known_variants_only(self.get_matrix_col_indices_by_val(1,kit_order=kit_order))
+        vi = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
         #vi.append(-999) #top
         ki = self.get_matrix_row_indices_by_val(1,variant_order=variant_order).tolist()
         if ki is None:
@@ -1034,7 +1042,8 @@ class Sort(object):
         #Q: does it have a superset?
         for V in vi:
 
-            sups4V = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=V,convertToNames=False)) #superset of related coord
+            #sups4V = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=V,convertToNames=False)) #superset of related coord
+            sups4V = self.get_supset_variants(variant_order=V,convertToNames=False) #superset of related coord
             #sups4V.append(-999) #top
 
             if config['DEBUG_RULE3'] == True:
@@ -1140,9 +1149,13 @@ class Sort(object):
                             if itm2 not in rule_p1_list:
                                 #If here, we have a winner!
                                 msg = "%s:%s" % (itm1,itm2)
+                                #self.resolved_variants.append((unk_variant,False))
+                                #self.unk_variants.remove(unk_variant)
+                                self.NP[unk_variant[0],unk_variant[1]]=-1
                                 self.resolved_variants.append((unk_variant,False))
                                 #if config['DEBUG_RULE3'] == True:
-                                print("")
+                                if config['DEBUG_RULE3'] == True:
+                                    print("")
                                 #print("}}"+"}")
                                 msg1a = self.get_variant_name_by_order(itm1[0])
                                 msg1b = self.get_variant_name_by_order(itm1[1])
@@ -1151,7 +1164,8 @@ class Sort(object):
                                 return "RULE3: False - 2 diff branches (%s,%s) + (%s,%s)"% (msg1a,msg1b,msg2a,msg2b)
 
         #print("}}"+"}")
-        print("")
+        if config['DEBUG_RULE3'] == True:
+            print("")
         return "RULEX: Unk"
 
     # tree
