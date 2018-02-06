@@ -95,3 +95,6 @@ create table s_dupe_joins (
   dupe_variant_id int -- children
 );
 
+-- create table one_rec (foo int);
+-- insert into one_rec (foo) values(1);
+
