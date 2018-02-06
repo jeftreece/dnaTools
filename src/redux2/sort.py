@@ -226,8 +226,10 @@ class Sort(object):
                 print("----------------")
                 #print(unk)
                 coord = self.get_coord(unk[1],unk[0])
-                #print(coord)
-                print("%s {{%s"%(coord,"{")) #beg vim marker
+                print(coord)
+                #print("%s {{%s"%(coord,"{")) #beg vim marker
+                #print("%s {{%s"%(coord,"{")) #beg vim marker
+                print("{{"+"{") #beg vim marker
                 print("unk-0: %s"%unk[0])
                 print("unk-1: %s"%unk[1])
                 print("")
@@ -241,12 +243,13 @@ class Sort(object):
                 #print(subsets)
                 print("- subset test: %s"%self.test_for_normal_variant_subsets(unk_variant=unk,subsets=subsets))
                 print("")
+                #print("}}"+"}") #end vim marker
                 print("- diff branch test: %s"%self.test_for_diff_supset_branches(unk_variant=unk))
                 #print(self.get_coord(unk[1],unk[0]) + "("+str(=unk[0]))+")")
                 #print("%s (%s) (%s)" % (coord, superset, subsets))
                 #if unk[0] == 13:
                 #    sys.exit()
-                print("}}"+"}") #end vim marker
+                #print("}}"+"}") #end vim marker
         #unresolved list
         print("----------------")
         print("")
@@ -464,7 +467,7 @@ class Sort(object):
             for vo in list(variant_order):
                 #hack to have an artificial top
                 if vo == -999: #top
-                    variantList.append(itm[0])
+                    variantList.append('top')
                 #normal variants in the matrix
                 else:
                     for itm in list(self.VARIANTS.items()):
@@ -502,6 +505,8 @@ class Sort(object):
     def get_matrix_row_indices_by_val(self,val,variant_order=None,variant_name=None,overrideData=None): #like get_matrix_row_data but retrieves index info for given val
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
+        if variant_order == -999: #top hack
+            return np.asarray((list(range(len(self.KITS))))) #TODO: working testing!!! (zak)
         if variant_order is not None and overrideData is not None: # we're sending in a custom evaluation
             return np.argwhere(overrideData[0,] == val).T[1,] #with override data, there's only one line evaluated - 1d datset
         if variant_order is not None: #no override -- use self.NP (all data)
@@ -1004,8 +1009,10 @@ class Sort(object):
         variant_order = unk_variant[0]
         kit_order = unk_variant[1]
         supsets = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
+        supsets.append(-999) #top
         subsets = self.use_imperfect_known_variants_only(self.get_subset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
         vi = self.use_imperfect_known_variants_only(self.get_matrix_col_indices_by_val(1,kit_order=kit_order))
+        vi.append(-999) #top
         ki = self.get_matrix_row_indices_by_val(1,variant_order=variant_order).tolist()
         if ki is None:
             ki = []
@@ -1024,6 +1031,7 @@ class Sort(object):
         for V in vi:
 
             sups4V = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=V,convertToNames=False)) #superset of related coord
+            sups4V.append(-999) #top
 
             if config['DEBUG_RULE2'] == True:
                 print("[P1.5]!!! V: %s" %self.get_variant_name_by_order(V))
@@ -1099,6 +1107,8 @@ class Sort(object):
 
                 #What positive variant relations do those supersets have? 
                 k4sup4vo = self.get_matrix_row_indices_by_val(1,variant_order=sup4vo).tolist() #other kits per V
+                #k4sup4vo.append(-999) #top
+                
                 if config['DEBUG_RULE2'] == True:
                     print("[P2.13]!!! k4sup4vo(%s): %s"%(self.get_variant_name_by_order(sup4vo),self.get_kit_name_by_order(k4sup4vo)))
                     print("[P2.14]!!! ki: %s"%self.get_kit_name_by_order(ki))
@@ -1129,8 +1139,10 @@ class Sort(object):
                                 self.resolved_variants.append((unk_variant,False))
                                 if config['DEBUG_RULE2'] == True:
                                     print("")
+                                print("}}"+"}")
                                 return "False:%s" % msg
 
+        print("}}"+"}")
         return "Unk"
 
     # tree
