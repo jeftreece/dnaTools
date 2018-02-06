@@ -59,6 +59,16 @@ WHITE = '\033[37m'
 
 # }}}
 
+#TODO: order of priority
+'''
+1. A297 junk rule
+2. redo the horiz/vert sort
+3. get_matrix_data should exlude all neg variants too
+4. hide top from matrix stdout
+5. do I still need self.perfect_variants, etc?
+6. write good notes and commenting for the rules
+'''
+
 class Sort(object):
     
     def __init__(self):
@@ -167,6 +177,64 @@ class Sort(object):
         sys.exit()
 
     def sort_step1(self):
+        self.matrix_vertical_sort_new()
+        
+    def sort_step2(self):
+        self.matrix_horizontal_sort()
+        
+    def sort_step3(self):
+        #(beg)stash these 
+        self.perfect_variants = self.get_perfect_variants_idx()
+        self.imperfect_variants = self.get_imperfect_variants_idx()
+        self.imperfect_known_variants = self.get_imperfect_known_variants_idx()
+        self.imperfect_unknown_variants = self.get_imperfect_unknown_variants_idx()
+        #(end)stash these
+        #variant list that have kits with negative (zero) values
+        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
+        #iterate all None situations
+        self.unk_variants = ((np.argwhere(self.NP == 0)).tolist())
+        unk_variants = self.unk_variants[:]
+        #unresolved list
+        print("")
+        print("unresolved")
+        print(self.get_coord_name_by_order(self.unk_variants))
+        print("...")
+        print("")
+        print("Processing Nones:")
+        #loop unk variants
+        for unk in unk_variants:
+            if unk[0] in zlist: #unk[0] = variant_order, unk[1] = kit_order
+                print("----------------")
+                coord = self.get_coord(unk[1],unk[0])
+                print("%s:[%s,%s] " % (coord,unk[0],unk[1]))
+                print("{{"+"{") #beg vim marker
+                print("")
+                supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
+                supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
+                subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
+                subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
+                print("%s"%self.test_rule1_subsets(unk_variant=unk,subsets=subsets,supsets=supsets))
+                print("")
+                print("}}"+"}") #end vim marker
+
+        #unresolved list
+        print("----------------")
+        print("")
+        print("unresolved")
+        print(self.get_coord_name_by_order(self.unk_variants))
+        #resolved list
+        print("resolved")
+        print(self.resolved_variants)
+        #stdout relations data
+        if config['DEBUG_RELATIONS']:
+            self.stdout_matrix_relations_data()
+        print("")
+        #sys.exit()
+
+        self.matrix_vertical_sort()
+        self.matrix_horizontal_sort()
+
+    def matrix_vertical_sort_new(self):
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
@@ -192,7 +260,7 @@ class Sort(object):
             self.set_new_order(NO[0],NO[1],variantType=True)
         self.NP = np.matrix(list(DATA.values()))
         
-    def sort_step2(self):
+    def matrix_horizontal_sort_new(self):
         DATA = OrderedDict()
         cnt = 0 
         new_orders = []
@@ -206,61 +274,46 @@ class Sort(object):
         self.NP = np.matrix(list(DATA.values()))
         self.NP = np.transpose(self.NP)
         
-    def sort_step3(self):
-        #TODO: need to do something about how I remove these so doesn't mess up the order of processing
-        #(beg)stash these 
-        self.perfect_variants = self.get_perfect_variants_idx()
-        self.imperfect_variants = self.get_imperfect_variants_idx()
-        self.imperfect_known_variants = self.get_imperfect_known_variants_idx()
-        self.imperfect_unknown_variants = self.get_imperfect_unknown_variants_idx()
-        #(end)stash these
-        #variant list that have kits with negative (zero) values
-        zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
-        #iterate all None situations
-        self.unk_variants = ((np.argwhere(self.NP == 0)).tolist())
-        #unresolved list
-        print("")
-        print("unresolved")
-        print(self.unk_variants)
-        print("...")
-        print("")
-        print("Processing Nones:")
-        #loop unk variants
-        for unk in self.unk_variants:
-            if unk[0] in zlist: #unk[0] = variant_order, unk[1] = kit_order
-                print("----------------")
-                coord = self.get_coord(unk[1],unk[0])
-                print("%s:[%s,%s] " % (coord,unk[0],unk[1]))
-                print("{{"+"{") #beg vim marker
-                #print("unk-0: %s"%unk[0])
-                #print("unk-1: %s"%unk[1])
-                print("")
-                supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                #print("- subset test: %s"%self.test_rule1_subsets(unk_variant=unk,subsets=subsets,supsets=supsets))
-                #print("")
-                #print("")
-                print("%s"%self.test_rule1_subsets(unk_variant=unk,subsets=subsets,supsets=supsets))
-                #print("- diff branch test: %s"%self.test_rule3_diff_branches(unk_variant=unk,supsets=supsets))
-                #print("- supset test: %s"%self.test_rule2_supsets(unk_variant=unk,supsets=supsets))
-                print("")
-                print("}}"+"}") #end vim marker
-
-        #unresolved list
-        print("----------------")
-        print("")
-        print("unresolved")
-        print(self.unk_variants)
-        #resolved list
-        print("resolved")
-        print(self.resolved_variants)
-        #stdout relations data
-        if config['DEBUG_RELATIONS']:
-            self.stdout_matrix_relations_data()
-        print("")
-        sys.exit()
+    def matrix_vertical_sort(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            #if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 not in self.get_numpy_matrix_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('vp'):
+            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 not in self.get_numpy_matrix_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('variants'):
+            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
+            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 in self.get_numpy_matrix_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        
+    def matrix_horizontal_sort(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        self.NP = np.transpose(self.NP)
+        for K,V in self.get_axis('kp'):
+            new_orders.append([K,cnt])
+            DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
+            cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],kitType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        self.NP = np.transpose(self.NP)
+        
 
     def stdout_tbl_matrix(self):
         debug_chk('DEBUG_MATRIX',"",1)
@@ -404,6 +457,14 @@ class Sort(object):
                         kitList.append(itm[0])
                         break
             return(kitList)
+        
+    def get_coord_name_by_order(self,coord_order):
+        coord_name = []
+        for C in coord_order:
+            variant_name = self.get_variant_name_by_order(variant_order=C[0])
+            kit_name = self.get_kit_name_by_order(kit_order=C[1])
+            coord_name.append((variant_name,kit_name))
+        return coord_name
         
     def get_variant_name_by_order(self,variant_order,listFlg=False,impKnownFlg=False): #get variant name (can also take a list)
         #listFlg: force listFlg as return data type
@@ -948,20 +1009,20 @@ class Sort(object):
     def test_rule1_subsets(self,unk_variant,subsets,supsets):
         kit_order = unk_variant[1]
         pc = self.get_matrix_col_indices_by_val(1,kit_order=kit_order)
-        if config['DEBUG_RULE1'] == True:
+        if config['DEBUG_RULE1']:
             print("!!!pc: positive conditions")
             print(self.get_variant_name_by_order(variant_order=pc))
 
         #standard subset test
         for sub in subsets:
             if sub in pc:
-                if config['DEBUG_RULE1'] == True:
+                if config['DEBUG_RULE1']:
                     print("!!!sub: ")
                     print(self.get_variant_name_by_order(variant_order=sub))
-                #self.unk_variants.remove(unk_variant)
+                self.unk_variants.remove(unk_variant)
                 self.NP[unk_variant[0],unk_variant[1]]=1
                 self.resolved_variants.append((unk_variant,True))
-                if config['DEBUG_RULE1'] == True:
+                if config['DEBUG_RULE1']:
                     print("")
                 return 'RULE1: True: sub of %s' % self.get_variant_name_by_order(variant_order=sub)
         #Note: if get here -- go to rule 2
@@ -980,7 +1041,7 @@ class Sort(object):
         kpc = self.get_matrix_row_indices_by_val(1,variant_order=variant_order,overrideData=overrideData)
         knc = self.get_matrix_row_indices_by_val(-1,variant_order=variant_order)
 
-        if config['DEBUG_RULE2'] == True:
+        if config['DEBUG_RULE2']:
             print("!!!kpc: kit positive conditions")
             print(kpc)
             print(self.get_kit_name_by_order(kit_order=kpc))
@@ -989,27 +1050,27 @@ class Sort(object):
             print(self.get_kit_name_by_order(kit_order=knc))
 
         for sup in supsets:
-            if config['DEBUG_RULE2'] == True:
+            if config['DEBUG_RULE2']:
                 print("!!!sup: ")
                 print(self.get_variant_name_by_order(variant_order=sup))
             kpc4sup = self.get_matrix_row_indices_by_val(1,variant_order=sup)
-            if config['DEBUG_RULE2'] == True:
+            if config['DEBUG_RULE2']:
                 print("!!!kpc4sup: ")
                 print(self.get_kit_name_by_order(kit_order=kpc4sup))
             knc4sup = self.get_matrix_row_indices_by_val(-1,variant_order=sup)
-            if config['DEBUG_RULE2'] == True:
+            if config['DEBUG_RULE2']:
                 print("!!!knc4sup: ")
                 print(self.get_kit_name_by_order(kit_order=knc4sup))
             lenPos = len(list(set(kpc).intersection(set(kpc4sup))))
             lenNeg = len(list(set(knc).intersection(set(knc4sup))))
-            if config['DEBUG_RULE2'] == True:
+            if config['DEBUG_RULE2']:
                 print("lenPos: %s" % lenPos)
                 print("lenNeg: %s" % lenNeg)
             if lenPos == len(kpc) and lenNeg == len(knc):
-                #self.unk_variants.remove(unk_variant)
+                self.unk_variants.remove(unk_variant)
                 self.NP[unk_variant[0],unk_variant[1]]=1
                 self.resolved_variants.append((unk_variant,True))
-                if config['DEBUG_RULE2'] == True:
+                if config['DEBUG_RULE2']:
                     print("")
                 return 'RULE2: True - ambiguous: equivalent/subset of %s'%(self.get_variant_name_by_order(variant_order=sup))
 
@@ -1030,7 +1091,7 @@ class Sort(object):
             ki = []
         rule_p1_list = []
 
-        if config['DEBUG_RULE3'] == True:
+        if config['DEBUG_RULE3']:
             print("[1]!!! variant_order: %s" %self.get_variant_name_by_order(variant_order))
             print("[2]!!! supsets: %s" %self.get_variant_name_by_order(supsets))
             print("[3]!!! vi (imperfect knowns when set coord to pos): %s" %self.get_variant_name_by_order(vi))
@@ -1046,66 +1107,66 @@ class Sort(object):
             sups4V = self.get_supset_variants(variant_order=V,convertToNames=False) #superset of related coord
             #sups4V.append(-999) #top
 
-            if config['DEBUG_RULE3'] == True:
+            if config['DEBUG_RULE3']:
                 print("[P1.5]!!! V: %s" %self.get_variant_name_by_order(V))
                 print("[P1.6]!!! sups4V(%s): %s" %(self.get_variant_name_by_order(V),self.get_variant_name_by_order(sups4V)))
 
             #Is it a direct relation? 
             if V not in supsets and V not in subsets: # and variant_order not in sups4V:
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("")
                 directRelation_chk = False
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("directRelation Chk is: %s (continue with V=%s)" %(directRelation_chk,self.get_variant_name_by_order(V)))
                     print("")
             else:
                 directRelation_chk = True
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("directRelation Chk is: %s (don't continue with V=%s)" %(directRelation_chk,self.get_variant_name_by_order(V)))
                     print("")
                 continue # try the next V
 
             if directRelation_chk == False:
 
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("[P1.7]!!! V in: %s" %self.get_variant_name_by_order(V))
                 k4V = self.get_matrix_row_indices_by_val(1,variant_order=V).tolist() #other kits per V
                 k4V.remove(kit_order)
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("[P1.8]!!! k4V(%s): %s" %(self.get_variant_name_by_order(V),self.get_kit_name_by_order(k4V)))
 
                 #Does it have any supersets?
                 if len(sups4V) == 0:
                     #sups4V.append(-999) #top
-                    if config['DEBUG_RULE3'] == True:
+                    if config['DEBUG_RULE3']:
                         print("sups Chk: sups not in sups4V (don't continue with V=%s)"%self.get_variant_name_by_order(V))
                         print("")
                     continue # try the next V
 
                 for sup4V in sups4V:
-                    if config['DEBUG_RULE3'] == True:
+                    if config['DEBUG_RULE3']:
                         print("")
                         print("sups Chk: sups in sups4V (continue with V=%s)"%self.get_variant_name_by_order(V))
                         print("")
                         print("[P1.9]!!! sup4V(%s): %s" %(self.get_variant_name_by_order(V),self.get_variant_name_by_order(sup4V)))
                     k4sup4V = self.get_matrix_row_indices_by_val(1,variant_order=sup4V).tolist() #other kits per V
-                    if config['DEBUG_RULE3'] == True:
+                    if config['DEBUG_RULE3']:
                         print("[P1.10]!!! k4sup4V(%s)(%s)(bef.rem) in: %s" %(self.get_variant_name_by_order(V),self.get_variant_name_by_order(sup4V),self.get_kit_name_by_order(k4sup4V)))
                     if kit_order in k4sup4V: #(1)can't be the given coord's kit
                         k4sup4V.remove(kit_order) #(2)can't be the given coord's kit
-                    if config['DEBUG_RULE3'] == True:
+                    if config['DEBUG_RULE3']:
                         print("[P1.11]!!! k4sup4V(%s)(%s)(aft.rem) in: %s" %(self.get_variant_name_by_order(V),self.get_variant_name_by_order(sup4V),self.get_kit_name_by_order(k4sup4V)))
                     k_in_k4V_and_k4sup4V = list(set(k4V).intersection(set(k4sup4V)))
 
                     #Is there additional overlap btw this other variant and its superset?
                     if len(k_in_k4V_and_k4sup4V) == 0:
-                        if config['DEBUG_RULE3'] == True:
+                        if config['DEBUG_RULE3']:
                             print("P1.k4V + k4sup4V intersection chk: no additional overlap (don't continue with V=%s)"%self.get_variant_name_by_order(V))
                             print("")
                         continue
 
                     #Everything seems ok for part one of this rule
-                    if config['DEBUG_RULE3'] == True:
+                    if config['DEBUG_RULE3']:
                         print("k4V + k4sup4V intersection chk: additional overlap (continue with V=%s)"%self.get_variant_name_by_order(V))
                         print("")
                         print("[P1.12]!!! k_in_k4V_and_k4sup4V: %s" %self.get_kit_name_by_order(k_in_k4V_and_k4sup4V))
@@ -1122,7 +1183,7 @@ class Sort(object):
                 k4sup4vo = self.get_matrix_row_indices_by_val(1,variant_order=sup4vo).tolist() #other kits per V
                 #k4sup4vo.append(-999) #top
                 
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("[P2.13]!!! k4sup4vo(%s): %s"%(self.get_variant_name_by_order(sup4vo),self.get_kit_name_by_order(k4sup4vo)))
                     print("[P2.14]!!! ki: %s"%self.get_kit_name_by_order(ki))
                     print("")
@@ -1135,7 +1196,7 @@ class Sort(object):
                     continue
 
                 #If so, everything seems ok for part two of this rule
-                if config['DEBUG_RULE3'] == True:
+                if config['DEBUG_RULE3']:
                     print("k4sup4vo + ki intersection chk: additional overlap (continue with sup4vo=%s)"%self.get_variant_name_by_order(sup4vo))
                     print("")
                     print("[P2.15]!!! k_in_k4sup4vo_and_ki in: %s" %self.get_kit_name_by_order(k_in_k4sup4vo_and_ki))
@@ -1150,11 +1211,11 @@ class Sort(object):
                                 #If here, we have a winner!
                                 msg = "%s:%s" % (itm1,itm2)
                                 #self.resolved_variants.append((unk_variant,False))
-                                #self.unk_variants.remove(unk_variant)
+                                self.unk_variants.remove(unk_variant)
                                 self.NP[unk_variant[0],unk_variant[1]]=-1
                                 self.resolved_variants.append((unk_variant,False))
-                                #if config['DEBUG_RULE3'] == True:
-                                if config['DEBUG_RULE3'] == True:
+                                #if config['DEBUG_RULE3']:
+                                if config['DEBUG_RULE3']:
                                     print("")
                                 #print("}}"+"}")
                                 msg1a = self.get_variant_name_by_order(itm1[0])
@@ -1164,7 +1225,7 @@ class Sort(object):
                                 return "RULE3: False - 2 diff branches (%s,%s) + (%s,%s)"% (msg1a,msg1b,msg2a,msg2b)
 
         #print("}}"+"}")
-        if config['DEBUG_RULE3'] == True:
+        if config['DEBUG_RULE3']:
             print("")
         return "RULEX: Unk"
 
