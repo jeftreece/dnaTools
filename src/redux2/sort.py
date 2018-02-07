@@ -61,6 +61,7 @@ WHITE = '\033[37m'
 
 #TODO: order of priority
 '''
+1. split checker ... anything with a split needs to be flagged. doesn't get an ambiguous bump up
 1. A297 junk rule
 2. redo the horiz/vert sort
 3. get_matrix_data should exlude all neg variants too
@@ -96,8 +97,8 @@ class Sort(object):
 
         self.perfect_variants = None
         self.imperfect_variants = None
-        self.imperfect_known_variants = None
-        self.imperfect_unknown_variants = None
+        #self.perfect_variants = None
+        #self.imperfect_variants = None
         self.resolved_variants = []
 
     # schema / sample data
@@ -184,10 +185,12 @@ class Sort(object):
         
     def sort_step3(self):
         #(beg)stash these 
+        #self.perfect_variants = self.get_perfect_variants_idx()
+        #self.imperfect_variants = self.get_imperfect_variants_idx()
         self.perfect_variants = self.get_perfect_variants_idx()
         self.imperfect_variants = self.get_imperfect_variants_idx()
-        self.imperfect_known_variants = self.get_imperfect_known_variants_idx()
-        self.imperfect_unknown_variants = self.get_imperfect_unknown_variants_idx()
+        #print(self.imperfect_variants)
+        #sys.exit()
         #(end)stash these
         #variant list that have kits with negative (zero) values
         zlist = np.unique(np.argwhere(self.NP == -1)[:,0]).tolist()
@@ -209,11 +212,12 @@ class Sort(object):
                 print("%s:[%s,%s] " % (coord,unk[0],unk[1]))
                 print("{{"+"{") #beg vim marker
                 print("")
-                supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False)
-                print("%s"%self.test_rule1_subsets(unk_variant=unk,subsets=subsets,supsets=supsets))
+                supsetsP = self.get_supset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False,perfectFlg=True)
+                supsets = self.get_supset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False,perfectFlg=True)
+                subsetsP = self.get_subset_variants(override_val=1,variant_order=unk[0],kit_order=unk[1],convertToNames=False,perfectFlg=True)
+                subsets = self.get_subset_variants(variant_order=unk[0],kit_order=unk[1],convertToNames=False,perfectFlg=True)
+                print("%s"%self.test_rule0_consistency(unk_variant=unk,subsets=subsets,supsets=supsets))
+                #print("%s"%self.test_rule1_subsets(unk_variant=unk,subsets=subsets,supsets=supsets))
                 print("")
                 print("}}"+"}") #end vim marker
 
@@ -426,15 +430,16 @@ class Sort(object):
             coord_name.append((variant_name,kit_name))
         return coord_name
         
-    def get_variant_name_by_order(self,variant_order,listFlg=False,impKnownFlg=False): #get variant name (can also take a list)
+    def get_variant_name_by_order(self,variant_order,listFlg=False,perfectFlg=False): #get variant name (can also take a list)
         #listFlg: force listFlg as return data type
-        #impKnownFlg: force it to be a name that's part of the imperfect known list of variants
+        #perfectFlg: force it to be a name that's part of the imperfect known list of variants
         intFlg = True
         try:
             value = int(variant_order)
         except:
             intFlg = False
         if intFlg: #typically, it's just the order number it's placed in the matrix
+            #print("here1am1")
             variant = None
             #hack to have an artifial top
             #if variant_order == -999: #top
@@ -443,14 +448,14 @@ class Sort(object):
             for itm in list(self.VARIANTS.items()):
                 if itm[1][1] == variant_order:
                     if listFlg:
-                        if impKnownFlg is False or self.imperfect_known_variants is None:
+                        if perfectFlg is False or self.perfect_variants is None:
                             variant = itm[0]
-                        elif itm[0] in self.imperfect_known_variants:
+                        elif itm[0] in self.perfect_variants:
                             variant = itm[0]
                     else:
-                        if impKnownFlg is False or self.imperfect_known_variants is None:
+                        if perfectFlg is False or self.perfect_variants is None:
                             variant = itm[0]
-                        elif itm[1][1] in self.imperfect_known_variants:
+                        elif itm[1][1] in self.perfect_variants:
                             variant = itm[0]
                     break
             if listFlg:
@@ -462,7 +467,9 @@ class Sort(object):
                 return variant
         else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
             variantList = []
+            #print("here1am2")
             for vo in list(variant_order):
+                #print(vo)
                 #hack to have an artificial top
                 #if vo == -999: #top
                 #    variantList.append('top')
@@ -471,10 +478,11 @@ class Sort(object):
                     foo = 1 #TODO: can fix this later
                 else:
                     for itm in list(self.VARIANTS.items()):
+                        #print(itm)
                         if itm[1][1] == vo:
-                            if impKnownFlg is False or self.imperfect_known_variants is None:
+                            if perfectFlg is False or self.perfect_variants is None:
                                 variantList.append(itm[0])
-                            elif itm[1][1] in self.imperfect_known_variants:
+                            elif itm[1][1] in self.perfect_known_variants:
                                 variantList.append(itm[0])
                             break
             return(variantList)
@@ -496,7 +504,7 @@ class Sort(object):
                 if itm[1][1] == kit_order:
                     #print (".1..")
                     #print (itm[0])
-                    #print (self.imperfect_known_variants)
+                    #print (self.perfect_known_variants)
                     #print (".2..")
                     if listFlg:
                             kit = itm[0]
@@ -516,7 +524,7 @@ class Sort(object):
                 for itm in list(self.KITS.items()):
                     #print (".1..")
                     #print (itm[0])
-                    #print (self.imperfect_known_variants)
+                    #print (self.perfect_known_variants)
                     #print (".2..")
                     if itm[1][1] == ko:
                         kitList.append(itm[0])
@@ -526,19 +534,19 @@ class Sort(object):
     def get_kit_order_by_name(self,kit_name): #get kit order from its name
         return self.KITS[kit_name][1]
         
-    def get_matrix_row_data(self,variant_order=None,variant_name=None): #get same type variant data for each kit
+    def get_matrix_kit_data(self,variant_order=None,variant_name=None): #get same type variant data for each kit
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
         if variant_order is not None:
             return self.NP[variant_order,]
         
-    def get_matrix_col_data(self,kit_order=None,kit_name=None): #get all type variant data for one kit
+    def get_matrix_variant_data(self,kit_order=None,kit_name=None): #get all type variant data for one kit
         if kit_name is not None:
             kit_order = self.get_kit_order_by_name(kit_name)
         if kit_order is not None:
             return self.NP[:,kit_order].T
         
-    def get_matrix_kit_indices_by_val(self,val,variant_order=None,variant_name=None,overrideData=None): #like get_matrix_row_data but retrieves index info for given val
+    def get_matrix_kit_indices_by_val(self,val,variant_order=None,variant_name=None,overrideData=None): #like get_matrix_kit_data but retrieves index info for given val
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
         #if variant_order == -999: #top hack
@@ -548,7 +556,7 @@ class Sort(object):
         if variant_order is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[variant_order,] == val).T[1,] #default data, it's the entire matrix - 2d dataset 
         
-    def get_matrix_variant_indices_by_val(self,val,kit_order=None,kit_name=None,overrideData=None): #like get_matrix_col_data but retrieves index info for given val
+    def get_matrix_variant_indices_by_val(self,val,kit_order=None,kit_name=None,overrideData=None): #like get_matrix_variant_data but retrieves index info for given val
         if kit_name is not None:
             kit_order = self.get_kit_order_by_name(kit_name)
         if kit_order is not None and overrideData is not None:
@@ -556,34 +564,35 @@ class Sort(object):
         if kit_order is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[:,kit_order] == val).T[0,] #default data, it's the entire matrix - 2d dataset
 
-    def use_imperfect_known_variants_only(self,variants):
-        if self.imperfect_known_variants == None:
+    def use_perfect_known_variants_only(self,variants):
+        if self.perfect_known_variants == None:
             return variants
         newList = []
         for v in variants:
-            if v in self.imperfect_known_variants:
+            if v in self.perfect_known_variants:
                 newList.append(v)
         return newList
 
-    def get_perfect_variants(self):
-        neg_idx = np.argwhere(self.NP==-1) #get index to negative data
-        neg_idx_r = np.unique(neg_idx[:,0]) #get unique rows of those indices
-        print(neg_idx_r)
-        print(len(self.NP))
-        sys.exit()
-        #Note: https://stackoverflow.com/questions/25330959/how-to-select-inverse-of-indexes-of-a-numpy-array
-        #(beg) technique to delete things other than the idx values
-        mask = np.ones(len(self.NP), np.bool)
-        mask[neg_idx_r] = 0
-        variant_data = self.NP[mask]
-        #(end) 
-        print(variant_data)
-        sys.exit()
-        variant_names = self.get_variant_name_by_order(variant_idx)
-        self.set_new_axis(variant_names,variant_idx_r,variantType=True) #reset variant axis
-        self.NP = variant_data #reset data
+    #(commented out)def get_perfect_variants(self):{{{
+    #    neg_idx = np.argwhere(self.NP==-1) #get index to negative data
+    #    neg_idx_r = np.unique(neg_idx[:,0]) #get unique rows of those indices
+    #    print(neg_idx_r)
+    #    print(len(self.NP))
+    #    sys.exit()
+    #    #Note: https://stackoverflow.com/questions/25330959/how-to-select-inverse-of-indexes-of-a-numpy-array
+    #    #(beg) technique to delete things other than the idx values
+    #    mask = np.ones(len(self.NP), np.bool)
+    #    mask[neg_idx_r] = 0
+    #    variant_data = self.NP[mask]
+    #    #(end) 
+    #    print(variant_data)
+    #    sys.exit()
+    #    variant_names = self.get_variant_name_by_order(variant_idx)
+    #    self.set_new_axis(variant_names,variant_idx_r,variantType=True) #reset variant axis
+    #    self.NP = variant_data #reset data}}}
         
     def get_imperfect_variants(self):
+        #TODO: need to fix this. I had the def wrong.
         variant_idx = np.argwhere(self.NP==-1) #get index to negative data
         variant_idx_r = np.unique(variant_idx[:,0]) #get unique rows of those indices
         variant_data = self.NP[variant_idx_r]
@@ -597,33 +606,40 @@ class Sort(object):
         self.NP = variant_data #reset data
         #print(self.NP)
         #sys.exit()
-
+        
     def get_perfect_variants_idx(self):
-        allrows_idx = list(range(len(self.VARIANTS)))
-        neg_idx_r = list(self.get_imperfect_variants_idx())
-        return np.unique(np.delete(allrows_idx, neg_idx_r, axis=0))
+        idx = list(range(len(self.VARIANTS)))
+        prf_idx = idx[:] #copy idx so I have this one for deleting
+        unk_idx = list(np.unique(np.argwhere(self.NP==0)[:,0]))
+        for x in idx:
+            if x in unk_idx:
+                prf_idx.remove(x)
+        return idx
         
     def get_imperfect_variants_idx(self):
-        neg_idx = np.argwhere(self.NP==-1)
-        return np.unique(neg_idx[:,0])
+        return list(np.unique(np.argwhere(self.NP==0)[:,0]))[:] #make it a copy
         
-    def get_imperfect_known_variants_idx(self):
-        imp_idx = list(self.get_imperfect_variants_idx())
-        unk_idx = list(np.unique(np.argwhere(self.NP==0)[:,0]))
-        for x in unk_idx:
-            if x in imp_idx:
-                imp_idx.remove(x)
-        return imp_idx
-        
-    def get_imperfect_unknown_variants_idx(self):
-        unk_idx = list(np.unique(np.argwhere(self.NP==0)[:,0]))
-        prf_idx = list(self.get_perfect_variants_idx())
-        for x in prf_idx:
-            if x in unk_idx:
-                unk_idx.remove(x)
-        return unk_idx
+    def filter_perfect_variants(self,variant_order):
+        #print("filter(bef) -  variant_order: %s" % variant_order)
+        if any(isinstance(el, list) for el in variant_order):
+            for itm in reversed([[n,v] for (n,(v,c)) in enumerate(variant_order)]):
+                if itm[1] in self.imperfect_variants:
+                    #print(itm)
+                    #print(itm[0])
+                    variant_order.remove(variant_order[itm[0]])
+            #print("filter(aft.1) -  variant_order: %s" % variant_order)
+            return variant_order
+        else:
+            for itm in reversed([[n,v] for n,v in enumerate(variant_order)]):
+                #print(itm)
+                if itm[1] in self.imperfect_variants:
+                    #print(itm)
+                    #print(itm[0])
+                    variant_order.remove(variant_order[itm[0]])
+            #print("filter(aft.2) -  variant_order: %s" % variant_order)
+            return variant_order
 
-    def get_subset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None, convertToNames=True,impKnownFlg=False):
+    def get_subset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None, convertToNames=True,perfectFlg=False):
         #variant_order: is variant's order in matrix, name is variant name
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
 
@@ -634,7 +650,7 @@ class Sort(object):
             idxP = np.argwhere(VAR1p==vo) #idx make sure we exclude the incoming variant
             VAR2p = np.delete(VAR1p, idxP)
             if config['DBG_SUBS_SUPS']:
-                print("[sub.2]!!!- VAR2p: %s"%VAR2p)
+                print("[sub.1]!!!- VAR2p: %s"%VAR2p)
             unique_elements_p, counts_elements_p = np.unique(VAR2p, return_counts=True)
             VAR3p = np.asarray((unique_elements_p, counts_elements_p)).T #get uniques
             if config['DBG_SUBS_SUPS']:
@@ -678,14 +694,16 @@ class Sort(object):
             if config['DBG_SUBS_SUPS']:
                 print("[sub.9]!!!- VAR5a: %s"%VAR5a)
                 print("[sub.9]!!!- VAR5a(names): %s"%self.get_variant_name_by_order(VAR5a))
-            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant order ids (in order, max first)
+            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant counts
             if config['DBG_SUBS_SUPS']:
                 print("[sub.10]!!!- VAR5b: %s"%VAR5b)
             VAR6 = np.asarray((VAR5a,VAR5b)).T #merged for return
             if config['DBG_SUBS_SUPS']:
                 print("[sub.11]!!!- VAR6: %s"%VAR6)
-            return VAR6
-        
+            #if len(VAR6) == 0:
+            #    return []
+            return VAR6 #[:,0]
+
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
         if kit_name is not None:
@@ -695,10 +713,16 @@ class Sort(object):
             kpc = self.get_matrix_kit_indices_by_val(1,variant_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         else:
             kpc = self.get_matrix_kit_indices_by_val(1,variant_order=variant_order) #default pos conditions
+
         if convertToNames is True:
-            subs = self.get_variant_name_by_order(variant_order=get_subsets(kpc,variant_order)[:,0],impKnownFlg=impKnownFlg,listFlg=1)
+            subs = self.get_variant_name_by_order(variant_order=self.filter_perfect_variants(get_subsets(kpc,variant_order)[:,0].tolist()),listFlg=1)
+            #print("here.1")
         else:
-            subs = get_subsets(kpc,variant_order)[:,0]
+            subs = self.filter_perfect_variants(variant_order=get_subsets(kpc,variant_order).tolist())
+            #print("here.2")
+        if config['DBG_SUBS_SUPS']:
+            print("[sub.12]!!!- subs: %s" % subs)
+
         if config['DBG_SUBS_SUPS']:
             suffix=''
             if override_val is not None and kit_order is not None:
@@ -706,7 +730,7 @@ class Sort(object):
             print("- subsets%s: %s kpc: %s" % (suffix,",".join([str(i) for i in subs]),kpc))
         return subs
         
-    def get_supset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None, convertToNames=True,impKnownFlg=False):
+    def get_supset_variants(self,override_val=None,variant_order=None,variant_name=None,kit_order=None,kit_name=None, convertToNames=True,perfectFlg=False):
         #variant order: is variant's order in matrix, name is variant name
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
 
@@ -750,13 +774,15 @@ class Sort(object):
             pc = self.get_matrix_kit_indices_by_val(1,variant_order=variant_order,overrideData=overrideData) #pos conditions when override coord with a value
         else:
             pc = self.get_matrix_kit_indices_by_val(1,variant_order=variant_order) #default pos conditions
-        supsX = get_supsets(pc,variant_order)
+        supsX = self.filter_perfect_variants(get_supsets(pc,variant_order).tolist()) #.tolist())
+
         if len(supsX) == 0:
             sups = supsX
         elif convertToNames is True:
-            sups = self.get_variant_name_by_order(variant_order=supsX[:,0],impKnownFlg=impKnownFlg,listFlg=1)
+            sups = self.get_variant_name_by_order(variant_order=supsX[:,0],perfectFlg=perfectFlg,listFlg=1)
         else:
-            sups = supsX[:,0]
+            #print(supsX)
+            sups = np.asarray(supsX)[:,0]
                 
         if override_val is not None and kit_order is not None:
             if override_val==1:
@@ -773,7 +799,7 @@ class Sort(object):
     def get_min_superset_variant(self,variant_order=None,variant_name=None): #order is variant's order in matrix, name is variant name
         if variant_name is not None:
             variant_order = self.get_variant_order_by_name(variant_name)
-        sups = self.get_supset_variants(variant_order=variant_order)
+        sups = self.get_supset_variants(variant_order=variant_order,perfectFlg=perfectFlg)
         if len(sups) is 0:
             return None
         else:
@@ -789,7 +815,7 @@ class Sort(object):
         
     def get_row_when_value_override_coord(self,override_val,kit_order=None,variant_order=None,kit_name=None,variant_name=None):
         #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-        row = self.get_matrix_row_data(variant_order=variant_order)
+        row = self.get_matrix_kit_data(variant_order=variant_order)
         #print("*****beg:This is the val we're overriding -kit/variant")
         #print(kit_order)
         #print(variant_order)
@@ -1023,6 +1049,44 @@ class Sort(object):
 
         #}}}
 
+    def test_rule0_consistency(self,unk_variant,subsets,supsets):
+        variant_order = unk_variant[0]
+        kit_order = unk_variant[1]
+        kpc = self.get_matrix_kit_indices_by_val(val=1,variant_order=variant_order)
+        if config['DEBUG_RULE0']:
+            print("[cons.1] !!! - kit_order: %s" % kit_order)
+            print("[cons.2] !!! - variant_order: %s" % variant_order)
+            print("[cons.8] !!! - kpc: %s" % kpc)
+            print("[cons.8] !!! - kpc(names): %s" % self.get_kit_name_by_order(kpc))
+        if config['DEBUG_RULE0']:
+            print("[cons.3] !!! - supsets: %s" % supsets)
+            print("[cons.4] !!! - supsets(names): %s" % self.get_variant_name_by_order(variant_order=supsets))
+            #print("[cons.5] !!! - subsets: %s" % subsets)
+            #print("[cons.6] !!! - subsets(names): %s" % self.get_variant_name_by_order(variant_order=subsets))
+        if len(supsets):
+            sup = supsets[len(supsets)-1]
+            kpc4sup = self.get_matrix_kit_indices_by_val(val=1,variant_order=sup)
+            if config['DEBUG_RULE0']:
+                print("")
+                print("[cons.7] !!! - sup: %s" % self.get_variant_name_by_order(variant_order=sup))
+                print("[cons.8] !!! - kpc4sup: %s" % kpc4sup)
+                print("[cons.8] !!! - kpc4sup(names): %s" % self.get_kit_name_by_order(kpc4sup))
+            subs4sup = self.get_subset_variants(variant_order=sup,perfectFlg=True,convertToNames=False)
+            if config['DEBUG_RULE0']:
+                print("[cons.9] !!! - subs4sup: %s" % subs4sup)
+                print("[cons.10] !!! - subs4sup(names): %s" % self.get_subset_variants(variant_order=sup,perfectFlg=True))
+                print("")
+        #for sup in supsets:
+        #    if config['DEBUG_RULE0']:
+        #        print("")
+        #        print("[cons.7] !!! - sup: %s" % self.get_variant_name_by_order(variant_order=sup))
+        #    kpc = self.get_matrix_kit_indices_by_val(val=1,variant_order=sup)
+        #    if config['DEBUG_RULE0']:
+        #        print("[cons.8] !!! - kpc: %s" % kpc)
+        #        print("[cons.8] !!! - kpc(names): %s" % self.get_kit_name_by_order(kpc))
+
+        return 'RULE0:Unk'
+        
     def test_rule1_subsets(self,unk_variant,subsets,supsets):
         kit_order = unk_variant[1]
         pc = self.get_matrix_variant_indices_by_val(1,kit_order=kit_order)
@@ -1043,7 +1107,7 @@ class Sort(object):
                 self.resolved_variants.append((unk_variant,True))
                 if config['DEBUG_RULE1']:
                     print("")
-                return 'RULE1: True: sub of %s' % self.get_variant_name_by_order(variant_order=sub)
+                return 'RULE1: True: sup of %s' % self.get_variant_name_by_order(variant_order=sub)
         #Note: if get here -- go to rule 2
         return self.test_rule2_supsets(unk_variant=unk_variant,subsets=subsets,supsets=supsets)
         
@@ -1101,8 +1165,8 @@ class Sort(object):
         kit_order = unk_variant[1]
         #supsets = self.get_supset_variants(variant_order=unk_variant[0],convertToNames=False) #superset of given coord
         #supsets.append(-999) #top
-        #subsets = self.use_imperfect_known_variants_only(self.get_subset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
-        #vi = self.use_imperfect_known_variants_only(self.get_matrix_variant_indices_by_val(1,kit_order=kit_order))
+        #subsets = self.use_imperfect_variants_only(self.get_subset_variants(variant_order=unk_variant[0],convertToNames=False)) #superset of given coord
+        #vi = self.use_imperfect_variants_only(self.get_matrix_variant_indices_by_val(1,kit_order=kit_order))
         vi = self.get_matrix_variant_indices_by_val(1,kit_order=kit_order)
         #vi.append(-999) #top
         ki = self.get_matrix_kit_indices_by_val(1,variant_order=variant_order).tolist()
@@ -1122,7 +1186,7 @@ class Sort(object):
         #Q: does it have a superset?
         for V in vi:
 
-            #sups4V = self.use_imperfect_known_variants_only(self.get_supset_variants(variant_order=V,convertToNames=False)) #superset of related coord
+            #sups4V = self.use_imperfect_variants_only(self.get_supset_variants(variant_order=V,convertToNames=False)) #superset of related coord
             sups4V = self.get_supset_variants(variant_order=V,convertToNames=False) #superset of related coord
             #sups4V.append(-999) #top
 
