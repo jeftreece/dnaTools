@@ -197,7 +197,7 @@ else: #this area calls controllers
 
     # sort prototype - matrix
     if args.sort or args.sortmatrix:
-        #c_sort_sample_db()
+        c_sort_sample_db()
         c_sort_db_matrix()
 
     # sort prototype - tree

@@ -1266,7 +1266,7 @@ class Sort(object):
     def get_mx_data(self):
 
         #sql - exclude perfect variants
-        sql = "select * from perfect_variants_with_kits_assignments;"
+        sql = "select * from perfect_variants_with_kits_assignments_and_unk;"
 
         #get data
         self.dbo.sql_exec(sql)
