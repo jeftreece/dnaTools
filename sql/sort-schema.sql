@@ -2,6 +2,12 @@
 
 -- DROPS
 
+drop view perfect_variants_with_kits_assignments_and_unk;
+drop view perfect_variants_with_kits_assignments;
+drop view perfect_variants_with_kits;
+drop view perfect_variants;
+drop view view kits_view;
+
 drop table if exists s_variants;
 drop table if exists s_calls;
 -- drop table if exists s_call_passes;
