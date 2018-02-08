@@ -64,7 +64,7 @@ WHITE = '\033[37m'
 1. split checker ... anything with a split needs to be flagged. doesn't get an ambiguous bump up
 1. A297 junk rule
 2. redo the horiz/vert sort
-3. get_matrix_data should exlude all neg variants too
+3. get_mx_data should exlude all neg variants too
 4. hide top from matrix stdout
 5. do I still need self.perfect_variants, etc?
 6. write good notes and commenting for the rules
@@ -146,30 +146,30 @@ class Sort(object):
         self.dbo.dc = self.dbo.cursor()
 
         #get data
-        self.get_matrix_data()
+        self.get_mx_data()
 
         #stdout relations data
         if config['DEBUG_RELATIONS']:
-            self.stdout_matrix_relations_data()
+            self.stdout_mx_relations_data()
 
         #step 0
         debug_chk('DEBUG_MATRIX',"data - step 0 (default)",1)
-        self.stdout_tbl_matrix()
+        self.stdout_tbl_mx()
 
         #step 1
         debug_chk('DEBUG_MATRIX',"data - step 1",1)
         self.sort_step1()
-        self.stdout_tbl_matrix()
+        self.stdout_tbl_mx()
 
         #step 2
         debug_chk('DEBUG_MATRIX',"data - step 2",1)
         self.sort_step2()
-        self.stdout_tbl_matrix()
+        self.stdout_tbl_mx()
 
         #step 3
         debug_chk('DEBUG_MATRIX',"data - step 3",1)
         self.sort_step3()
-        self.stdout_tbl_matrix()
+        self.stdout_tbl_mx()
 
         #step 4
         #debug_chk('DEBUG_MATRIX',"data - step 4",1)
@@ -178,21 +178,21 @@ class Sort(object):
         sys.exit()
 
     def sort_step1(self):
-        self.matrix_vertical_sort_new()
+        self.mx_vertical_sort_new()
         
     def sort_step2(self):
-        self.matrix_horizontal_sort()
+        self.mx_horizontal_sort()
         
     def sort_step3(self):
         print("Processing Imperfect Variants:")
         for impV in self.get_imperfect_variants_idx():
             print("----------------")
             print(impV)
-            print(self.get_vname_by_order(impV))
+            print(self.get_vname_by_vix(impV))
             print("{{"+"{") #beg vim marker
-            kzc = self.get_matrix_kit_indices_by_val(val=0,vix=impV)
+            kzc = self.get_kixs_by_val(val=0,vix=impV)
             print(kzc)
-            print(self.get_kname_by_order(kzc))
+            print(self.get_kname_by_kix(kzc))
             results = []
             #sys.exit()
             print("")
@@ -257,207 +257,605 @@ class Sort(object):
         #print(self.resolved_variants)
         #stdout relations data
         #if config['DEBUG_RELATIONS']:
-        #    self.stdout_matrix_relations_data()
+        #    self.stdout_mx_relations_data()
         #print("")
         #sys.exit()
 
-        self.get_matrix_count_data()
-        self.matrix_vertical_sort()
-        self.matrix_horizontal_sort()
+        self.get_mx_count_data()
+        self.mx_vertical_sort()
+        self.mx_horizontal_sort()
 
-    def matrix_vertical_sort_new(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        for K,V in self.get_axis('variants'):
-            #if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 not in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('vp'):
-            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 not in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('variants'):
-            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],variantType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        
-    def matrix_horizontal_sort_new(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        self.NP = np.transpose(self.NP)
-        for K,V in self.get_axis('kp'):
-            new_orders.append([K,cnt])
-            DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-            cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],kitType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        self.NP = np.transpose(self.NP)
-        
-    def matrix_vertical_sort(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        for K,V in self.get_axis('variants'):
-            #if 0 not in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 not in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('vp'):
-            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' not in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 not in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('variants'):
-            #if 0 in self.get_numpy_matrix_row_as_list(V[1]) and 'None' in self.get_numpy_matrix_row_as_list(V[1]):
-            if -1 in self.get_numpy_matrix_row_as_list(V[1]) and 0 in self.get_numpy_matrix_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],variantType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        
-    def matrix_horizontal_sort(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        self.NP = np.transpose(self.NP)
-        for K,V in self.get_axis('kp'):
-            new_orders.append([K,cnt])
-            DATA[K] = self.get_numpy_matrix_row_as_list(V[1],noneToStr=False)
-            cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],kitType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        self.NP = np.transpose(self.NP)
-        
+    def test_rule1_supsets(self,vix,kzc):
 
-    def stdout_tbl_matrix(self):
-        debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX',"big_matrix view{{"+"{",1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        table = BeautifulTable()
-        table.column_headers = ['']+self.get_cur_kit_list()
-        for K,V in self.get_axis('variants'):
-            table.append_row([K]+self.get_numpy_matrix_row_as_list(V[1]))
-        debug_chk('DEBUG_MATRIX',table,1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
-        debug_chk('DEBUG_MATRIX',"small_matrix view{{"+"{",1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX','kits: '+str(self.get_axis('kits',keysOnly=True)),1)
-        debug_chk('DEBUG_MATRIX','variants: '+str(self.get_axis('variants',keysOnly=True)),1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        if config['MATRIX_COLORS']:
-            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
-        else:
-            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -"),1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
-        debug_chk('DEBUG_MATRIX',"",1)
-        
-    def stdout_matrix_relations_data(self,dataStr='',run=0):
-        if dataStr != '' and run != 0:
-            print("---")
-            print(str(dataStr)+"{{"+"{") #beg vim marker
+        #M301 rule (part of it)
+
+        #Note: if there is an existing perfect variant that has the same 
+        #(or superset of the) known +/-'s to the imperfect variant when 
+        #the unresolved ? is turned to a +, then it's a +.
+        #Note: this rule requires supsetsP!
+
+        #find the the kits that perfectly match positives for filling any
+        #combination of unk values
+
+        #what is the kpc of this variant
+
+        overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
+        kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+        print (np.argwhere(self.NP[:,kpuc]==1)[:,0])
+        sys.exit()
+
+        #what could it be with all unks to positive?
+        #self.get_kixs_by_val(1,
+        #what have the min kpc of the bottom variant?
+        #excluding to just the kpc of the max variant?
+
+        #vix = unk_variant[0]
+        #kix = unk_variant[1]
+        #supsets = self.get_supset_variants(vix=vix,kix=kix,convertToNames=False,perfectFlg=True)
+        overrideData = self.get_row_when_override_coord(1,kix=kix,vix=vix)
+
+        kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
+        knc = self.get_kixs_by_val(-1,vix=vix)
+
+        if config['DEBUG_RULE1']:
+            print("")
+            print("[R1.1]!!!kpc: kit positive conditions: %s" %kpc)
+            print("[R1.2]!!!kpc(names): %s"%self.get_kname_by_kix(kix=kpc))
+            print("[R1.3]!!!knc: kit negative conditions: %s" %knc)
+            print("[R1.4]!!!knc(names): %s"% self.get_kname_by_kix(kix=knc))
+            print("[R1.5]!!!supsetsP: %s" %supsetsP)
+            print("[R1.6]!!!supsetsP(names): %s" % self.get_vname_by_vix(vix=supsetsP))
+
+        for sup in reversed(supsetsP):
+
+            if config['DEBUG_RULE1']:
+                print("")
+                print("[R1.5]!!!sup: %s" % sup)
+                print("[R1.6]!!!sup(name): %s" % self.get_vname_by_vix(vix=sup))
+
+            kpc4sup = self.get_kixs_by_val(1,vix=sup)
+
+            if config['DEBUG_RULE1']:
+                print("[R1.7]!!!kpc4sup: %s"%kpc4sup)
+                print("[R1.8]!!!kpc4sup(name): %s"%self.get_kname_by_kix(kix=kpc4sup))
+
+            knc4sup = self.get_kixs_by_val(-1,vix=sup)
+
+            if config['DEBUG_RULE1']:
+                print("[R1.9]!!!knc4sup: %s"%knc4sup)
+                print("[R1.10]!!!knc4sup(name): %s"%self.get_kname_by_kix(kix=knc4sup))
+
+            lenPos = len(list(set(kpc).intersection(set(kpc4sup))))
+            lenNeg = len(list(set(knc).intersection(set(knc4sup))))
+
+            if config['DEBUG_RULE1']:
+                print("[R1.11]!!!lenPos: %s" % lenPos)
+                print("[R1.12]!!!lenNeg: %s" % lenNeg)
+
+            if lenPos == len(kpc) and lenNeg == len(knc):
+                self.unk_variants.remove(unk_variant)
+                self.NP[unk_variant[0],unk_variant[1]]=1
+                self.resolved_variants.append((unk_variant,True))
+
+                print("")
+                return 'RULE1: True - ambiguous: equivalent/subset of %s'%(self.get_vname_by_vix(vix=sup))
+
+        #if we get here ... go to rule 3
         print("")
-        #print counts
-        print("relation counts:")
-        print("-------------------------")
-        print("mix:"+str(len(self.MIXA)))
-        print("pos:"+str(len(self.POSA)))
-        print("neg:"+str(len(self.NEGA)))
-        print("unk:"+str(len(self.UNKA)))
-        print("")
-        #print data
-        print("relation data:")
-        print("-------------------------")
-        for K in sorted(list(set([itm1[0] for itm1 in self.MIXA]+[itm1[0] for itm1 in self.POSA]+[itm1[0] for itm1 in self.NEGA]))):
-            M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
-            P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
-            N = ",".join(sorted([itm2[1] for itm2 in self.NEGA if itm2[0] == K]))
-            U = ",".join(sorted([itm2[1] for itm2 in self.UNKA if itm2[0] == K]))
-            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"], unk:["+str(U.lower())+"]")
-        print("")
-        if dataStr != '' and run != 0:
-            print("}}"+"}") #end vim marker
+        return 'RULE1: Unk'
+        return self.test_rule3_diff_branches(unk_variant,subsets,supsets)
+        
+    def test_rule1a_subsets(self,unk_variant,subsets,supsets,supsetsP):
+        #How this works:
+        #1. check to see if this coord's related vpc variants are subsets of this coord's variant.
 
-    def set_new_order(self,val,cnt,kitType=False,variantType=False):
-        if kitType:
-            self.KITS[val][1] = cnt
-        if variantType:
-            self.VARIANTS[val][1] = cnt
-        
-    def set_new_axis(self,vals,cnts,kitType=False,variantType=False):
-        self.VARIANTS = {}
-        for x in range(len(vals)):
-            self.VARIANTS[vals[x]] = [0,cnts[x]]
+        #Z381 rule - needs subsets
 
-    def get_coord(self,kix,vix,moreInfo=False):
-        buf = ""
-        if moreInfo:
-            buf = "coord: "+str(kix)+","+str(vix)
-        kit = self.get_kname_by_order(kix)
-        variant = self.get_vname_by_order(vix)
-        buf = buf +  "k|v: "+str(kit)+"|"+(variant)
-        if moreInfo:
-            buf = buf + "value:"+str(self.NP[vix,kix])
-        return buf
+        kix = unk_variant[1]
+        vpc = self.get_vixs_by_val(1,kix=kix)
+
+        if config['DEBUG_RULE1a']:
+            print("[R1a.1] vpc: positive conditions: %s" %vpc)
+            print("[R1a.2] vpc(names): %s"%self.get_vname_by_vix(vix=vpc))
+            print("[R1a.3] subsets: %s"%subsets)
+            print("[R1a.4] subsets(names): %s"%self.get_vname_by_vix(vix=subsets))
+
+        #standard subset test
+        for sub in subsets:
+            if sub in vpc:
+
+                if config['DEBUG_RULE1a']:
+                    print("")
+                    print("[R1a.5] sub: %s"%sub)
+                    print("[R1a.6] sub(name):"%self.get_vname_by_vix(vix=sub))
+
+                self.unk_variants.remove(unk_variant)
+                self.NP[unk_variant[0],unk_variant[1]]=1
+                self.resolved_variants.append((unk_variant,True))
+
+                if config['DEBUG_RULE1a']:
+                    print("")
+
+                return 'RULE1a: True: sup of %s' % self.get_vname_by_vix(vix=sub)
+
+        #Note: if get here -- go to rule 2
+        return "RULE1a: Unk"
+        return self.test_rule2_supsets(unk_variant=unk_variant,subsets=subsets,supsets=supsets,supsetsP=supsetsP)
         
-    def get_cur_kit_list(self):
-        return self.get_axis('kits',keysOnly=True)
-        
-    def get_numpy_matrix_row_as_list(self,rownum,noneToStr=True):
-        if noneToStr:
-            return ['None' if v is None else v for v in self.NP[rownum,:].tolist()[0]]
-        else:
-            return self.NP[rownum,:].tolist()[0]
-        
-    def get_cur_variant_list(self):
-        return self.get_axis('variants',keysOnly=True)
-        
-    def get_axis(self,orderByType=None,keysOnly=False): # gets the variant/col or kit/row names (and optionally order info too)
-        if orderByType in ['variants','kits']:
-            if orderByType == 'variants' : SCH = self.VARIANTS
-            if orderByType == 'kits' : SCH = self.KITS
-            if keysOnly:
-                return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
+    def test_rule3_diff_branches(self,unk_variant,subsets,supsets):
+
+        #Z28 rule
+
+        vix = unk_variant[0]
+        kix = unk_variant[1]
+        #supsets = self.get_supset_variants(vix=unk_variant[0],convertToNames=False) #superset of given coord
+        #supsets.append(-999) #top
+        #subsets = self.use_imperfect_variants_only(self.get_subset_variants(vix=unk_variant[0],convertToNames=False)) #superset of given coord
+        #vi = self.use_imperfect_variants_only(self.get_vixs_by_val(1,kix=kix))
+        vi = self.get_vixs_by_val(1,kix=kix)
+        #vi.append(-999) #top
+        ki = self.get_kixs_by_val(1,vix=vix).tolist()
+        if ki is None:
+            ki = []
+        rule_p1_list = []
+
+        if config['DEBUG_RULE3']:
+            print("[R3a.1] vix: %s" %self.get_vname_by_vix(vix))
+            print("[R3a.2] supsets: %s" %self.get_vname_by_vix(supsets))
+            print("[R3a.3] vi (imperfect knowns when set coord to pos): %s" %self.get_vname_by_vix(vi))
+            print("[R3a.4] ki (related kits when set coord to pos): %s" %self.get_kname_by_kix(ki))
+            print("")
+
+        #Note: first deal with the variant that might might share the unknown variant we're wondering about
+        #Q: Is it not a direct relation?
+        #Q: does it have a superset?
+        for V in vi:
+
+            #sups4V = self.use_imperfect_variants_only(self.get_supset_variants(vix=V,convertToNames=False)) #superset of related coord
+            sups4V = self.get_supset_variants(vix=V,convertToNames=False) #superset of related coord
+            #sups4V.append(-999) #top
+
+            if config['DEBUG_RULE3']:
+                print("[R3a.5] V: %s" %self.get_vname_by_vix(V))
+                print("[R3a.6] sups4V(%s): %s" %(self.get_vname_by_vix(V),self.get_vname_by_vix(sups4V)))
+                print("[R3a.6] supsets: %s" %supsets)
+                print("[R3a.7] subsets: %s" %subsets)
+                print("[R3a.8] supsets(names): %s" %self.get_vname_by_vix(supsets))
+                print("[R3a.9] subsets(names): %s" %self.get_vname_by_vix(subsets))
+
+            #Is it a direct relation? 
+            if V not in supsets and V not in subsets: # and vix not in sups4V:
+                if config['DEBUG_RULE3']:
+                    print("")
+                directRelation_chk = False
+                if config['DEBUG_RULE3']:
+                    print("[R3a.10] directRelation Chk is: %s (continue with V=%s)" %(directRelation_chk,self.get_vname_by_vix(V)))
+                    print("")
             else:
-                return sorted(SCH.items(), key=lambda e: e[1][1])
-        if orderByType in ['kp','kn','kx','vp','vn','vx']:
-            if keysOnly:
-                return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+                directRelation_chk = True
+                if config['DEBUG_RULE3']:
+                    print("[R3a.11] directRelation Chk is: %s (don't continue with V=%s)" %(directRelation_chk,self.get_vname_by_vix(V)))
+                    print("")
+                continue # try the next V
+
+            if directRelation_chk == False:
+
+                if config['DEBUG_RULE3']:
+                    print("[R3a.12] V in: %s" %self.get_vname_by_vix(V))
+                k4V = self.get_kixs_by_val(1,vix=V).tolist() #other kits per V
+                k4V.remove(kix)
+                if config['DEBUG_RULE3']:
+                    print("[R3a.13] k4V(%s): %s" %(self.get_vname_by_vix(V),self.get_kname_by_kix(k4V)))
+
+                #Does it have any supersets?
+                if len(sups4V) == 0:
+                    #sups4V.append(-999) #top
+                    if config['DEBUG_RULE3']:
+                        print("[R3a.14] sups Chk: sups not in sups4V (don't continue with V=%s)"%self.get_vname_by_vix(V))
+                        print("")
+                    continue # try the next V
+
+                for sup4V in sups4V:
+                    if config['DEBUG_RULE3']:
+                        print("")
+                        print("sups Chk: sups in sups4V (continue with V=%s)"%self.get_vname_by_vix(V))
+                        print("")
+                        print("[R3a.15] sup4V(%s): %s" %(self.get_vname_by_vix(V),self.get_vname_by_vix(sup4V)))
+                    k4sup4V = self.get_kixs_by_val(1,vix=sup4V).tolist() #other kits per V
+                    if config['DEBUG_RULE3']:
+                        print("[R3a.16] k4sup4V(%s)(%s)(bef.rem) in: %s" %(self.get_vname_by_vix(V),self.get_vname_by_vix(sup4V),self.get_kname_by_kix(k4sup4V)))
+                    if kix in k4sup4V: #(1)can't be the given coord's kit
+                        k4sup4V.remove(kix) #(2)can't be the given coord's kit
+                    if config['DEBUG_RULE3']:
+                        print("[R3a.17] k4sup4V(%s)(%s)(aft.rem) in: %s" %(self.get_vname_by_vix(V),self.get_vname_by_vix(sup4V),self.get_kname_by_kix(k4sup4V)))
+                    k_in_k4V_and_k4sup4V = list(set(k4V).intersection(set(k4sup4V)))
+
+                    #Is there additional overlap btw this other variant and its superset?
+                    if len(k_in_k4V_and_k4sup4V) == 0:
+                        if config['DEBUG_RULE3']:
+                            print("[R3a.18] k4V + k4sup4V intersection chk: no additional overlap (don't continue with V=%s)"%self.get_vname_by_vix(V))
+                            print("")
+                        continue
+
+                    #Everything seems ok for part one of this rule
+                    if config['DEBUG_RULE3']:
+                        print("[R3a.19] k4V + k4sup4V intersection chk: additional overlap (continue with V=%s)"%self.get_vname_by_vix(V))
+                        print("")
+                        print("[R3a.20] k_in_k4V_and_k4sup4V: %s" %self.get_kname_by_kix(k_in_k4V_and_k4sup4V))
+                        print("")
+                    rule_p1_list.append((sup4V,k_in_k4V_and_k4sup4V))
+
+        if len(rule_p1_list):
+            rule_p2_list = []
+
+            #Loop the known supersets of the given variant
+            for sup4vo in supsets:
+
+                #What positive variant relations do those supersets have? 
+                k4sup4vo = self.get_kixs_by_val(1,vix=sup4vo).tolist() #other kits per V
+                #k4sup4vo.append(-999) #top
+                
+                if config['DEBUG_RULE3']:
+                    print("[R3b.21] k4sup4vo(%s): %s"%(self.get_vname_by_vix(sup4vo),self.get_kname_by_kix(k4sup4vo)))
+                    print("[R3b.22] ki: %s"%self.get_kname_by_kix(ki))
+                    print("")
+
+                #Is there any overlap with the given coord?
+                k_in_k4sup4vo_and_ki = set(k4sup4vo).intersection(set(ki))
+                if len(k_in_k4sup4vo_and_ki) == 0:
+                    print("[R3b.23] k4sup4vo + ki intersection chk: no additional overlap (don't continue with sup4vo=%s)"%self.get_vname_by_vix(sup4vo))
+                    print("")
+                    continue
+
+                #If so, everything seems ok for part two of this rule
+                if config['DEBUG_RULE3']:
+                    print("[R3b.24] k4sup4vo + ki intersection chk: additional overlap (continue with sup4vo=%s)"%self.get_vname_by_vix(sup4vo))
+                    print("")
+                    print("[R3b.25] k_in_k4sup4vo_and_ki in: %s" %self.get_kname_by_kix(k_in_k4sup4vo_and_ki))
+                rule_p2_list.append((sup4vo,k_in_k4sup4vo_and_ki))
+
+            #Check that both rules are satisfied and not shared btw both lists
+            if len(rule_p2_list):
+                for itm1 in rule_p1_list:
+                    if itm1 not in rule_p2_list:
+                        for itm2 in rule_p2_list:
+                            if itm2 not in rule_p1_list:
+                                #If here, we have a winner!
+                                msg = "%s:%s" % (itm1,itm2)
+                                #self.resolved_variants.append((unk_variant,False))
+                                self.unk_variants.remove(unk_variant)
+                                self.NP[unk_variant[0],unk_variant[1]]=-1
+                                self.resolved_variants.append((unk_variant,False))
+                                #if config['DEBUG_RULE3']:
+                                #print("}}"+"}")
+                                msg1a = self.get_vname_by_vix(itm1[0])
+                                msg1b = self.get_vname_by_vix(itm1[1])
+                                msg2a = self.get_vname_by_vix(itm2[0])
+                                msg2b = self.get_vname_by_vix(itm2[1])
+                                print("")
+                                return "RULE3: False - 2 diff branches (%s,%s) + (%s,%s)"% (msg1a,msg1b,msg2a,msg2b)
+
+        #print("}}"+"}")
+        if config['DEBUG_RULE3']:
+            print("")
+
+        return "RULE3: Unk"
+        return "RULEX: Unk"
+    def test_rule0_consistency(self,vix,subsets,supsets):
+        '''{{{
+
+        [step 1 - rule1 - M301]{{{ 
+
+        If we make the ? a +, are there any +/- combos (superset candidates) like this already
+
+         [b] Yes - go to standard Rule 2 (convert "?" to "+" - and flag as ambiguuous)
+        x[a] No - go to step 2
+
+        }}}
+        [step 2]{{{
+
+        (step 2a) ok, let's try the + for the unk.
+        (step 2b) ok, let's try it w/o the pos for unk. (ph.consistency)
+
+        }}}
+        [step 3]{{{
+        
+        What is its minimum superset [(a) with (b) w/o] considering the unk call?
+
+        x[A] U106
+
+        (step 3) What are the unique highest subset combo children of v1 (other than v5) that
+        touch +'s (in equal or different ways that v5 does to the superset)?
+
+        v2--> L48
+        v3--> Z156
+
+        Are they subsets? No
+
+        Would changing unknowns to positive, make any all of them subsets? Yes
+        If can change all of them ... then promote.
+
+        If no...still can't ... step 4
+        }}}
+        [step 4]{{{
+        
+        With these subsets, do the following study:
+
+        (a) One for they way they intersect the superset (v1).
+        (b) One for they way they intersect the superset (v1) and the variant being studied (v5).
+        (c) Add up the total unique connections btw both lists
+        (d) Note the unique difference in kits btw both lists
+
+        Intersection List1          Intersection List2
+        ------------------          ------------------
+        L48:  v1+v2 [D,I,C,H]       L48: v1+v2+v5 [C,H] D,I <- possible
+        Z156: v1+v3 [B,G]           Z156: v1+v3+v5 []   B,G <- possible
+        -------                     --------
+        total = 6                   total = [2] 4<- possible (due to unks)
+
+        (step 5)
+        
+        Make conclusions for split/no split
+
+        Conclusions:
+
+        (1) No diff btw two lists - ambiguous  promote all shared points btw the two lists that might be unk
+        (2) Intersection List 1 is greater == split
+        (3) Intersection List 2 is greater == flag for study
+
+        }}}
+        [step 5 - split process/loop]{{{
+
+        (step 1) move Zxx to Zxx.tmp
+        (step 2) of v1's highest children, which intersects v5 the best? v2 (or other v1 child)
+        (step 3) splice Zxx.tmp to create a Zxx.# and if anything left unexplained, a new Zxx.tmp that
+                 accomodates v2 (or other v1 child) as a parent
+        (step 4) repeat steps 2-3 until no more Zxx.tmp
+
+        }}}
+
+        }}}'''
+
+        #A297 rule
+
+        vix = unk_variant[0]
+        kix = unk_variant[1]
+        kpc = self.get_kixs_by_val(val=1,vix=vix)
+
+        if config['DEBUG_RULE0']:
+            print("[R0.1] kix: %s" % kix)
+            print("[R0.2] vix: %s" % vix)
+            print("[R0.8] kpc: %s" % kpc)
+            print("[R0.8] kpc(names): %s" % self.get_kname_by_kix(kpc))
+
+        if config['DEBUG_RULE0']:
+            print("[R0.3] supsets: %s" % supsets)
+            print("[R0.4] supsets(names): %s" % self.get_vname_by_vix(vix=supsets))
+            #print("[R0.5] !!! - subsets: %s" % subsets)
+            #print("[R0.6] !!! - subsets(names): %s" % self.get_vname_by_vix(vix=subsets))
+
+        if len(supsets):
+            sup = supsets[len(supsets)-1]
+            kpc4sup = self.get_kixs_by_val(val=1,vix=sup)
+
+            if config['DEBUG_RULE0']:
+                print("")
+                print("[R0.7] sup: %s" % self.get_vname_by_vix(vix=sup))
+                print("[R0.8] kpc4sup: %s" % kpc4sup)
+                print("[R0.8] kpc4sup(names): %s" % self.get_kname_by_kix(kpc4sup))
+
+            subs4sup = self.get_subset_variants(vix=sup,perfectFlg=True,convertToNames=False)
+
+            if config['DEBUG_RULE0']:
+                print("[R0.9] subs4sup: %s" % subs4sup)
+                print("[R0.10] subs4sup(names): %s" % self.get_subset_variants(vix=sup,perfectFlg=True))
+                print("")
+
+        #for sup in supsets:
+        #    if config['DEBUG_RULE0']:
+        #        print("")
+        #        print("[cons.7] !!! - sup: %s" % self.get_vname_by_vix(vix=sup))
+        #    kpc = self.get_kixs_by_val(val=1,vix=sup)
+        #    if config['DEBUG_RULE0']:
+        #        print("[cons.8] !!! - kpc: %s" % kpc)
+        #        print("[cons.8] !!! - kpc(names): %s" % self.get_kname_by_kix(kpc))
+
+        return 'RULE0: Unk'
+        
+
+    def get_subset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
+        #vix: is variant's order in matrix, name is vname
+        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
+
+        def get_subsets(kpc,vo):
+            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
+            if config['DBG_SUBS_IN']:
+                print("[subin.1] VAR1p: %s"%VAR1p)
+            idxP = np.argwhere(VAR1p==vo) #idx make sure we exclude the incoming variant
+            VAR2p = np.delete(VAR1p, idxP)
+            if config['DBG_SUBS_IN']:
+                print("[subin.2] VAR2p: %s"%VAR2p)
+            unique_elements_p, counts_elements_p = np.unique(VAR2p, return_counts=True)
+            VAR3p = np.asarray((unique_elements_p, counts_elements_p)).T #get uniques
+            if config['DBG_SUBS_IN']:
+                print("[subin.3] VAR3p: %s"%VAR3p)
+            VAR3x = VAR3p
+            #...
+            #Note: for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
+            #beg - adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
+            unq, unq_inv = np.unique(VAR3x[:,0], return_inverse=True)
+            out = np.zeros((len(unq), VAR3x.shape[1]), dtype=VAR3x.dtype) #create empty array to put the added values
+            out[:, 0] = unq #fill the first column
+            np.add.at(out[:, 1:], unq_inv, VAR3x[:, 1:])
+            #end - adding technique
+            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
+            out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
+            if config['DBG_SUBS_IN']:
+                print("[subin.4] out1: %s"%out1)
+                print("[subin.5] kpc: %s"%kpc)
+                print("[subin.6] kpc(names): %s"%self.get_kname_by_kix(kpc))
+            VAR4 = np.argwhere(out1[:,1]<len(kpc)) #[:,0]
+            if config['DBG_SUBS_IN']:
+                print("[subin.7] VAR4: %s"%VAR4)
+            #end - sorting technique
+            out2a = out1[:,0]
+            if config['DBG_SUBS_IN']:
+                print("[subin.8] out2a: %s"%out2a)
+            out2b = out1[:,1]
+            if config['DBG_SUBS_IN']:
+                print("[subin.9] out2b: %s"%out2b)
+            VAR5a = out2a[list(VAR4.T[0])] #these are the superset vixs ids (in order, max first)
+            if config['DBG_SUBS_IN']:
+                print("[subin.10] VAR5a: %s"%VAR5a)
+                print("[subin.11] VAR5a(names): %s"%self.get_vname_by_vix(VAR5a))
+            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant counts
+            if config['DBG_SUBS_IN']:
+                print("[subin.12] VAR5b: %s"%VAR5b)
+            VAR6 = np.asarray((VAR5a,VAR5b)).T #merged for return
+            if config['DBG_SUBS_IN']:
+                print("[subin.13] VAR6: %s"%VAR6)
+            #if len(VAR6) == 0:
+            #    return []
+            return VAR6 #[:,0]
+
+        if vname is not None:
+            vix = self.get_vix_by_name(vname)
+        if kname is not None:
+            kix = self.get_kix_by_name(kname)
+        if override_val is not None and kix is not None:
+            overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
+            kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
+        else:
+            kpc = self.get_kixs_by_val(1,vix=vix) #default pos conditions
+
+        if convertToNames is True:
+            subs = self.get_vname_by_vix(vix=self.filter_perfect_variants(get_subsets(kpc,vix)[:,0].tolist()),listFlg=1)
+        else:
+            subs = self.filter_perfect_variants(vix=get_subsets(kpc,vix)[:,0].tolist())
+        if config['DBG_SUBS']:
+            print("[sub.1] subs: %s" % subs)
+
+        if config['DBG_SUBS']:
+            suffix=''
+            if override_val is not None and kix is not None:
+                suffix = 'P' if override_val == 1 else 'N'
+            print("[sub.2] subsets%s: %s kpc: %s" % (suffix,",".join([str(i) for i in subs]),kpc))
+        return subs
+        
+    def get_supset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
+        #vix: is variant's order in matrix, name is vname
+        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
+
+        def get_supsets(kpc,vo):
+            if config['DBG_SUPS_IN']:
+                print("[supin.0] kpc: %s"%kpc)
+                print("[supin.0] kpc(names): %s"%self.get_kname_by_kix(kpc))
+            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+            if config['DBG_SUPS_IN']:
+                print("[supin.1] VAR1p: %s"%VAR1p)
+            unqP, cntP = np.unique(VAR1p, return_counts=True)
+            VAR2p = np.asarray((unqP, cntP)).T
+            if config['DBG_SUPS_IN']:
+                print("[supin.2] VAR2p: %s"%VAR2p)
+            VAR2x = VAR2p[VAR2p[:,1]==len(kpc)] #has to have at least what the incoming variant had in count
+            if config['DBG_SUPS_IN']:
+                print("[supin.3] VAR2x: %s"%VAR2x)
+            idx = np.argwhere(VAR2x[:,0]==vo) #idx make sure we exclude the incoming variant
+            VAR3 = np.delete(VAR2x[:,0], idx) #idx again/delete
+            if config['DBG_SUPS_IN']:
+                print("[supin.4] VAR3: %s"%VAR3)
+            #...
+            if len(VAR3) == 0: return [] #there are no supsets according to the filter
+            #(beg) master list of all positives
+            allPos = np.argwhere(self.NP==1)[:,0]
+            if config['DBG_SUPS_IN']:
+                print("[supin.5] allPos: %s"%allPos)
+
+            unqA, cntA = np.unique(allPos, return_counts=True)
+            AP = np.asarray((unqA, cntA))[1,]
+            if config['DBG_SUPS_IN']:
+                print("[supin.6] AP: %s"%AP)
+            #(end) master list of all positives
+            VAR5 = AP[list(VAR3),] #extrapolate the right subset mix to master list of all positives
+            if config['DBG_SUPS_IN']:
+                print("[supin.7] VAR5: %s"%VAR5)
+            VAR6 = np.asarray((VAR3,VAR5)).T
+            if config['DBG_SUPS_IN']:
+                print("[supin.8] VAR6: %s"%VAR6)
+            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
+            VAR7 = VAR6[VAR6[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
+            if config['DBG_SUPS_IN']:
+                print("[supin.9] VAR7: %s"%VAR7)
+            #VAR7 = VAR6[VAR6[:,1].argsort()] #normal sort (2nd col) - so we can get the minimum ones first
+            #(end) sorting
+            return VAR7
+
+        if config['DBG_SUPS']:
+            print("")
+        if vname is not None:
+            vix = self.get_vix_by_name(vname)
+        if kname is not None:
+            kix = self.get_kix_by_name(kname)
+        if override_val is not None and kix is not None:
+            overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
+            kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
+        else:
+            kpc = self.get_kixs_by_val(1,vix=vix) #default pos conditions
+        if config['DBG_SUPS']:
+            print("[sup.1] kpc: %s"%kpc)
+
+        supsY = get_supsets(kpc,vix)
+        if config['DBG_SUPS']:
+            print("[sup.2] supsY: %s"%supsY)
+        if len(supsY) == 0:
+            return []
+        else:
+            supsX = self.filter_perfect_variants(supsY.tolist()) #.tolist())
+        if config['DBG_SUPS']:
+            print("[sup.3] supsX: %s"%supsX)
+
+        if len(supsX) == 0:
+            sups = supsX
+        elif convertToNames is True:
+            sups = self.get_vname_by_vix(vix=supsX[:,0],perfectFlg=perfectFlg,listFlg=1)
+        else:
+            #print(supsX)
+            sups = np.asarray(supsX)[:,0]
+        if config['DBG_SUPS']:
+            print("[sup.4] sups: %s"%sups)
+                
+        if override_val is not None and kix is not None:
+            if override_val==1:
+                if config['DBG_SUPS']:
+                    print("[sup.5] supsetsP: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
             else:
-                listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-                if orderByType in ['vp','vn','vx']:
-                    #print(self.VARIANTS)
-                    return [(key, self.VARIANTS[key]) for key in listByCount]
-                if orderByType in ['kp','kn','kx']:
-                    return [(key, self.KITS[key]) for key in listByCount]
+                if config['DBG_SUPS']:
+                    print("[sup.6] supsetsN: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
+        else:
+            if config['DBG_SUPS']:
+                print("[sup.7] supsets: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
+        return sups
         
-    def get_coord_name_by_order(self,coord_order):
-        coord_name = []
-        for C in coord_order:
-            vname = self.get_vname_by_order(vix=C[0])
-            kname = self.get_kname_by_order(kix=C[1])
-            coord_name.append((vname,kname))
-        return coord_name
-        
-    def get_vname_by_order(self,vix,listFlg=False,perfectFlg=False): #get variant name (can also take a list)
+    def use_perfect_known_variants_only(self,variants):
+        if self.perfect_known_variants == None:
+            return variants
+        newList = []
+        for v in variants:
+            if v in self.perfect_known_variants:
+                newList.append(v)
+        return newList
+
+    def get_row_when_override_kixs(self,override_val,vix,kixs):
+        row = self.get_mx_kit_data(vix=vix)
+        if len(kixs) == 0:
+            return row
+        rowO = np.empty_like(row)
+        rowO[:] = row #make duplicate copy - important!
+        for kx in kixs.tolist():
+            rowO[0,kx] = override_val
+        return rowO
+
+    def get_vname_by_vix(self,vix,listFlg=False,perfectFlg=False): #get vname (can also take a list)
         #listFlg: force listFlg as return data type
         #perfectFlg: force it to be a name that's part of the imperfect known list of variants
         intFlg = True
@@ -515,10 +913,7 @@ class Sort(object):
             return(variantList)
         
         
-    def get_vix_by_name(self,vname): #get variant order from its name
-        return self.VARIANTS[vname][1]
-        
-    def get_kname_by_order(self,kix,listFlg=False):
+    def get_kname_by_kix(self,kix,listFlg=False):
         #listFlg: force listFlg as return data type
         intFlg = True
         try:
@@ -558,22 +953,14 @@ class Sort(object):
                         break
             return(kitList)
         
-    def get_kix_by_name(self,kname): #get kit order from its name
+    def get_vix_by_name(self,vname): #get vix from its name
+        return self.VARIANTS[vname][1]
+        
+    def get_kix_by_name(self,kname): #get kix from its name
         return self.KITS[kname][1]
         
-    def get_matrix_kit_data(self,vix=None,vname=None): #get same type variant data for each kit
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        if vix is not None:
-            return self.NP[vix,]
-        
-    def get_matrix_variant_data(self,kix=None,kname=None): #get all type variant data for one kit
-        if kname is not None:
-            kix = self.get_kix_by_name(kname)
-        if kix is not None:
-            return self.NP[:,kix].T
-        
-    def get_matrix_kit_indices_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_matrix_kit_data but retrieves index info for given val
+
+    def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_mx_kit_data but retrieves index info for given val
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         #if vix == -999: #top hack
@@ -583,7 +970,7 @@ class Sort(object):
         if vix is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[vix,] == val).T[1,] #default data, it's the entire matrix - 2d dataset 
         
-    def get_matrix_variant_indices_by_val(self,val,kix=None,kname=None,overrideData=None): #like get_matrix_variant_data but retrieves index info for given val
+    def get_vixs_by_val(self,val,kix=None,kname=None,overrideData=None): #like get_mx_variant_data but retrieves index info for given val
         if kname is not None:
             kix = self.get_kix_by_name(kname)
         if kix is not None and overrideData is not None:
@@ -591,14 +978,212 @@ class Sort(object):
         if kix is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[:,kix] == val).T[0,] #default data, it's the entire matrix - 2d dataset
 
-    def use_perfect_known_variants_only(self,variants):
-        if self.perfect_known_variants == None:
-            return variants
-        newList = []
-        for v in variants:
-            if v in self.perfect_known_variants:
-                newList.append(v)
-        return newList
+    #...
+
+    def mx_vertical_sort_new(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            #if 0 not in self.get_mx_row_as_list(V[1]):
+            if -1 not in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('vp'):
+            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' not in self.get_mx_row_as_list(V[1]):
+            if -1 in self.get_mx_row_as_list(V[1]) and 0 not in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('variants'):
+            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' in self.get_mx_row_as_list(V[1]):
+            if -1 in self.get_mx_row_as_list(V[1]) and 0 in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        
+    def mx_horizontal_sort_new(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        self.NP = np.transpose(self.NP)
+        for K,V in self.get_axis('kp'):
+            new_orders.append([K,cnt])
+            DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+            cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],kitType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        self.NP = np.transpose(self.NP)
+        
+    def mx_vertical_sort(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        for K,V in self.get_axis('variants'):
+            #if 0 not in self.get_mx_row_as_list(V[1]):
+            if -1 not in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('vp'):
+            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' not in self.get_mx_row_as_list(V[1]):
+            if -1 in self.get_mx_row_as_list(V[1]) and 0 not in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for K,V in self.get_axis('variants'):
+            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' in self.get_mx_row_as_list(V[1]):
+            if -1 in self.get_mx_row_as_list(V[1]) and 0 in self.get_mx_row_as_list(V[1]):
+                new_orders.append([K,cnt])
+                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+                cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],variantType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        
+    def mx_horizontal_sort(self):
+        DATA = OrderedDict()
+        cnt = 0 
+        new_orders = []
+        self.NP = np.transpose(self.NP)
+        for K,V in self.get_axis('kp'):
+            new_orders.append([K,cnt])
+            DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
+            cnt = cnt + 1
+        for NO in new_orders:
+            self.set_new_order(NO[0],NO[1],kitType=True)
+        self.NP = np.matrix(list(DATA.values()))
+        self.NP = np.transpose(self.NP)
+        
+
+    def stdout_tbl_mx(self):
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',"big_matrix view{{"+"{",1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        table = BeautifulTable()
+        table.column_headers = ['']+self.get_cur_kit_list()
+        for K,V in self.get_axis('variants'):
+            table.append_row([K]+self.get_mx_row_as_list(V[1]))
+        debug_chk('DEBUG_MATRIX',table,1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
+        debug_chk('DEBUG_MATRIX',"small_matrix view{{"+"{",1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX','kits: '+str(self.get_axis('kits',keysOnly=True)),1)
+        debug_chk('DEBUG_MATRIX','variants: '+str(self.get_axis('variants',keysOnly=True)),1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        if config['MATRIX_COLORS']:
+            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+        else:
+            debug_chk('DEBUG_MATRIX',str(self.NP).replace("-1"," -"),1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        debug_chk('DEBUG_MATRIX',"}}"+"}",1)
+        debug_chk('DEBUG_MATRIX',"",1)
+        
+    def stdout_mx_relations_data(self,dataStr='',run=0):
+        if dataStr != '' and run != 0:
+            print("---")
+            print(str(dataStr)+"{{"+"{") #beg vim marker
+        print("")
+        #print counts
+        print("relation counts:")
+        print("-------------------------")
+        print("mix:"+str(len(self.MIXA)))
+        print("pos:"+str(len(self.POSA)))
+        print("neg:"+str(len(self.NEGA)))
+        print("unk:"+str(len(self.UNKA)))
+        print("")
+        #print data
+        print("relation data:")
+        print("-------------------------")
+        for K in sorted(list(set([itm1[0] for itm1 in self.MIXA]+[itm1[0] for itm1 in self.POSA]+[itm1[0] for itm1 in self.NEGA]))):
+            M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
+            P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
+            N = ",".join(sorted([itm2[1] for itm2 in self.NEGA if itm2[0] == K]))
+            U = ",".join(sorted([itm2[1] for itm2 in self.UNKA if itm2[0] == K]))
+            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"], unk:["+str(U.lower())+"]")
+        print("")
+        if dataStr != '' and run != 0:
+            print("}}"+"}") #end vim marker
+
+    def set_new_order(self,val,cnt,kitType=False,variantType=False):
+        if kitType:
+            self.KITS[val][1] = cnt
+        if variantType:
+            self.VARIANTS[val][1] = cnt
+        
+    def set_new_axis(self,vals,cnts,kitType=False,variantType=False):
+        self.VARIANTS = {}
+        for x in range(len(vals)):
+            self.VARIANTS[vals[x]] = [0,cnts[x]]
+
+    def get_coord(self,kix,vix,moreInfo=False):
+        buf = ""
+        if moreInfo:
+            buf = "coord: "+str(kix)+","+str(vix)
+        kit = self.get_kname_by_kix(kix)
+        variant = self.get_vname_by_vix(vix)
+        buf = buf +  "k|v: "+str(kit)+"|"+(variant)
+        if moreInfo:
+            buf = buf + "value:"+str(self.NP[vix,kix])
+        return buf
+        
+    def get_cur_kit_list(self):
+        return self.get_axis('kits',keysOnly=True)
+        
+    def get_cur_variant_list(self):
+        return self.get_axis('variants',keysOnly=True)
+        
+    def get_axis(self,orderByType=None,keysOnly=False): # gets the variant/col or kit/row names (and optionally order info too)
+        if orderByType in ['variants','kits']:
+            if orderByType == 'variants' : SCH = self.VARIANTS
+            if orderByType == 'kits' : SCH = self.KITS
+            if keysOnly:
+                return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
+            else:
+                return sorted(SCH.items(), key=lambda e: e[1][1])
+        if orderByType in ['kp','kn','kx','vp','vn','vx']:
+            if keysOnly:
+                return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+            else:
+                listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+                if orderByType in ['vp','vn','vx']:
+                    #print(self.VARIANTS)
+                    return [(key, self.VARIANTS[key]) for key in listByCount]
+                if orderByType in ['kp','kn','kx']:
+                    return [(key, self.KITS[key]) for key in listByCount]
+        
+    def get_coord_name_by_order(self,coord_order):
+        coord_name = []
+        for C in coord_order:
+            vname = self.get_vname_by_vix(vix=C[0])
+            kname = self.get_kname_by_kix(kix=C[1])
+            coord_name.append((vname,kname))
+        return coord_name
+
+    def get_mx_row_as_list(self,rownum,noneToStr=True):
+        if noneToStr:
+            return ['None' if v is None else v for v in self.NP[rownum,:].tolist()[0]]
+        else:
+            return self.NP[rownum,:].tolist()[0]
+        
+    def get_mx_kit_data(self,vix=None,vname=None): #get same type variant data for each kit
+        if vname is not None:
+            vix = self.get_vix_by_name(vname)
+        if vix is not None:
+            return self.NP[vix,]
+        
+    def get_mx_variant_data(self,kix=None,kname=None): #get all type variant data for one kit
+        if kname is not None:
+            kix = self.get_kix_by_name(kname)
+        if kix is not None:
+            return self.NP[:,kix].T
+        
 
     def get_imperfect_variants(self):
         #TODO: need to fix this. I had the def wrong.
@@ -607,7 +1192,7 @@ class Sort(object):
         variant_data = self.NP[variant_idx_r]
         #print(variant_data)
         #sys.exit()
-        vnames = self.get_vname_by_order(variant_idx_r)
+        vnames = self.get_vname_by_vix(variant_idx_r)
         self.set_new_axis(vnames,variant_idx_r,variantType=True) #reset variant axis
         #sys.exit()
         #self.NP = None
@@ -650,188 +1235,6 @@ class Sort(object):
             #print("filter(aft.2) -  vix: %s" % vix)
             return vix
 
-    def get_subset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
-        #vix: is variant's order in matrix, name is variant name
-        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-
-        def get_subsets(kpc,vo):
-            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
-            if config['DBG_SUBS_IN']:
-                print("[subin.1] VAR1p: %s"%VAR1p)
-            idxP = np.argwhere(VAR1p==vo) #idx make sure we exclude the incoming variant
-            VAR2p = np.delete(VAR1p, idxP)
-            if config['DBG_SUBS_IN']:
-                print("[subin.2] VAR2p: %s"%VAR2p)
-            unique_elements_p, counts_elements_p = np.unique(VAR2p, return_counts=True)
-            VAR3p = np.asarray((unique_elements_p, counts_elements_p)).T #get uniques
-            if config['DBG_SUBS_IN']:
-                print("[subin.3] VAR3p: %s"%VAR3p)
-            VAR3x = VAR3p
-            #...
-            #Note: for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
-            #beg - adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
-            unq, unq_inv = np.unique(VAR3x[:,0], return_inverse=True)
-            out = np.zeros((len(unq), VAR3x.shape[1]), dtype=VAR3x.dtype) #create empty array to put the added values
-            out[:, 0] = unq #fill the first column
-            np.add.at(out[:, 1:], unq_inv, VAR3x[:, 1:])
-            #end - adding technique
-            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
-            out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-            if config['DBG_SUBS_IN']:
-                print("[subin.4] out1: %s"%out1)
-                print("[subin.5] kpc: %s"%kpc)
-                print("[subin.6] kpc(names): %s"%self.get_kname_by_order(kpc))
-            VAR4 = np.argwhere(out1[:,1]<len(kpc)) #[:,0]
-            if config['DBG_SUBS_IN']:
-                print("[subin.7] VAR4: %s"%VAR4)
-            #end - sorting technique
-            out2a = out1[:,0]
-            if config['DBG_SUBS_IN']:
-                print("[subin.8] out2a: %s"%out2a)
-            out2b = out1[:,1]
-            if config['DBG_SUBS_IN']:
-                print("[subin.9] out2b: %s"%out2b)
-            VAR5a = out2a[list(VAR4.T[0])] #these are the superset variant orders ids (in order, max first)
-            if config['DBG_SUBS_IN']:
-                print("[subin.10] VAR5a: %s"%VAR5a)
-                print("[subin.11] VAR5a(names): %s"%self.get_vname_by_order(VAR5a))
-            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant counts
-            if config['DBG_SUBS_IN']:
-                print("[subin.12] VAR5b: %s"%VAR5b)
-            VAR6 = np.asarray((VAR5a,VAR5b)).T #merged for return
-            if config['DBG_SUBS_IN']:
-                print("[subin.13] VAR6: %s"%VAR6)
-            #if len(VAR6) == 0:
-            #    return []
-            return VAR6 #[:,0]
-
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        if kname is not None:
-            kix = self.get_kix_by_name(kname)
-        if override_val is not None and kix is not None:
-            overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
-            kpc = self.get_matrix_kit_indices_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
-        else:
-            kpc = self.get_matrix_kit_indices_by_val(1,vix=vix) #default pos conditions
-
-        if convertToNames is True:
-            subs = self.get_vname_by_order(vix=self.filter_perfect_variants(get_subsets(kpc,vix)[:,0].tolist()),listFlg=1)
-        else:
-            subs = self.filter_perfect_variants(vix=get_subsets(kpc,vix)[:,0].tolist())
-        if config['DBG_SUBS']:
-            print("[sub.1] subs: %s" % subs)
-
-        if config['DBG_SUBS']:
-            suffix=''
-            if override_val is not None and kix is not None:
-                suffix = 'P' if override_val == 1 else 'N'
-            print("[sub.2] subsets%s: %s kpc: %s" % (suffix,",".join([str(i) for i in subs]),kpc))
-        return subs
-        
-    def get_supset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
-        #variant order: is variant's order in matrix, name is variant name
-        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-
-        def get_supsets(kpc,vo):
-            if config['DBG_SUPS_IN']:
-                print("[supin.0] kpc: %s"%kpc)
-                print("[supin.0] kpc(names): %s"%self.get_kname_by_order(kpc))
-            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
-            if config['DBG_SUPS_IN']:
-                print("[supin.1] VAR1p: %s"%VAR1p)
-            unqP, cntP = np.unique(VAR1p, return_counts=True)
-            VAR2p = np.asarray((unqP, cntP)).T
-            if config['DBG_SUPS_IN']:
-                print("[supin.2] VAR2p: %s"%VAR2p)
-            VAR2x = VAR2p[VAR2p[:,1]==len(kpc)] #has to have at least what the incoming variant had in count
-            if config['DBG_SUPS_IN']:
-                print("[supin.3] VAR2x: %s"%VAR2x)
-            idx = np.argwhere(VAR2x[:,0]==vo) #idx make sure we exclude the incoming variant
-            VAR3 = np.delete(VAR2x[:,0], idx) #idx again/delete
-            if config['DBG_SUPS_IN']:
-                print("[supin.4] VAR3: %s"%VAR3)
-            #...
-            if len(VAR3) == 0: return [] #there are no supsets according to the filter
-            #(beg) master list of all positives
-            allPos = np.argwhere(self.NP==1)[:,0]
-            if config['DBG_SUPS_IN']:
-                print("[supin.5] allPos: %s"%allPos)
-
-            unqA, cntA = np.unique(allPos, return_counts=True)
-            AP = np.asarray((unqA, cntA))[1,]
-            if config['DBG_SUPS_IN']:
-                print("[supin.6] AP: %s"%AP)
-            #(end) master list of all positives
-            VAR5 = AP[list(VAR3),] #extrapolate the right subset mix to master list of all positives
-            if config['DBG_SUPS_IN']:
-                print("[supin.7] VAR5: %s"%VAR5)
-            VAR6 = np.asarray((VAR3,VAR5)).T
-            if config['DBG_SUPS_IN']:
-                print("[supin.8] VAR6: %s"%VAR6)
-            #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
-            VAR7 = VAR6[VAR6[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-            if config['DBG_SUPS_IN']:
-                print("[supin.9] VAR7: %s"%VAR7)
-            #VAR7 = VAR6[VAR6[:,1].argsort()] #normal sort (2nd col) - so we can get the minimum ones first
-            #(end) sorting
-            return VAR7
-
-        if config['DBG_SUPS']:
-            print("")
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        if kname is not None:
-            kix = self.get_kix_by_name(kname)
-        if override_val is not None and kix is not None:
-            overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
-            kpc = self.get_matrix_kit_indices_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
-        else:
-            kpc = self.get_matrix_kit_indices_by_val(1,vix=vix) #default pos conditions
-        if config['DBG_SUPS']:
-            print("[sup.1] kpc: %s"%kpc)
-
-        supsY = get_supsets(kpc,vix)
-        if config['DBG_SUPS']:
-            print("[sup.2] supsY: %s"%supsY)
-        if len(supsY) == 0:
-            return []
-        else:
-            supsX = self.filter_perfect_variants(supsY.tolist()) #.tolist())
-        if config['DBG_SUPS']:
-            print("[sup.3] supsX: %s"%supsX)
-
-        if len(supsX) == 0:
-            sups = supsX
-        elif convertToNames is True:
-            sups = self.get_vname_by_order(vix=supsX[:,0],perfectFlg=perfectFlg,listFlg=1)
-        else:
-            #print(supsX)
-            sups = np.asarray(supsX)[:,0]
-        if config['DBG_SUPS']:
-            print("[sup.4] sups: %s"%sups)
-                
-        if override_val is not None and kix is not None:
-            if override_val==1:
-                if config['DBG_SUPS']:
-                    print("[sup.5] supsetsP: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
-            else:
-                if config['DBG_SUPS']:
-                    print("[sup.6] supsetsN: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
-        else:
-            if config['DBG_SUPS']:
-                print("[sup.7] supsets: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
-        return sups
-        
-    def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is variant name
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        sups = self.get_supset_variants(vix=vix,perfectFlg=perfectFlg)
-        if len(sups) is 0:
-            return None
-        else:
-            return sups[0]
-
     def get_coord_value(self,kix=None,vix=None,kname=None,vname=None):
         if kix is not None and vix is not None:
             return self.NP[vix][kix]
@@ -840,25 +1243,16 @@ class Sort(object):
             get_vix_by_name(vname)
             return self.NP[vix][kix]
         
-    def get_row_when_override_kixs(self,override_val,vix,kixs):
-        row = self.get_matrix_kit_data(vix=vix)
-        if len(kixs) == 0:
-            return row
-        rowO = np.empty_like(row)
-        rowO[:] = row #make duplicate copy - important!
-        for kx in kixs.tolist():
-            rowO[0,kx] = override_val
-        return rowO
 
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
         #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-        row = self.get_matrix_kit_data(vix=vix)
+        row = self.get_mx_kit_data(vix=vix)
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
         rowO[0,kix] = override_val
         return rowO
 
-    def get_matrix_data(self):
+    def get_mx_data(self):
 
         #sql - exclude perfect variants
         sql = '''
@@ -902,16 +1296,16 @@ class Sort(object):
             self.NP = np.matrix(list(DATA.values()))
 
         #chk matrix (debugging)
-        #self.stdout_tbl_matrix()
+        #self.stdout_tbl_mx()
         #sys.exit()
 
         #get count data
-        self.get_matrix_count_data()
+        self.get_mx_count_data()
 
         #get relations data
-        self.get_matrix_relations_data()
+        self.get_mx_relations_data()
 
-    def get_matrix_count_data(self):
+    def get_mx_count_data(self):
 
         #NOTE: this could be done with numpy - which is better? does it matter?
 
@@ -948,10 +1342,8 @@ class Sort(object):
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
         
-    def get_matrix_relations_data(self):
-
+    def get_mx_relations_data(self):
         #sql - get negatives (without kits){{{
-
         sql = '''
             SELECT distinct V1.name, V2.name
             FROM s_calls C1, s_calls C2,
@@ -1058,401 +1450,14 @@ class Sort(object):
 
         #}}}
 
-    def test_rule1_supsets(self,vix,kzc):
-
-        #M301 rule (part of it)
-
-        #Note: if there is an existing perfect variant that has the same 
-        #(or superset of the) known +/-'s to the imperfect variant when 
-        #the unresolved ? is turned to a +, then it's a +.
-        #Note: this rule requires supsetsP!
-
-        #find the the kits that perfectly match positives for filling any
-        #combination of unk values
-
-        #what is the kpc of this variant
-
-        overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
-        kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-        print (np.argwhere(self.NP[:,kpuc]==1)[:,0])
-        sys.exit()
-
-        #what could it be with all unks to positive?
-        #self.get_matrix_kit_indices_by_val(1,
-        #what have the min kpc of the bottom variant?
-        #excluding to just the kpc of the max variant?
-
-        #vix = unk_variant[0]
-        #kix = unk_variant[1]
-        #supsets = self.get_supset_variants(vix=vix,kix=kix,convertToNames=False,perfectFlg=True)
-        overrideData = self.get_row_when_override_coord(1,kix=kix,vix=vix)
-
-        kpc = self.get_matrix_kit_indices_by_val(1,vix=vix,overrideData=overrideData)
-        knc = self.get_matrix_kit_indices_by_val(-1,vix=vix)
-
-        if config['DEBUG_RULE1']:
-            print("")
-            print("[R1.1]!!!kpc: kit positive conditions: %s" %kpc)
-            print("[R1.2]!!!kpc(names): %s"%self.get_kname_by_order(kix=kpc))
-            print("[R1.3]!!!knc: kit negative conditions: %s" %knc)
-            print("[R1.4]!!!knc(names): %s"% self.get_kname_by_order(kix=knc))
-            print("[R1.5]!!!supsetsP: %s" %supsetsP)
-            print("[R1.6]!!!supsetsP(names): %s" % self.get_vname_by_order(vix=supsetsP))
-
-        for sup in reversed(supsetsP):
-
-            if config['DEBUG_RULE1']:
-                print("")
-                print("[R1.5]!!!sup: %s" % sup)
-                print("[R1.6]!!!sup(name): %s" % self.get_vname_by_order(vix=sup))
-
-            kpc4sup = self.get_matrix_kit_indices_by_val(1,vix=sup)
-
-            if config['DEBUG_RULE1']:
-                print("[R1.7]!!!kpc4sup: %s"%kpc4sup)
-                print("[R1.8]!!!kpc4sup(name): %s"%self.get_kname_by_order(kix=kpc4sup))
-
-            knc4sup = self.get_matrix_kit_indices_by_val(-1,vix=sup)
-
-            if config['DEBUG_RULE1']:
-                print("[R1.9]!!!knc4sup: %s"%knc4sup)
-                print("[R1.10]!!!knc4sup(name): %s"%self.get_kname_by_order(kix=knc4sup))
-
-            lenPos = len(list(set(kpc).intersection(set(kpc4sup))))
-            lenNeg = len(list(set(knc).intersection(set(knc4sup))))
-
-            if config['DEBUG_RULE1']:
-                print("[R1.11]!!!lenPos: %s" % lenPos)
-                print("[R1.12]!!!lenNeg: %s" % lenNeg)
-
-            if lenPos == len(kpc) and lenNeg == len(knc):
-                self.unk_variants.remove(unk_variant)
-                self.NP[unk_variant[0],unk_variant[1]]=1
-                self.resolved_variants.append((unk_variant,True))
-
-                print("")
-                return 'RULE1: True - ambiguous: equivalent/subset of %s'%(self.get_vname_by_order(vix=sup))
-
-        #if we get here ... go to rule 3
-        print("")
-        return 'RULE1: Unk'
-        return self.test_rule3_diff_branches(unk_variant,subsets,supsets)
-        
-    def test_rule1a_subsets(self,unk_variant,subsets,supsets,supsetsP):
-        #How this works:
-        #1. check to see if this coord's related vpc variants are subsets of this coord's variant.
-
-        #Z381 rule - needs subsets
-
-        kix = unk_variant[1]
-        vpc = self.get_matrix_variant_indices_by_val(1,kix=kix)
-
-        if config['DEBUG_RULE1a']:
-            print("[R1a.1] vpc: positive conditions: %s" %vpc)
-            print("[R1a.2] vpc(names): %s"%self.get_vname_by_order(vix=vpc))
-            print("[R1a.3] subsets: %s"%subsets)
-            print("[R1a.4] subsets(names): %s"%self.get_vname_by_order(vix=subsets))
-
-        #standard subset test
-        for sub in subsets:
-            if sub in vpc:
-
-                if config['DEBUG_RULE1a']:
-                    print("")
-                    print("[R1a.5] sub: %s"%sub)
-                    print("[R1a.6] sub(name):"%self.get_vname_by_order(vix=sub))
-
-                self.unk_variants.remove(unk_variant)
-                self.NP[unk_variant[0],unk_variant[1]]=1
-                self.resolved_variants.append((unk_variant,True))
-
-                if config['DEBUG_RULE1a']:
-                    print("")
-
-                return 'RULE1a: True: sup of %s' % self.get_vname_by_order(vix=sub)
-
-        #Note: if get here -- go to rule 2
-        return "RULE1a: Unk"
-        return self.test_rule2_supsets(unk_variant=unk_variant,subsets=subsets,supsets=supsets,supsetsP=supsetsP)
-        
-    def test_rule3_diff_branches(self,unk_variant,subsets,supsets):
-
-        #Z28 rule
-
-        vix = unk_variant[0]
-        kix = unk_variant[1]
-        #supsets = self.get_supset_variants(vix=unk_variant[0],convertToNames=False) #superset of given coord
-        #supsets.append(-999) #top
-        #subsets = self.use_imperfect_variants_only(self.get_subset_variants(vix=unk_variant[0],convertToNames=False)) #superset of given coord
-        #vi = self.use_imperfect_variants_only(self.get_matrix_variant_indices_by_val(1,kix=kix))
-        vi = self.get_matrix_variant_indices_by_val(1,kix=kix)
-        #vi.append(-999) #top
-        ki = self.get_matrix_kit_indices_by_val(1,vix=vix).tolist()
-        if ki is None:
-            ki = []
-        rule_p1_list = []
-
-        if config['DEBUG_RULE3']:
-            print("[R3a.1] vix: %s" %self.get_vname_by_order(vix))
-            print("[R3a.2] supsets: %s" %self.get_vname_by_order(supsets))
-            print("[R3a.3] vi (imperfect knowns when set coord to pos): %s" %self.get_vname_by_order(vi))
-            print("[R3a.4] ki (related kits when set coord to pos): %s" %self.get_kname_by_order(ki))
-            print("")
-
-        #Note: first deal with the variant that might might share the unknown variant we're wondering about
-        #Q: Is it not a direct relation?
-        #Q: does it have a superset?
-        for V in vi:
-
-            #sups4V = self.use_imperfect_variants_only(self.get_supset_variants(vix=V,convertToNames=False)) #superset of related coord
-            sups4V = self.get_supset_variants(vix=V,convertToNames=False) #superset of related coord
-            #sups4V.append(-999) #top
-
-            if config['DEBUG_RULE3']:
-                print("[R3a.5] V: %s" %self.get_vname_by_order(V))
-                print("[R3a.6] sups4V(%s): %s" %(self.get_vname_by_order(V),self.get_vname_by_order(sups4V)))
-                print("[R3a.6] supsets: %s" %supsets)
-                print("[R3a.7] subsets: %s" %subsets)
-                print("[R3a.8] supsets(names): %s" %self.get_vname_by_order(supsets))
-                print("[R3a.9] subsets(names): %s" %self.get_vname_by_order(subsets))
-
-            #Is it a direct relation? 
-            if V not in supsets and V not in subsets: # and vix not in sups4V:
-                if config['DEBUG_RULE3']:
-                    print("")
-                directRelation_chk = False
-                if config['DEBUG_RULE3']:
-                    print("[R3a.10] directRelation Chk is: %s (continue with V=%s)" %(directRelation_chk,self.get_vname_by_order(V)))
-                    print("")
-            else:
-                directRelation_chk = True
-                if config['DEBUG_RULE3']:
-                    print("[R3a.11] directRelation Chk is: %s (don't continue with V=%s)" %(directRelation_chk,self.get_vname_by_order(V)))
-                    print("")
-                continue # try the next V
-
-            if directRelation_chk == False:
-
-                if config['DEBUG_RULE3']:
-                    print("[R3a.12] V in: %s" %self.get_vname_by_order(V))
-                k4V = self.get_matrix_kit_indices_by_val(1,vix=V).tolist() #other kits per V
-                k4V.remove(kix)
-                if config['DEBUG_RULE3']:
-                    print("[R3a.13] k4V(%s): %s" %(self.get_vname_by_order(V),self.get_kname_by_order(k4V)))
-
-                #Does it have any supersets?
-                if len(sups4V) == 0:
-                    #sups4V.append(-999) #top
-                    if config['DEBUG_RULE3']:
-                        print("[R3a.14] sups Chk: sups not in sups4V (don't continue with V=%s)"%self.get_vname_by_order(V))
-                        print("")
-                    continue # try the next V
-
-                for sup4V in sups4V:
-                    if config['DEBUG_RULE3']:
-                        print("")
-                        print("sups Chk: sups in sups4V (continue with V=%s)"%self.get_vname_by_order(V))
-                        print("")
-                        print("[R3a.15] sup4V(%s): %s" %(self.get_vname_by_order(V),self.get_vname_by_order(sup4V)))
-                    k4sup4V = self.get_matrix_kit_indices_by_val(1,vix=sup4V).tolist() #other kits per V
-                    if config['DEBUG_RULE3']:
-                        print("[R3a.16] k4sup4V(%s)(%s)(bef.rem) in: %s" %(self.get_vname_by_order(V),self.get_vname_by_order(sup4V),self.get_kname_by_order(k4sup4V)))
-                    if kix in k4sup4V: #(1)can't be the given coord's kit
-                        k4sup4V.remove(kix) #(2)can't be the given coord's kit
-                    if config['DEBUG_RULE3']:
-                        print("[R3a.17] k4sup4V(%s)(%s)(aft.rem) in: %s" %(self.get_vname_by_order(V),self.get_vname_by_order(sup4V),self.get_kname_by_order(k4sup4V)))
-                    k_in_k4V_and_k4sup4V = list(set(k4V).intersection(set(k4sup4V)))
-
-                    #Is there additional overlap btw this other variant and its superset?
-                    if len(k_in_k4V_and_k4sup4V) == 0:
-                        if config['DEBUG_RULE3']:
-                            print("[R3a.18] k4V + k4sup4V intersection chk: no additional overlap (don't continue with V=%s)"%self.get_vname_by_order(V))
-                            print("")
-                        continue
-
-                    #Everything seems ok for part one of this rule
-                    if config['DEBUG_RULE3']:
-                        print("[R3a.19] k4V + k4sup4V intersection chk: additional overlap (continue with V=%s)"%self.get_vname_by_order(V))
-                        print("")
-                        print("[R3a.20] k_in_k4V_and_k4sup4V: %s" %self.get_kname_by_order(k_in_k4V_and_k4sup4V))
-                        print("")
-                    rule_p1_list.append((sup4V,k_in_k4V_and_k4sup4V))
-
-        if len(rule_p1_list):
-            rule_p2_list = []
-
-            #Loop the known supersets of the given variant
-            for sup4vo in supsets:
-
-                #What positive variant relations do those supersets have? 
-                k4sup4vo = self.get_matrix_kit_indices_by_val(1,vix=sup4vo).tolist() #other kits per V
-                #k4sup4vo.append(-999) #top
-                
-                if config['DEBUG_RULE3']:
-                    print("[R3b.21] k4sup4vo(%s): %s"%(self.get_vname_by_order(sup4vo),self.get_kname_by_order(k4sup4vo)))
-                    print("[R3b.22] ki: %s"%self.get_kname_by_order(ki))
-                    print("")
-
-                #Is there any overlap with the given coord?
-                k_in_k4sup4vo_and_ki = set(k4sup4vo).intersection(set(ki))
-                if len(k_in_k4sup4vo_and_ki) == 0:
-                    print("[R3b.23] k4sup4vo + ki intersection chk: no additional overlap (don't continue with sup4vo=%s)"%self.get_vname_by_order(sup4vo))
-                    print("")
-                    continue
-
-                #If so, everything seems ok for part two of this rule
-                if config['DEBUG_RULE3']:
-                    print("[R3b.24] k4sup4vo + ki intersection chk: additional overlap (continue with sup4vo=%s)"%self.get_vname_by_order(sup4vo))
-                    print("")
-                    print("[R3b.25] k_in_k4sup4vo_and_ki in: %s" %self.get_kname_by_order(k_in_k4sup4vo_and_ki))
-                rule_p2_list.append((sup4vo,k_in_k4sup4vo_and_ki))
-
-            #Check that both rules are satisfied and not shared btw both lists
-            if len(rule_p2_list):
-                for itm1 in rule_p1_list:
-                    if itm1 not in rule_p2_list:
-                        for itm2 in rule_p2_list:
-                            if itm2 not in rule_p1_list:
-                                #If here, we have a winner!
-                                msg = "%s:%s" % (itm1,itm2)
-                                #self.resolved_variants.append((unk_variant,False))
-                                self.unk_variants.remove(unk_variant)
-                                self.NP[unk_variant[0],unk_variant[1]]=-1
-                                self.resolved_variants.append((unk_variant,False))
-                                #if config['DEBUG_RULE3']:
-                                #print("}}"+"}")
-                                msg1a = self.get_vname_by_order(itm1[0])
-                                msg1b = self.get_vname_by_order(itm1[1])
-                                msg2a = self.get_vname_by_order(itm2[0])
-                                msg2b = self.get_vname_by_order(itm2[1])
-                                print("")
-                                return "RULE3: False - 2 diff branches (%s,%s) + (%s,%s)"% (msg1a,msg1b,msg2a,msg2b)
-
-        #print("}}"+"}")
-        if config['DEBUG_RULE3']:
-            print("")
-
-        return "RULE3: Unk"
-        return "RULEX: Unk"
-    def test_rule0_consistency(self,vix,subsets,supsets):
-        '''{{{
-
-        [step 1 - rule1 - M301]{{{ 
-
-        If we make the ? a +, are there any +/- combos (superset candidates) like this already
-
-         [b] Yes - go to standard Rule 2 (convert "?" to "+" - and flag as ambiguuous)
-        x[a] No - go to step 2
-
-        }}}
-        [step 2]{{{
-
-        (step 2a) ok, let's try the + for the unk.
-        (step 2b) ok, let's try it w/o the pos for unk. (ph.consistency)
-
-        }}}
-        [step 3]{{{
-        
-        What is its minimum superset [(a) with (b) w/o] considering the unk call?
-
-        x[A] U106
-
-        (step 3) What are the unique highest subset combo children of v1 (other than v5) that
-        touch +'s (in equal or different ways that v5 does to the superset)?
-
-        v2--> L48
-        v3--> Z156
-
-        Are they subsets? No
-
-        Would changing unknowns to positive, make any all of them subsets? Yes
-        If can change all of them ... then promote.
-
-        If no...still can't ... step 4
-        }}}
-        [step 4]{{{
-        
-        With these subsets, do the following study:
-
-        (a) One for they way they intersect the superset (v1).
-        (b) One for they way they intersect the superset (v1) and the variant being studied (v5).
-        (c) Add up the total unique connections btw both lists
-        (d) Note the unique difference in kits btw both lists
-
-        Intersection List1          Intersection List2
-        ------------------          ------------------
-        L48:  v1+v2 [D,I,C,H]       L48: v1+v2+v5 [C,H] D,I <- possible
-        Z156: v1+v3 [B,G]           Z156: v1+v3+v5 []   B,G <- possible
-        -------                     --------
-        total = 6                   total = [2] 4<- possible (due to unks)
-
-        (step 5)
-        
-        Make conclusions for split/no split
-
-        Conclusions:
-
-        (1) No diff btw two lists - ambiguous  promote all shared points btw the two lists that might be unk
-        (2) Intersection List 1 is greater == split
-        (3) Intersection List 2 is greater == flag for study
-
-        }}}
-        [step 5 - split process/loop]{{{
-
-        (step 1) move Zxx to Zxx.tmp
-        (step 2) of v1's highest children, which intersects v5 the best? v2 (or other v1 child)
-        (step 3) splice Zxx.tmp to create a Zxx.# and if anything left unexplained, a new Zxx.tmp that
-                 accomodates v2 (or other v1 child) as a parent
-        (step 4) repeat steps 2-3 until no more Zxx.tmp
-
-        }}}
-
-        }}}'''
-
-        #A297 rule
-
-        vix = unk_variant[0]
-        kix = unk_variant[1]
-        kpc = self.get_matrix_kit_indices_by_val(val=1,vix=vix)
-
-        if config['DEBUG_RULE0']:
-            print("[R0.1] kix: %s" % kix)
-            print("[R0.2] vix: %s" % vix)
-            print("[R0.8] kpc: %s" % kpc)
-            print("[R0.8] kpc(names): %s" % self.get_kname_by_order(kpc))
-
-        if config['DEBUG_RULE0']:
-            print("[R0.3] supsets: %s" % supsets)
-            print("[R0.4] supsets(names): %s" % self.get_vname_by_order(vix=supsets))
-            #print("[R0.5] !!! - subsets: %s" % subsets)
-            #print("[R0.6] !!! - subsets(names): %s" % self.get_vname_by_order(vix=subsets))
-
-        if len(supsets):
-            sup = supsets[len(supsets)-1]
-            kpc4sup = self.get_matrix_kit_indices_by_val(val=1,vix=sup)
-
-            if config['DEBUG_RULE0']:
-                print("")
-                print("[R0.7] sup: %s" % self.get_vname_by_order(vix=sup))
-                print("[R0.8] kpc4sup: %s" % kpc4sup)
-                print("[R0.8] kpc4sup(names): %s" % self.get_kname_by_order(kpc4sup))
-
-            subs4sup = self.get_subset_variants(vix=sup,perfectFlg=True,convertToNames=False)
-
-            if config['DEBUG_RULE0']:
-                print("[R0.9] subs4sup: %s" % subs4sup)
-                print("[R0.10] subs4sup(names): %s" % self.get_subset_variants(vix=sup,perfectFlg=True))
-                print("")
-
-        #for sup in supsets:
-        #    if config['DEBUG_RULE0']:
-        #        print("")
-        #        print("[cons.7] !!! - sup: %s" % self.get_vname_by_order(vix=sup))
-        #    kpc = self.get_matrix_kit_indices_by_val(val=1,vix=sup)
-        #    if config['DEBUG_RULE0']:
-        #        print("[cons.8] !!! - kpc: %s" % kpc)
-        #        print("[cons.8] !!! - kpc(names): %s" % self.get_kname_by_order(kpc))
-
-        return 'RULE0: Unk'
-        
+    # not used
+
+    def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is vname
+        if vname is not None:
+            vix = self.get_vix_by_name(vname)
+        sups = self.get_supset_variants(vix=vix,perfectFlg=perfectFlg)
+        if len(sups) is 0:
+            return None
+        else:
+            return sups[0]
 
