@@ -98,3 +98,32 @@ create table s_dupe_joins (
 -- create table one_rec (foo int);
 -- insert into one_rec (foo) values(1);
 
+create view kits_view AS 
+  SELECT DISTINCT kit_id from s_calls;
+
+create view perfect_variants AS
+  SELECT DISTINCT V.name, V.variant_loc, V.variant_id
+  FROM s_calls C, s_variants V
+  WHERE (C.assigned = -1 OR V.name = 'top') AND
+  V.variant_loc = C.variant_loc;
+
+create view perfect_variants_with_kits AS
+  SELECT K.kit_id, PV.name, PV.variant_loc, PV.variant_id
+  FROM perfect_variants PV
+  CROSS JOIN 
+  kits_view K;
+
+create view perfect_variants_with_kits_assignments AS
+  SELECT C.kit_id, PV.name, PV.variant_loc, PV.variant_id, C.assigned
+  FROM s_calls C, perfect_variants PV
+  WHERE C.variant_loc = PV.variant_loc;
+
+create view perfect_variants_with_kits_assignments_and_unk AS
+  SELECT PVK.kit_id, PVK.name, PVK.variant_loc, PVK.variant_id, ifnull(PVKA.assigned,0)
+  FROM 
+  perfect_variants_with_kits PVK
+  LEFT JOIN 
+  perfect_variants_with_kits_assignments PVKA
+  ON
+  PVK.variant_loc = PVKA.variant_loc AND
+  PVK.kit_id = PVKA.kit_id;

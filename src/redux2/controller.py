@@ -511,3 +511,11 @@ def c_sort_db_tree():
     sort = Sort()
     sort.dbo = DB()
     sort.sort_tree()
+
+#variant
+
+def c_sort_db_tree(vix):
+    sort = Sort()
+    sort = Sort()
+    sort.dbo = DB()
+    sort.stdout_variant(vix)

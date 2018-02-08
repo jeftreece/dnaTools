@@ -134,8 +134,9 @@ class Sort(object):
                     kv = str(row[str(k)]) #assigned
                     vv = str(row['v']) #variant_loc
                     #s_calls
-                    sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,vv,kv)
-                    self.dbo.sql_exec(sql1)
+                    if kv != 0:
+                        sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,vv,kv)
+                        self.dbo.sql_exec(sql1)
 
     # matrix
 
@@ -185,24 +186,24 @@ class Sort(object):
         
     def sort_step3(self):
         print("Processing Imperfect Variants:")
-        for impV in self.get_imperfect_variants_idx():
+        for impVix in self.get_imperfect_variants_idx():
             print("----------------")
-            print(impV)
-            print(self.get_vname_by_vix(impV))
+            print("impVix: %s"%impVix)
+            print("impVix(names): %s"%self.get_vname_by_vix(impVix))
             print("{{"+"{") #beg vim marker
-            kzc = self.get_kixs_by_val(val=0,vix=impV)
-            print(kzc)
-            print(self.get_kname_by_kix(kzc))
+            kzc = self.get_kixs_by_val(val=0,vix=impVix)
+            print("kzc: %s"%kzc)
+            print("kzc(names): %s"%self.get_kname_by_kix(kzc))
             results = []
             #sys.exit()
             print("")
-            #supsetsP = self.get_supset_variants(override_val=1,vix=impV,kix=unk[1],convertToNames=False,perfectFlg=True)
-            #supsets = self.get_supset_variants(vix=impV,kix=unk[1],convertToNames=False,perfectFlg=True)
-            #subsetsP = self.get_subset_variants(override_val=1,vix=impV,kix=unk[1],convertToNames=False,perfectFlg=True)
-            #subsets = self.get_subset_variants(vix=impV,kix=unk[1],convertToNames=False,perfectFlg=True)
+            #supsetsP = self.get_supset_variants(override_val=1,vix=impVix,kix=unk[1],convertToNames=False,perfectFlg=True)
+            #supsets = self.get_supset_variants(vix=impVix,kix=unk[1],convertToNames=False,perfectFlg=True)
+            #subsetsP = self.get_subset_variants(override_val=1,vix=impVix,kix=unk[1],convertToNames=False,perfectFlg=True)
+            #subsets = self.get_subset_variants(vix=impVix,kix=unk[1],convertToNames=False,perfectFlg=True)
             #rule0 - A297 - needs supsets{{{
 
-            #results.append(['R0',self.test_rule0_consistency(vix=impV,kzc=kzc,subsets=subsets,supsets=supsets)])
+            #results.append(['R0',self.test_rule0_consistency(vix=impVix,kzc=kzc,subsets=subsets,supsets=supsets)])
 
             #}}}
             #rule1 - M301 - needs supsetsP (ambiguous promotion){{{
@@ -217,7 +218,7 @@ class Sort(object):
 
             #Problem: ???
 
-            results.append(['R1',self.test_rule1_supsets(vix=impV,kzc=kzc)])
+            results.append(['R1',self.test_rule1_supsets(vix=impVix,kzc=kzc)])
 
             #}}} 
             #rule1a - Z381 - needs subsets{{{
@@ -279,10 +280,32 @@ class Sort(object):
 
         #what is the kpc of this variant}}}
 
+        if config['DEBUG_RULE1']:
+            print("[R1.0] START RULE 1")
+            print("")
+
+        sups4vix = self.get_supset_variants(vix=vix,convertToNames=False,perfectFlg=True)
+
+        if config['DEBUG_RULE1']:
+            print("[R1.3] sups4vix: %s" %sups4vix)
+            print("[R1.4] sups4vix(names): %s" % self.get_vname_by_vix(vix=sups4vix))
+            print("")
+
+        subs4vix = self.get_subset_variants(vix=vix,convertToNames=False,perfectFlg=True)
+
+        if config['DEBUG_RULE1']:
+            print("[R1.1] subs4vix: %s" %subs4vix)
+            print("[R1.2] subs4vix(names): %s" % self.get_vname_by_vix(vix=subs4vix))
+            print("")
+
         overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
         kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-        print (np.argwhere(self.NP[:,kpuc]==1)[:,0])
 
+        if config['DEBUG_RULE1']:
+            print ("[R1.5] kpuc equiv (not quite): %s:"%np.argwhere(self.NP[:,kpuc]==1)[:,0])
+            print("")
+
+        #{{{
         #what could it be with all unks to positive?
         #self.get_kixs_by_val(1,
         #what have the min kpc of the bottom variant?
@@ -296,10 +319,21 @@ class Sort(object):
 
         #kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
         #knc = self.get_kixs_by_val(-1,vix=vix)
+        #}}}
 
-        supsets = self.get_supset_variants(vix=vix,convertToNames=False,perfectFlg=True,kpc=kpuc)
-        print("[R1.1]!!!supsets: %s" %supsets)
-        print("[R1.2]!!!supsets(names): %s" % self.get_vname_by_vix(vix=supsets))
+        subs4kpuc = self.get_subset_variants(vix=vix,convertToNames=False,perfectFlg=True,kpc=kpuc)
+        sups4kpuc = self.get_supset_variants(vix=vix,convertToNames=False,perfectFlg=True,kpc=subs4kpuc)
+
+        if config['DEBUG_RULE1']:
+            print("[R1.5] subs4kpuc: %s" %subs4kpuc)
+            print("[R1.6] subs4kpuc(names): %s" % self.get_vname_by_vix(vix=subs4kpuc))
+            print("")
+            print("[R1.7] sups4kpuc: %s" %sups4kpuc)
+            print("[R1.8] sups4kpuc(names): %s" % self.get_vname_by_vix(vix=sups4kpuc))
+            print("")
+
+        print("")
+
         sys.exit()
 
         if config['DEBUG_RULE1']:
@@ -849,7 +883,7 @@ class Sort(object):
         return newList
 
     def get_row_when_override_kixs(self,override_val,vix,kixs):
-        row = self.get_mx_kit_data(vix=vix)
+        row = self.get_mx_kdata(vix=vix)
         if len(kixs) == 0:
             return row
         rowO = np.empty_like(row)
@@ -942,7 +976,7 @@ class Sort(object):
         return self.KITS[kname][1]
         
 
-    def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_mx_kit_data but retrieves index info for given val
+    def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_mx_kdata but retrieves index info for given val
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None and overrideData is not None: # we're sending in a custom evaluation
@@ -1033,6 +1067,9 @@ class Sort(object):
             self.set_new_order(NO[0],NO[1],kitType=True)
         self.NP = np.matrix(list(DATA.values()))
         self.NP = np.transpose(self.NP)
+
+    def stdout_variant(self):
+        foo = 1
 
     def stdout_tbl_mx(self):
         debug_chk('DEBUG_MATRIX',"",1)
@@ -1145,7 +1182,7 @@ class Sort(object):
         else:
             return self.NP[rownum,:].tolist()[0]
         
-    def get_mx_kit_data(self,vix=None,vname=None): #get same type variant data for each kit
+    def get_mx_kdata(self,vix=None,vname=None): #get same type variant data for each kit
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None:
@@ -1192,7 +1229,7 @@ class Sort(object):
         #print("filter(bef) -  vix: %s" % vix)
         if any(isinstance(el, list) for el in vix):
             for itm in reversed([[n,v] for (n,(v,c)) in enumerate(vix)]):
-                print(vix)
+                #print(vix)
                 if itm[1] in self.get_imperfect_variants_idx():
                     #print(itm)
                     #print(itm[0])
@@ -1220,7 +1257,7 @@ class Sort(object):
 
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
         #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
-        row = self.get_mx_kit_data(vix=vix)
+        row = self.get_mx_kdata(vix=vix)
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
         rowO[0,kix] = override_val
@@ -1229,18 +1266,54 @@ class Sort(object):
     def get_mx_data(self):
 
         #sql - exclude perfect variants
+        sql = "select * from perfect_variants_with_kits_assignments;"
+
+        #get data
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
+        DATA = OrderedDict()
+        self.KITS = {}
+        self.VARIANTS = {}
+        cntV = 0
+        cntK = 0
+        for row in F:
+            if row[1] not in DATA:
+                DATA[row[1]] = []
+            DATA[row[1]].append(row[2])
+            #TODO: numpy way to do this? still needed? get rid of dupe info?
+            if row[0] not in self.KITS:
+                self.KITS[row[0]] = [cntK,cntK]
+                cntK = cntK + 1
+            #TODO: numpy way to do this? still needed? get rid of dupe info?
+            if row[1] not in self.VARIANTS:
+                self.VARIANTS[row[1]] = [cntV,cntV]
+                cntV = cntV + 1
+      
+       #create numpy version of data
+        for key,value in DATA.items():
+            self.NP = np.matrix(list(DATA.values()))
+
+        #chk matrix (debugging)
+        #self.stdout_tbl_mx()
+        #sys.exit()
+
+        #get count data
+        self.get_mx_count_data()
+
+        #get relations data
+        self.get_mx_relations_data()
+    def get_variant_data_by_vname(self,vname):
+
+        #sql - exclude perfect variants
         sql = '''
             SELECT C.kit_id, V.name, C.assigned, V.variant_id
             FROM s_calls C, s_variants V,
-            (SELECT DISTINCT V.variant_loc
-             FROM s_calls C, s_variants V
-             WHERE (C.assigned = -1 OR V.name = 'top') AND
-             V.variant_loc = C.variant_loc
-            ) VX
             WHERE C.variant_loc = V.variant_loc AND
-            C.variant_loc = VX.variant_loc
+            V.vname = %s
             ORDER by 4;
-            '''
+            ''' %vname
 
         #get data
         self.dbo.sql_exec(sql)

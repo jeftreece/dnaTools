@@ -90,6 +90,13 @@ parser.add_argument('-om', '--sortmatrix', help='sort matrixdata prototype (s_ s
 parser.add_argument('-ot', '--sorttree', help='sort tree data prototype (s_ schema currently)', action='store_true')
 
 #}}}
+# variant {{{
+
+#parser.add_argument('-gv', '--variant', help='variant', type=int, action='store_true')
+parser.add_argument('-gv', '--variant', help='variant', type=int)
+parser.add_argument('-uv', '--update_variant', help='update variant', action='store_true')
+
+#}}}
 
 #}}}
 # arg/namespace {{{
@@ -170,9 +177,11 @@ else: #this area calls controllers
     # redux.bash stuff
     if args.backup:
         c_r2_backup()
+
     # redux.bash stuff
     if args.prep:
         c_r2_prep()
+
     # redux2.py stuff (v1 schema)
     if args.redux2:
         c_r2_db()
@@ -186,14 +195,26 @@ else: #this area calls controllers
     # }}}
     # sort {{{
 
-    # sort prototype
+    # sort prototype - matrix
     if args.sort or args.sortmatrix:
-        c_sort_sample_db()
+        #c_sort_sample_db()
         c_sort_db_matrix()
-    # sort prototype
+
+    # sort prototype - tree
     if args.sorttree:
-        c_sort_sample_db()
+        #c_sort_sample_db()
         c_sort_db_tree()
+
+    # }}}
+    # variant {{{
+
+    if args.variant:
+        #print(args)
+        #c_sort_sample_db()
+        c_variant(args.variant)
+
+    if args.update_variant:
+        c_upd_variant()
 
     # }}}
 
