@@ -340,6 +340,7 @@ class Sort(object):
 
         print("")
 
+        #Need to redo how I'm approaching this 
         sys.exit()
 
         if config['DEBUG_RULE1']:
@@ -710,6 +711,22 @@ class Sort(object):
 
     def get_subset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False,kpc=None):
 
+        #-------------------------------------------------------------------------------------------------
+        # How subsets are determined:
+        #-------------------------------------------------------------------------------------------------
+        # get_subsets (private routine)
+        # - vix - the row-idx of the reference variant
+        # - kpc - the col kit-idxs where this vix is "actively" seen as having the given "val" value
+        # - VAR1 - evaluate the incoming kpc for positives along the matrix - create an index with the results
+        # - VAR2 - delete any mention of the vix in these index results (since we are looking for other variants)
+        # - VAR3 - get a count of how many times these other variants hit the kpc we're looking at
+        # - out/out1 - can't remember what the out logic does again, check that
+        # - VAR4 - then filter out those variants that have less kpc hits than the vix
+        # - VAR5 - the supersets
+        # - VAR6 - the superset counts to vpc
+        # - VAR7 - merge of VAR5 and VAR6
+        #-------------------------------------------------------------------------------------------------
+
         def get_subsets(kpc,vix):
             VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
             if config['DBG_SUBS_IN']:
@@ -728,11 +745,13 @@ class Sort(object):
             out = np.zeros((len(unq), VAR3.shape[1]), dtype=VAR3.dtype) #create empty array to put the added values
             out[:, 0] = unq #fill the first column
             np.add.at(out[:, 1:], unq_inv, VAR3[:, 1:])
+            if config['DBG_SUBS_IN']:
+                print("[subin.4] out: %s"%out)
             #end - adding technique
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
             out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
             if config['DBG_SUBS_IN']:
-                print("[subin.4] out1: %s"%out1)
+                print("[subin.4a] out1: %s"%out1)
                 print("[subin.5] kpc: %s"%kpc)
                 print("[subin.6] kpc(names): %s"%self.get_kname_by_kix(kpc))
             VAR4 = np.argwhere(out1[:,1]<len(kpc)) #[:,0]
@@ -745,13 +764,13 @@ class Sort(object):
             out2b = out1[:,1]
             if config['DBG_SUBS_IN']:
                 print("[subin.9] out2b: %s"%out2b)
-            VAR5 = out2a[list(VAR4.T[0])] #these are the superset vixs ids (in order, max first)
+            VAR5 = out2a[list(VAR4.T[0])] #these are the subset vixs ids (in order, max first)
             if config['DBG_SUBS_IN']:
-                print("[subin.10] VAR5: %s"%VAR5a)
+                print("[subin.10] VAR5: %s"%VAR5)
                 print("[subin.11] VAR5(names): %s"%self.get_vname_by_vix(VAR5))
-            VAR6 = out2b[list(VAR4.T[0])]#these are the superset variant counts
+            VAR6 = out2b[list(VAR4.T[0])]#these are the subset variant counts
             if config['DBG_SUBS_IN']:
-                print("[subin.12] VAR6: %s"%VAR5b)
+                print("[subin.12] VAR6: %s"%VAR6)
             VAR7 = np.asarray((VAR5,VAR6)).T #merged for return
             if config['DBG_SUBS_IN']:
                 print("[subin.13] VAR7: %s"%VAR7)
@@ -783,6 +802,24 @@ class Sort(object):
         return subs
         
     def get_supset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False,kpc=None):
+
+        #-------------------------------------------------------------------------------------------------
+        # How supsets are determined:
+        #-------------------------------------------------------------------------------------------------
+        # get_subsets (private routine)
+        # - vix - the row-idx of the reference variant
+        # - kpc - the col kit-idxs where this vix is "actively" seen as having the given "val" value
+        # - VAR1 - evaluate the incoming kpc for positives along the matrix - create an index with the results
+        # - VAR2 - get a count of how many times these other variants hit the kpc we're looking at
+        # - VAR3 - has to have at least what the incoming variant had in count
+        # - VAR4 - delete any mention of the vix in these index results (since we are looking for other variants)
+        # -      - give an opportunity to return [] if no results
+        # - allPos - all idx situations in the matrix where there are positives (we just want the col-variant idxs)
+        # - AP   - a unique count on how many positives there were per variant of allPos
+        # - VAR5 - use the VAR4 and AP idxs together to the hit counts on those variants that can be considered supersets
+        # - VAR6 - merge VAR4 and VAR5 together to combine superset idxs with their hit counts
+        # - VAR7 - reverse sort VAR6 - so the bigger ones are first
+        #-------------------------------------------------------------------------------------------------
 
         def get_supsets(kpc,vix):
             if config['DBG_SUPS_IN']:
