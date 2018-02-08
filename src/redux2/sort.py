@@ -300,9 +300,15 @@ class Sort(object):
 
         overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
         kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+        eqv1 = np.argwhere(self.NP[:,kpuc]==1)[:,0]
+        eqv2 = np.unique(eqv1)
 
         if config['DEBUG_RULE1']:
-            print ("[R1.5] kpuc equiv (not quite): %s:"%np.argwhere(self.NP[:,kpuc]==1)[:,0])
+            #print ("[R1.5] kpuc equiv (not quite): %s:"%eqv1)
+            print("[R1.3] kpuc: %s:"%kpuc)
+            print("[R1.4] kpuc(names): %s" % self.get_kname_by_kix(kix=kpuc))
+            print("[R1.5] kpuc equiv/uniq (not quite): %s:"%eqv2)
+            print("[R1.6] kpuc equiv/uniq/names: %s" % self.get_vname_by_vix(vix=eqv2))
             print("")
 
         #{{{
@@ -705,25 +711,23 @@ class Sort(object):
     def get_subset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False,kpc=None):
 
         def get_subsets(kpc,vix):
-            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
+            VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
             if config['DBG_SUBS_IN']:
-                print("[subin.1] VAR1p: %s"%VAR1p)
-            idxP = np.argwhere(VAR1p==vix) #idx make sure we exclude the incoming variant
-            VAR2p = np.delete(VAR1p, idxP)
+                print("[subin.1] VAR1: %s"%VAR1)
+            idx = np.argwhere(VAR1==vix) #idx make sure we exclude the incoming variant
+            VAR2 = np.delete(VAR1, idx)
             if config['DBG_SUBS_IN']:
-                print("[subin.2] VAR2p: %s"%VAR2p)
-            unique_elements_p, counts_elements_p = np.unique(VAR2p, return_counts=True)
-            VAR3p = np.asarray((unique_elements_p, counts_elements_p)).T #get uniques
+                print("[subin.2] VAR2p: %s"%VAR2)
+            VAR3 = self.get_uniq_counts(VAR2)
             if config['DBG_SUBS_IN']:
-                print("[subin.3] VAR3p: %s"%VAR3p)
-            VAR3x = VAR3p
+                print("[subin.3] VAR3: %s"%VAR3)
             #...
             #Note: for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
             #beg - adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
-            unq, unq_inv = np.unique(VAR3x[:,0], return_inverse=True)
-            out = np.zeros((len(unq), VAR3x.shape[1]), dtype=VAR3x.dtype) #create empty array to put the added values
+            unq, unq_inv = np.unique(VAR3[:,0], return_inverse=True)
+            out = np.zeros((len(unq), VAR3.shape[1]), dtype=VAR3.dtype) #create empty array to put the added values
             out[:, 0] = unq #fill the first column
-            np.add.at(out[:, 1:], unq_inv, VAR3x[:, 1:])
+            np.add.at(out[:, 1:], unq_inv, VAR3[:, 1:])
             #end - adding technique
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
             out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
@@ -741,19 +745,19 @@ class Sort(object):
             out2b = out1[:,1]
             if config['DBG_SUBS_IN']:
                 print("[subin.9] out2b: %s"%out2b)
-            VAR5a = out2a[list(VAR4.T[0])] #these are the superset vixs ids (in order, max first)
+            VAR5 = out2a[list(VAR4.T[0])] #these are the superset vixs ids (in order, max first)
             if config['DBG_SUBS_IN']:
-                print("[subin.10] VAR5a: %s"%VAR5a)
-                print("[subin.11] VAR5a(names): %s"%self.get_vname_by_vix(VAR5a))
-            VAR5b = out2b[list(VAR4.T[0])]#these are the superset variant counts
+                print("[subin.10] VAR5: %s"%VAR5a)
+                print("[subin.11] VAR5(names): %s"%self.get_vname_by_vix(VAR5))
+            VAR6 = out2b[list(VAR4.T[0])]#these are the superset variant counts
             if config['DBG_SUBS_IN']:
-                print("[subin.12] VAR5b: %s"%VAR5b)
-            VAR6 = np.asarray((VAR5a,VAR5b)).T #merged for return
+                print("[subin.12] VAR6: %s"%VAR5b)
+            VAR7 = np.asarray((VAR5,VAR6)).T #merged for return
             if config['DBG_SUBS_IN']:
-                print("[subin.13] VAR6: %s"%VAR6)
+                print("[subin.13] VAR7: %s"%VAR7)
             #if len(VAR6) == 0:
             #    return []
-            return VAR6 #[:,0]
+            return VAR7 #[:,0]
 
         #Note: override one specific coord
         if override_val is not None and kix is not None:
@@ -784,36 +788,34 @@ class Sort(object):
             if config['DBG_SUPS_IN']:
                 print("[supin.0] kpc: %s"%kpc)
                 print("[supin.0] kpc(names): %s"%self.get_kname_by_kix(kpc))
-            VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+            VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
             if config['DBG_SUPS_IN']:
-                print("[supin.1] VAR1p: %s"%VAR1p)
-            unqP, cntP = np.unique(VAR1p, return_counts=True)
-            VAR2p = np.asarray((unqP, cntP)).T
+                print("[supin.1] VAR1: %s"%VAR1)
+            VAR2 = self.get_uniq_counts(VAR1)
             if config['DBG_SUPS_IN']:
-                print("[supin.2] VAR2p: %s"%VAR2p)
-            VAR2x = VAR2p[VAR2p[:,1]==len(kpc)] #has to have at least what the incoming variant had in count
+                print("[supin.2] VAR2: %s"%VAR2)
+            VAR3 = VAR2[VAR2[:,1]==len(kpc)] #has to have at least what the incoming variant had in count
             if config['DBG_SUPS_IN']:
-                print("[supin.3] VAR2x: %s"%VAR2x)
-            idx = np.argwhere(VAR2x[:,0]==vix) #idx make sure we exclude the incoming variant
-            VAR3 = np.delete(VAR2x[:,0], idx) #idx again/delete
+                print("[supin.3] VAR3: %s"%VAR3)
+            idx = np.argwhere(VAR3[:,0]==vix) #idx make sure we exclude the incoming variant
+            VAR4 = np.delete(VAR3[:,0], idx) #idx again/delete
             if config['DBG_SUPS_IN']:
-                print("[supin.4] VAR3: %s"%VAR3)
+                print("[supin.4] VAR4: %s"%VAR4)
             #...
-            if len(VAR3) == 0: return [] #there are no supsets according to the filter
+            if len(VAR4) == 0: return [] #there are no supsets according to the filter
             #(beg) master list of all positives
             allPos = np.argwhere(self.NP==1)[:,0]
             if config['DBG_SUPS_IN']:
                 print("[supin.5] allPos: %s"%allPos)
-
             unqA, cntA = np.unique(allPos, return_counts=True)
             AP = np.asarray((unqA, cntA))[1,]
             if config['DBG_SUPS_IN']:
                 print("[supin.6] AP: %s"%AP)
             #(end) master list of all positives
-            VAR5 = AP[list(VAR3),] #extrapolate the right subset mix to master list of all positives
+            VAR5 = AP[list(VAR4),] #extrapolate the right subset mix to master list of all positives
             if config['DBG_SUPS_IN']:
                 print("[supin.7] VAR5: %s"%VAR5)
-            VAR6 = np.asarray((VAR3,VAR5)).T
+            VAR6 = np.asarray((VAR4,VAR5)).T
             if config['DBG_SUPS_IN']:
                 print("[supin.8] VAR6: %s"%VAR6)
             #Note: sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
@@ -1496,6 +1498,10 @@ class Sort(object):
         self.UNKA = self.dbo.fetchall()
 
         #}}}
+
+    def get_uniq_counts(self,arr):
+        unique_elements, counts_elements = np.unique(arr, return_counts=True)
+        return np.asarray((unique_elements, counts_elements)).T #get uniques
 
     # not used
 
