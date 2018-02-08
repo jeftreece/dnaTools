@@ -267,7 +267,7 @@ class Sort(object):
 
     def test_rule1_supsets(self,vix,kzc):
 
-        #M301 rule (part of it)
+        #M301 rule (part of it){{{
 
         #Note: if there is an existing perfect variant that has the same 
         #(or superset of the) known +/-'s to the imperfect variant when 
@@ -277,7 +277,7 @@ class Sort(object):
         #find the the kits that perfectly match positives for filling any
         #combination of unk values
 
-        #what is the kpc of this variant
+        #what is the kpc of this variant}}}
 
         overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
         kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
@@ -292,6 +292,7 @@ class Sort(object):
         #vix = unk_variant[0]
         #kix = unk_variant[1]
         #supsets = self.get_supset_variants(vix=vix,kix=kix,convertToNames=False,perfectFlg=True)
+
         overrideData = self.get_row_when_override_coord(1,kix=kix,vix=vix)
 
         kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
@@ -663,7 +664,7 @@ class Sort(object):
         return 'RULE0: Unk'
         
 
-    def get_subset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
+    def get_subset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False):
         #vix: is variant's order in matrix, name is vname
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
 
@@ -718,10 +719,6 @@ class Sort(object):
             #    return []
             return VAR6 #[:,0]
 
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        if kname is not None:
-            kix = self.get_kix_by_name(kname)
         if override_val is not None and kix is not None:
             overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
             kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
@@ -742,7 +739,7 @@ class Sort(object):
             print("[sub.2] subsets%s: %s kpc: %s" % (suffix,",".join([str(i) for i in subs]),kpc))
         return subs
         
-    def get_supset_variants(self,override_val=None,vix=None,vname=None,kix=None,kname=None, convertToNames=True,perfectFlg=False):
+    def get_supset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False):
         #vix: is variant's order in matrix, name is vname
         #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
 
@@ -792,10 +789,6 @@ class Sort(object):
 
         if config['DBG_SUPS']:
             print("")
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        if kname is not None:
-            kix = self.get_kix_by_name(kname)
         if override_val is not None and kix is not None:
             overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
             kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
@@ -864,11 +857,7 @@ class Sort(object):
         except:
             intFlg = False
         if intFlg: #typically, it's just the order number it's placed in the matrix
-            #print("here1am1")
             variant = None
-            #hack to have an artifial top
-            #if vix == -999: #top
-            #    return 'top'
             #normal variants in the matrix
             for itm in list(self.VARIANTS.items()):
                 if itm[1][1] == vix:
@@ -894,24 +883,15 @@ class Sort(object):
             variantList = []
             #print("here1am2")
             for vo in list(vix):
-                #print(vo)
-                #hack to have an artificial top
-                #if vo == -999: #top
-                #    variantList.append('top')
                 #normal variants in the matrix
-                if 1 == 2:
-                    foo = 1 #TODO: can fix this later
-                else:
-                    for itm in list(self.VARIANTS.items()):
-                        #print(itm)
-                        if itm[1][1] == vo:
-                            if perfectFlg is False or self.perfect_variants is None:
-                                variantList.append(itm[0])
-                            elif itm[1][1] in self.perfect_known_variants:
-                                variantList.append(itm[0])
-                            break
+                for itm in list(self.VARIANTS.items()):
+                    if itm[1][1] == vo:
+                        if perfectFlg is False or self.perfect_variants is None:
+                            variantList.append(itm[0])
+                        elif itm[1][1] in self.perfect_known_variants:
+                            variantList.append(itm[0])
+                        break
             return(variantList)
-        
         
     def get_kname_by_kix(self,kix,listFlg=False):
         #listFlg: force listFlg as return data type
@@ -924,10 +904,6 @@ class Sort(object):
             kit = None
             for itm in list(self.KITS.items()):
                 if itm[1][1] == kix:
-                    #print (".1..")
-                    #print (itm[0])
-                    #print (self.perfect_known_variants)
-                    #print (".2..")
                     if listFlg:
                             kit = itm[0]
                     else:
@@ -944,10 +920,6 @@ class Sort(object):
             kitList = []
             for ko in list(kix):
                 for itm in list(self.KITS.items()):
-                    #print (".1..")
-                    #print (itm[0])
-                    #print (self.perfect_known_variants)
-                    #print (".2..")
                     if itm[1][1] == ko:
                         kitList.append(itm[0])
                         break
@@ -963,8 +935,6 @@ class Sort(object):
     def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_mx_kit_data but retrieves index info for given val
         if vname is not None:
             vix = self.get_vix_by_name(vname)
-        #if vix == -999: #top hack
-        #    return np.asarray((list(range(len(self.KITS))))) #TODO: working testing!!! (zak)
         if vix is not None and overrideData is not None: # we're sending in a custom evaluation
             return np.argwhere(overrideData[0,] == val).T[1,] #with override data, there's only one line evaluated - 1d datset
         if vix is not None: #no override -- use self.NP (all data)
@@ -985,19 +955,16 @@ class Sort(object):
         cnt = 0 
         new_orders = []
         for K,V in self.get_axis('variants'):
-            #if 0 not in self.get_mx_row_as_list(V[1]):
             if -1 not in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('vp'):
-            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' not in self.get_mx_row_as_list(V[1]):
             if -1 in self.get_mx_row_as_list(V[1]) and 0 not in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('variants'):
-            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' in self.get_mx_row_as_list(V[1]):
             if -1 in self.get_mx_row_as_list(V[1]) and 0 in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
@@ -1025,19 +992,16 @@ class Sort(object):
         cnt = 0 
         new_orders = []
         for K,V in self.get_axis('variants'):
-            #if 0 not in self.get_mx_row_as_list(V[1]):
             if -1 not in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('vp'):
-            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' not in self.get_mx_row_as_list(V[1]):
             if -1 in self.get_mx_row_as_list(V[1]) and 0 not in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
                 cnt = cnt + 1
         for K,V in self.get_axis('variants'):
-            #if 0 in self.get_mx_row_as_list(V[1]) and 'None' in self.get_mx_row_as_list(V[1]):
             if -1 in self.get_mx_row_as_list(V[1]) and 0 in self.get_mx_row_as_list(V[1]):
                 new_orders.append([K,cnt])
                 DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
@@ -1059,7 +1023,6 @@ class Sort(object):
             self.set_new_order(NO[0],NO[1],kitType=True)
         self.NP = np.matrix(list(DATA.values()))
         self.NP = np.transpose(self.NP)
-        
 
     def stdout_tbl_mx(self):
         debug_chk('DEBUG_MATRIX',"",1)
