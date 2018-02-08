@@ -282,7 +282,6 @@ class Sort(object):
         overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
         kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
         print (np.argwhere(self.NP[:,kpuc]==1)[:,0])
-        sys.exit()
 
         #what could it be with all unks to positive?
         #self.get_kixs_by_val(1,
@@ -293,10 +292,15 @@ class Sort(object):
         #kix = unk_variant[1]
         #supsets = self.get_supset_variants(vix=vix,kix=kix,convertToNames=False,perfectFlg=True)
 
-        overrideData = self.get_row_when_override_coord(1,kix=kix,vix=vix)
+        #overrideData = self.get_row_when_override_coord(1,kix=kix,vix=vix)
 
-        kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
-        knc = self.get_kixs_by_val(-1,vix=vix)
+        #kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
+        #knc = self.get_kixs_by_val(-1,vix=vix)
+
+        supsets = self.get_supset_variants(vix=vix,convertToNames=False,perfectFlg=True,kpc=kpuc)
+        print("[R1.1]!!!supsets: %s" %supsets)
+        print("[R1.2]!!!supsets(names): %s" % self.get_vname_by_vix(vix=supsets))
+        sys.exit()
 
         if config['DEBUG_RULE1']:
             print("")
@@ -664,15 +668,13 @@ class Sort(object):
         return 'RULE0: Unk'
         
 
-    def get_subset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False):
-        #vix: is variant's order in matrix, name is vname
-        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
+    def get_subset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False,kpc=None):
 
-        def get_subsets(kpc,vo):
+        def get_subsets(kpc,vix):
             VAR1p = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant's pos conditions
             if config['DBG_SUBS_IN']:
                 print("[subin.1] VAR1p: %s"%VAR1p)
-            idxP = np.argwhere(VAR1p==vo) #idx make sure we exclude the incoming variant
+            idxP = np.argwhere(VAR1p==vix) #idx make sure we exclude the incoming variant
             VAR2p = np.delete(VAR1p, idxP)
             if config['DBG_SUBS_IN']:
                 print("[subin.2] VAR2p: %s"%VAR2p)
@@ -719,31 +721,32 @@ class Sort(object):
             #    return []
             return VAR6 #[:,0]
 
+        #Note: override one specific coord
         if override_val is not None and kix is not None:
             overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
             kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
-        else:
+        elif kpc is None:
             kpc = self.get_kixs_by_val(1,vix=vix) #default pos conditions
-
+    
         if convertToNames is True:
             subs = self.get_vname_by_vix(vix=self.filter_perfect_variants(get_subsets(kpc,vix)[:,0].tolist()),listFlg=1)
         else:
             subs = self.filter_perfect_variants(vix=get_subsets(kpc,vix)[:,0].tolist())
+
+        #Debugging stdout msgs
         if config['DBG_SUBS']:
             print("[sub.1] subs: %s" % subs)
-
         if config['DBG_SUBS']:
             suffix=''
             if override_val is not None and kix is not None:
                 suffix = 'P' if override_val == 1 else 'N'
             print("[sub.2] subsets%s: %s kpc: %s" % (suffix,",".join([str(i) for i in subs]),kpc))
+
         return subs
         
-    def get_supset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False):
-        #vix: is variant's order in matrix, name is vname
-        #override_val: is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
+    def get_supset_variants(self,override_val=None,vix=None,kix=None,convertToNames=True,perfectFlg=False,kpc=None):
 
-        def get_supsets(kpc,vo):
+        def get_supsets(kpc,vix):
             if config['DBG_SUPS_IN']:
                 print("[supin.0] kpc: %s"%kpc)
                 print("[supin.0] kpc(names): %s"%self.get_kname_by_kix(kpc))
@@ -757,7 +760,7 @@ class Sort(object):
             VAR2x = VAR2p[VAR2p[:,1]==len(kpc)] #has to have at least what the incoming variant had in count
             if config['DBG_SUPS_IN']:
                 print("[supin.3] VAR2x: %s"%VAR2x)
-            idx = np.argwhere(VAR2x[:,0]==vo) #idx make sure we exclude the incoming variant
+            idx = np.argwhere(VAR2x[:,0]==vix) #idx make sure we exclude the incoming variant
             VAR3 = np.delete(VAR2x[:,0], idx) #idx again/delete
             if config['DBG_SUPS_IN']:
                 print("[supin.4] VAR3: %s"%VAR3)
@@ -783,40 +786,46 @@ class Sort(object):
             VAR7 = VAR6[VAR6[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
             if config['DBG_SUPS_IN']:
                 print("[supin.9] VAR7: %s"%VAR7)
-            #VAR7 = VAR6[VAR6[:,1].argsort()] #normal sort (2nd col) - so we can get the minimum ones first
             #(end) sorting
             return VAR7
 
-        if config['DBG_SUPS']:
-            print("")
+        #Note: override one specific coord
         if override_val is not None and kix is not None:
             overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
             kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData) #pos conditions when override coord with a value
-        else:
+        elif kpc is None:
             kpc = self.get_kixs_by_val(1,vix=vix) #default pos conditions
-        if config['DBG_SUPS']:
-            print("[sup.1] kpc: %s"%kpc)
 
+        #Note: get supsets
         supsY = get_supsets(kpc,vix)
+
+        #Debugging
         if config['DBG_SUPS']:
+            print("")
+            print("[sup.1] kpc: %s"%kpc)
             print("[sup.2] supsY: %s"%supsY)
+
+        #Perfect variants
         if len(supsY) == 0:
             return []
         else:
             supsX = self.filter_perfect_variants(supsY.tolist()) #.tolist())
+
+        #Debugging
         if config['DBG_SUPS']:
             print("[sup.3] supsX: %s"%supsX)
 
+        #Convert Names or not
         if len(supsX) == 0:
             sups = supsX
         elif convertToNames is True:
             sups = self.get_vname_by_vix(vix=supsX[:,0],perfectFlg=perfectFlg,listFlg=1)
         else:
-            #print(supsX)
             sups = np.asarray(supsX)[:,0]
+
+        #Debugging
         if config['DBG_SUPS']:
             print("[sup.4] sups: %s"%sups)
-                
         if override_val is not None and kix is not None:
             if override_val==1:
                 if config['DBG_SUPS']:
@@ -827,6 +836,7 @@ class Sort(object):
         else:
             if config['DBG_SUPS']:
                 print("[sup.7] supsets: "+",".join([str(i) for i in sups]) +" kpc:"+str(kpc))
+
         return sups
         
     def use_perfect_known_variants_only(self,variants):
@@ -1182,7 +1192,8 @@ class Sort(object):
         #print("filter(bef) -  vix: %s" % vix)
         if any(isinstance(el, list) for el in vix):
             for itm in reversed([[n,v] for (n,(v,c)) in enumerate(vix)]):
-                if itm[1] in self.imperfect_variants:
+                print(vix)
+                if itm[1] in self.get_imperfect_variants_idx():
                     #print(itm)
                     #print(itm[0])
                     vix.remove(vix[itm[0]])
@@ -1191,7 +1202,7 @@ class Sort(object):
         else:
             for itm in reversed([[n,v] for n,v in enumerate(vix)]):
                 #print(itm)
-                if itm[1] in self.imperfect_variants:
+                if itm[1] in self.get_imperfect_variants_idx():
                     #print(itm)
                     #print(itm[0])
                     vix.remove(vix[itm[0]])
