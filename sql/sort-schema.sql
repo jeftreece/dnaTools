@@ -116,8 +116,7 @@ create view perfect_variants AS
 create view perfect_variants_with_kits AS
   SELECT K.kit_id, PV.name, PV.variant_loc, PV.variant_id
   FROM perfect_variants PV
-  CROSS JOIN 
-  kits_view K;
+  CROSS JOIN kits_view K;
 
 create view perfect_variants_with_kits_assignments AS
   SELECT C.kit_id, PV.name, PV.variant_loc, PV.variant_id, C.assigned
@@ -126,10 +125,8 @@ create view perfect_variants_with_kits_assignments AS
 
 create view perfect_variants_with_kits_assignments_and_unk AS
   SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0), PVK.variant_loc, PVK.variant_id
-  FROM 
-  perfect_variants_with_kits PVK
-  LEFT JOIN 
-  perfect_variants_with_kits_assignments PVKA
-  ON
-  PVK.variant_loc = PVKA.variant_loc AND
+  FROM perfect_variants_with_kits PVK
+  LEFT JOIN perfect_variants_with_kits_assignments PVKA
+  ON PVK.variant_loc = PVKA.variant_loc AND
   PVK.kit_id = PVKA.kit_id;
+
