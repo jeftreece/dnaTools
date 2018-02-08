@@ -125,7 +125,7 @@ create view perfect_variants_with_kits_assignments AS
   WHERE C.variant_loc = PV.variant_loc;
 
 create view perfect_variants_with_kits_assignments_and_unk AS
-  SELECT PVK.kit_id, PVK.name, PVK.variant_loc, PVK.variant_id, ifnull(PVKA.assigned,0)
+  SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0), PVK.variant_loc, PVK.variant_id
   FROM 
   perfect_variants_with_kits PVK
   LEFT JOIN 
