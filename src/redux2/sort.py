@@ -147,7 +147,10 @@ class Sort(object):
     def variant_supsets(self,vname):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
-        vix = self.get_vix_by_vname(vname)
+        if vname.isdigit():
+            vix = vname
+        else:
+            vix = self.get_vix_by_vname(vname)
         print(vix)
         
     def variant_subsets(self,vname):
@@ -1219,6 +1222,16 @@ class Sort(object):
         self.VARIANTS = {}
         for x in range(len(vals)):
             self.VARIANTS[vals[x]] = [0,cnts[x]]
+        
+    def set_axes_to_db(self):
+        sql = "delete from s_matrix_idxs;"
+        self.dbo.sql_exec(sql)
+        itms = [(k,c2) for (n,(k,(c1,c2))) in enumerate(self.get_axis('variants'))]
+        sql = "insert into s_matrix_idxs (type_id,axis_id,idx) values (0,?,?);"
+        self.dbo.sql_exec_many(sql,itms)
+        itms = [[k,c2] for (n,(k,(c1,c2))) in enumerate(self.get_axis('kits'))]
+        sql = "insert into s_matrix_idxs (type_id,axis_id,idx) values (1,?,?);"
+        self.dbo.sql_exec_many(sql,itms)
 
     def get_coord(self,kix,vix,moreInfo=False):
         buf = ""
@@ -1345,7 +1358,7 @@ class Sort(object):
     def get_mx_data(self):
 
         #sql - exclude perfect variants
-        sql = "select * from perfect_variants_with_kits_assignments_and_unk;"
+        sql = "select * from perfect_assignments_with_unk;"
 
         #get data
         self.dbo.sql_exec(sql)
@@ -1382,7 +1395,8 @@ class Sort(object):
         self.get_mx_count_data()
 
         #get relations data
-        self.get_mx_relations_data()
+        #self.get_mx_relations_data()
+        
     def get_variant_data_by_vname(self,vname):
 
         #sql - exclude perfect variants
@@ -1580,17 +1594,6 @@ class Sort(object):
         unique_elements, counts_elements = np.unique(arr, return_counts=True)
         return np.asarray((unique_elements, counts_elements)).T #get uniques
 
-    def set_axes_to_db(self):
-        #create table s_matrix_idxs(
-        #    type_id int,      -- 0 = variants, 1 = kits
-        #    axis_id int,      -- either the variant id or the kit_id
-        #    matrix_idx int    
-        #    );
-        sql = "delete from s_matrix_idx();"
-        print("11111111111")
-        print(self.get_axis('kits'))
-        print(self.get_axis('variants'))
-        print("22222222222")
 
     # not used
     def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is vname
