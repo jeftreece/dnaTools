@@ -519,18 +519,9 @@ def c_variant_info(vname):
     sort.dbo = DB()
     sort.variant_info(vname)
     
-def c_variant_supsets(vname):
+def c_matrix():
     sort = Sort()
     sort.dbo = DB()
-    sort.variant_supsets(vname)
+    sort.matrix()
     
-def c_variant_subsets(vname):
-    sort = Sort()
-    sort.dbo = DB()
-    sort.variant_subsets(vname)
-    
-def c_variant_update(vname):
-    sort = Sort()
-    sort.dbo = DB()
-    sort.variant_update(vname)
 

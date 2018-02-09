@@ -138,28 +138,35 @@ class Sort(object):
                         sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,vv,kv)
                         self.dbo.sql_exec(sql1)
 
-    # variant calls
+    # argparser special routines
 
     def variant_info(self,vname):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
-        
-    def variant_supsets(self,vname):
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
+        self.get_mx_data(recreateFlg = False)
+
+        print("")
         if vname.isdigit():
-            vix = vname
+            vix = int(vname)
         else:
-            vix = self.get_vix_by_vname(vname)
-        print(vix)
+            vix = self.get_vix_by_name(vname)
+
+        print("vix: %s" % vix)
+        print("vix(name): %s" % self.get_vname_by_vix(vix))
+
+        print("")
+        print("subsets: %s"%self.get_vix_rel(relType=-1,vix=vix))
+        print("subsets(names): %s"%self.get_vname_by_vix(self.get_vix_rel(relType=-1,vix=vix)))
+        print("")
+        print("supsets: %s"%self.get_vix_rel(relType=1,vix=vix))
+        print("supsets(names): %s"%self.get_vname_by_vix(self.get_vix_rel(relType=1,vix=vix)))
+        print("")
         
-    def variant_subsets(self,vname):
+    def matrix(self):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
-        
-    def variant_update(vname):
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
+        self.get_mx_data(recreateFlg = False)
+        self.stdout_tbl_mx()
 
     # matrix calls
 
@@ -203,9 +210,11 @@ class Sort(object):
 
     def sort_step1(self):
         self.mx_vertical_sort_new()
+        self.save_mx_to_db()
         
     def sort_step2(self):
         self.mx_horizontal_sort()
+        self.save_mx_to_db()
         
     def sort_step3(self):
         print("Processing Imperfect Variants:")
@@ -288,6 +297,7 @@ class Sort(object):
         self.get_mx_count_data()
         self.mx_vertical_sort()
         self.mx_horizontal_sort()
+        self.save_mx_to_db()
 
     def test_rule1_supsets(self,vix,kzc):
 
@@ -1161,27 +1171,48 @@ class Sort(object):
     def stdout_variant(self):
         foo = 1
 
-    def stdout_tbl_mx(self):
-        self.save_mx_to_db()
+    def stdout_tbl_mx(self,vix=None):
+
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"big_matrix view{{"+"{",1)
         debug_chk('DBG_MATRIX',"",1)
+
+        #(beg)big matrix
         table = BeautifulTable()
         table.column_headers = ['']+self.get_cur_kit_list()
-        for K,V in self.get_axis('variants'):
+        #cntV = 0
+        for K,V in self.get_axis('variants',idx=vix):
+            #table.append_row([str(cntV)+":"+K]+self.get_mx_row_as_list(V[1]))
             table.append_row([K]+self.get_mx_row_as_list(V[1]))
+            #cntV = cntV + 1
         debug_chk('DBG_MATRIX',table,1)
+        #(end)big matrix
+
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"}}"+"}",1)
         debug_chk('DBG_MATRIX',"small_matrix view{{"+"{",1)
         debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX','kits: '+str(self.get_axis('kits',keysOnly=True)),1)
-        debug_chk('DBG_MATRIX','variants: '+str(self.get_axis('variants',keysOnly=True)),1)
+
+        #(beg)axes
+        debug_chk('DBG_MATRIX','kits: '+str(self.get_axis('kits',keysOnly=True,idx=vix)),1)
+        debug_chk('DBG_MATRIX','variants: '+str(self.get_axis('variants',keysOnly=True,idx=vix)),1)
+        #(end)axes
+
         debug_chk('DBG_MATRIX',"",1)
-        if config['MATRIX_COLORS']:
-            debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+
+        #(beg)small matrix
+        if vix is None:
+            if config['MATRIX_COLORS']:
+                debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+            else:
+                debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -"),1)
         else:
-            debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -"),1)
+            if config['MATRIX_COLORS']:
+                debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+            else:
+                debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -"),1)
+        #(end)small matrix
+
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"}}"+"}",1)
         debug_chk('DBG_MATRIX',"",1)
@@ -1253,7 +1284,7 @@ class Sort(object):
     def get_cur_variant_list(self):
         return self.get_axis('variants',keysOnly=True)
         
-    def get_axis(self,orderByType=None,keysOnly=False): # gets the variant/col or kit/row names (and optionally order info too)
+    def get_axis(self,orderByType=None,keysOnly=False,idx=None): # gets the variant/col or kit/row names (and optionally order info too)
         if orderByType in ['variants','kits']:
             if orderByType == 'variants' : SCH = self.VARIANTS
             if orderByType == 'kits' : SCH = self.KITS
@@ -1358,11 +1389,14 @@ class Sort(object):
         rowO[0,kix] = override_val
         return rowO
 
-    def get_mx_data(self):
+    def get_mx_data(self,recreateFlg=True):
 
-        #sql - exclude perfect variants
-        sql = "select * from perfect_assignments_with_unk;"
-        #sql = "select * from saved_assignments_with_unk;"
+        #recreating from scratch
+        if recreateFlg:
+            sql = "select * from perfect_assignments_with_unk;"
+        #going with the saved data
+        else:
+            sql = "select * from saved_assignments_with_unk;"
 
         #get data
         self.dbo.sql_exec(sql)
@@ -1374,34 +1408,56 @@ class Sort(object):
         self.VARIANTS = {}
         cntV = 0
         cntK = 0
-        sql = ''
         for row in F:
             if row[1] not in DATA:
                 DATA[row[1]] = []
+            #calls
             DATA[row[1]].append(row[2])
             #kits
             if row[0] not in self.KITS:
                 self.KITS[row[0]] = [cntK,cntK]
-                sql = "insert into s_mx_kits (kit_id) values('%s');" % row[0]
-                self.dbo.sql_exec(sql)
-                sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[0],cntK)
+                if recreateFlg:
+                    sql = "insert into s_mx_kits (kit_id) values('%s');" % row[0]
+                    self.dbo.sql_exec(sql)
+                    sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[0],cntK)
                 cntK = cntK + 1
             #variants
             if row[1] not in self.VARIANTS:
                 self.VARIANTS[row[1]] = [cntV,cntV]
-                sql = "insert into s_mx_variants (variant_id,variant_loc,name) values('%s','%s','%s');" % (row[3],row[4],row[1])
-                self.dbo.sql_exec(sql)
-                sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[1],cntV)
-                self.dbo.sql_exec(sql)
+                if recreateFlg:
+                    sql = "insert into s_mx_variants (variant_id,variant_loc,name) values('%s','%s','%s');" % (row[4],row[3],row[1])
+                    self.dbo.sql_exec(sql)
+                    sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (0,row[1],cntV)
+                    self.dbo.sql_exec(sql)
                 cntV = cntV + 1
+
+        #create axes (saved version)
+        #elif 1==2:
+        #    sql = "select * from s_mx_idxs;"
+        #    self.dbo.sql_exec(sql)
+        #    F = self.dbo.fetchall()
+        #    for row in F:
+        #        if row[0] == 0: #variant
+        #            self.VARIANTS[row[1]] = [row[2],row[2]]
+        #        else: #kit
+        #            self.KITS[row[1]] = [row[2],row[2]]
       
         #create numpy version of data
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
 
-        #push this new stuff into saved/matrix tbls
-        sql = "insert into s_mx_calls (kit_id,variant_loc,assigned) select kit_id,variant_loc,assigned from perfect_assignments;"
-        self.dbo.sql_exec(sql)
+        #print(self.VARIANTS)
+        #print(self.KITS)
+        #sys.exit()
+
+        #create numpy version of data
+        for key,value in DATA.items():
+            self.NP = np.matrix(list(DATA.values()))
+
+        #cpush this new stuff into saved/matrix tbls (recreation)
+        if recreateFlg:
+            sql = "insert into s_mx_calls (kit_id,variant_loc,assigned) select kit_id,variant_loc,assigned from perfect_assignments;"
+            self.dbo.sql_exec(sql)
 
         #chk matrix (debugging)
         #self.stdout_tbl_mx()
@@ -1610,8 +1666,8 @@ class Sort(object):
         unique_elements, counts_elements = np.unique(arr, return_counts=True)
         return np.asarray((unique_elements, counts_elements)).T #get uniques
 
-
     # not used
+
     def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is vname
         if vname is not None:
             vix = self.get_vix_by_name(vname)

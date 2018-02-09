@@ -191,9 +191,12 @@ create view saved_assignments AS
   WHERE SC.variant_loc = SV.variant_loc;
 
 create view saved_assignments_with_unk AS
-  SELECT SVK.kit_id, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.variant_loc, SVK.variant_id
-  FROM saved_variants_with_kits SVK
+  SELECT SVK.kit_id, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.variant_loc, SVK.variant_id, VI.idx, KI.idx
+  FROM s_mx_idxs VI, s_mx_idxs KI, saved_variants_with_kits SVK
   LEFT JOIN saved_assignments SVKA
   ON SVK.variant_loc = SVKA.variant_loc AND
-  SVK.kit_id = SVKA.kit_id;
+  SVK.kit_id = SVKA.kit_id
+  WHERE VI.type_id = 0 and VI.axis_id = SVK.name AND 
+  KI.type_id = 1 and KI.axis_id = SVK.kit_id
+  ORDER BY 6,7;
 
