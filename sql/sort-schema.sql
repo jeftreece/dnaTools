@@ -26,6 +26,7 @@ drop table if exists s_kits;
 drop table if exists s_dupes;
 drop table if exists s_dupe_joins;
 
+drop table if exists s_mx_kits;
 drop table if exists s_mx_idxs;
 drop table if exists s_mx_variants;
 drop table if exists s_mx_calls;
@@ -98,15 +99,16 @@ create table s_mx_variants (
  -- old_reference varchar(2), -- commenting out right now cuz not part of ian's doc
 );
 
--- create table s_mx_idxs(
--- type_id int,           -- 0 = variants, 1 = kits
--- axis_id varchar(10),   -- either the variant id or the kit_id 
---);
+create table s_mx_idxs(
+ type_id int,           -- 0 = variants, 1 = kits
+ axis_id varchar(10),   -- either the variant id or the kit_id 
+ idx int
+);
 
 create table s_mx_calls (
  kit_id varchar(10),        
  variant_loc varchar(10),
- assigned boolean 
+ assigned boolean,
  confidence int,
  changed int
 );
@@ -165,17 +167,17 @@ create view perfect_assignments AS
   WHERE C.variant_loc = PV.variant_loc;
 
 create view perfect_assignments_with_unk AS
-  SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0), PVK.variant_loc, PVK.variant_id
+  SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.variant_loc, PVK.variant_id
   FROM perfect_variants_with_kits PVK
   LEFT JOIN perfect_assignments PVKA
   ON PVK.variant_loc = PVKA.variant_loc AND
   PVK.kit_id = PVKA.kit_id;
 
 create view saved_kits AS 
-  SELECT DISTINCT kit_id, idx from s_mx_kits;
+  SELECT DISTINCT kit_id from s_mx_kits;
 
 create view saved_variants AS 
-  SELECT DISTINCT name, variant_loc, variant_id, idx
+  SELECT DISTINCT name, variant_loc, variant_id
   FROM s_mx_variants;
 
 create view saved_variants_with_kits AS
@@ -189,7 +191,7 @@ create view saved_assignments AS
   WHERE SC.variant_loc = SV.variant_loc;
 
 create view saved_assignments_with_unk AS
-  SELECT SVK.kit_id, SVK.name, ifnull(SVKA.assigned,0), SVK.variant_loc, SVK.variant_id
+  SELECT SVK.kit_id, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.variant_loc, SVK.variant_id
   FROM saved_variants_with_kits SVK
   LEFT JOIN saved_assignments SVKA
   ON SVK.variant_loc = SVKA.variant_loc AND

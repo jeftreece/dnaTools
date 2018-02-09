@@ -173,8 +173,8 @@ class Sort(object):
         self.get_mx_data()
 
         #stdout relations data
-        if config['DBG_RELS']:
-            self.stdout_mx_relations_data()
+        #if config['DBG_RELS']:
+        #    self.stdout_mx_relations_data()
 
         #step 0
         debug_chk('DBG_MATRIX',"data - step 0 (default)",1)
@@ -1162,7 +1162,7 @@ class Sort(object):
         foo = 1
 
     def stdout_tbl_mx(self):
-        self.set_axes_to_db()
+        self.save_mx_to_db()
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"big_matrix view{{"+"{",1)
         debug_chk('DBG_MATRIX',"",1)
@@ -1223,14 +1223,17 @@ class Sort(object):
         for x in range(len(vals)):
             self.VARIANTS[vals[x]] = [0,cnts[x]]
         
-    def set_axes_to_db(self):
-        sql = "delete from s_matrix_idxs;"
+    def save_mx_to_db(self):
+        sql = "delete from s_mx_idxs;"
+        #sql = sql+"delete from s_mx_kits;"
+        #sql = sql+"delete from s_mx_calls;"
+        #sql = sql+"delete from s_mx_idxs;"
         self.dbo.sql_exec(sql)
         itms = [(k,c2) for (n,(k,(c1,c2))) in enumerate(self.get_axis('variants'))]
-        sql = "insert into s_matrix_idxs (type_id,axis_id,idx) values (0,?,?);"
+        sql = "insert into s_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
         self.dbo.sql_exec_many(sql,itms)
         itms = [[k,c2] for (n,(k,(c1,c2))) in enumerate(self.get_axis('kits'))]
-        sql = "insert into s_matrix_idxs (type_id,axis_id,idx) values (1,?,?);"
+        sql = "insert into s_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
         self.dbo.sql_exec_many(sql,itms)
 
     def get_coord(self,kix,vix,moreInfo=False):
@@ -1359,6 +1362,7 @@ class Sort(object):
 
         #sql - exclude perfect variants
         sql = "select * from perfect_assignments_with_unk;"
+        #sql = "select * from saved_assignments_with_unk;"
 
         #get data
         self.dbo.sql_exec(sql)
@@ -1370,22 +1374,34 @@ class Sort(object):
         self.VARIANTS = {}
         cntV = 0
         cntK = 0
+        sql = ''
         for row in F:
             if row[1] not in DATA:
                 DATA[row[1]] = []
             DATA[row[1]].append(row[2])
-            #TODO: numpy way to do this? still needed? get rid of dupe info?
+            #kits
             if row[0] not in self.KITS:
                 self.KITS[row[0]] = [cntK,cntK]
+                sql = "insert into s_mx_kits (kit_id) values('%s');" % row[0]
+                self.dbo.sql_exec(sql)
+                sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[0],cntK)
                 cntK = cntK + 1
-            #TODO: numpy way to do this? still needed? get rid of dupe info?
+            #variants
             if row[1] not in self.VARIANTS:
                 self.VARIANTS[row[1]] = [cntV,cntV]
+                sql = "insert into s_mx_variants (variant_id,variant_loc,name) values('%s','%s','%s');" % (row[3],row[4],row[1])
+                self.dbo.sql_exec(sql)
+                sql = "insert into s_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[1],cntV)
+                self.dbo.sql_exec(sql)
                 cntV = cntV + 1
       
-       #create numpy version of data
+        #create numpy version of data
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
+
+        #push this new stuff into saved/matrix tbls
+        sql = "insert into s_mx_calls (kit_id,variant_loc,assigned) select kit_id,variant_loc,assigned from perfect_assignments;"
+        self.dbo.sql_exec(sql)
 
         #chk matrix (debugging)
         #self.stdout_tbl_mx()
