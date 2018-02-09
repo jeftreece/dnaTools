@@ -166,7 +166,7 @@ class Sort(object):
         if len(supsets):
 
             print("")
-            print("supsets: %s - [%s]"%(l2s(self.get_vname_by_vix(supsets)),il2s(supsets)))
+            print("sups: %s - [%s]"%(l2s(self.get_vname_by_vix(supsets)),il2s(supsets)))
 
             for sup in supsets:
                 kpc4sup = self.get_kixs_by_val(val=1,vix=sup)
@@ -177,7 +177,7 @@ class Sort(object):
 
         if len(subsets):
 
-            print("subsets: %s - [%s]"%(l2s(self.get_vname_by_vix(subsets)),il2s(subsets)))
+            print("subs: %s - [%s]"%(l2s(self.get_vname_by_vix(subsets)),il2s(subsets)))
 
             for sub in subsets:
                 print("  (sub) %s"%self.get_vname_by_vix(sub))
