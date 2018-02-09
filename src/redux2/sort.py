@@ -1194,11 +1194,24 @@ class Sort(object):
         debug_chk('DBG_MATRIX',"",1)
 
         #(beg)axes
-        debug_chk('DBG_MATRIX','kits: '+str(self.get_axis('kits',keysOnly=True,idx=vix)),1)
-        debug_chk('DBG_MATRIX','variants: '+str(self.get_axis('variants',keysOnly=True,idx=vix)),1)
-        #(end)axes
+        table2 = BeautifulTable()
+        table2.column_headers = self.get_cur_variant_list()
+        table2.append_row(list(range(len(self.get_cur_variant_list()))))
+        for itm in self.get_cur_variant_list():
+            table2.left_padding_widths[itm] = 1
+            table2.right_padding_widths[itm] = 0
+        debug_chk('DBG_MATRIX',table2,1)
+
+        table1 = BeautifulTable()
+        table1.column_headers = self.get_cur_kit_list()
+        table1.append_row(list(range(len(self.get_cur_kit_list()))))
+        for itm in self.get_cur_kit_list():
+            table1.left_padding_widths[itm] = 1
+            table1.right_padding_widths[itm] = 0
+        debug_chk('DBG_MATRIX',table1,1)
 
         debug_chk('DBG_MATRIX',"",1)
+        #(end)axes
 
         #(beg)small matrix
         if vix is None:
