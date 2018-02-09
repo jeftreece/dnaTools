@@ -31,12 +31,12 @@ def trace (level, msg):
 def debug_chk(var,msg,lev=0):
     if config[var] > lev:
         print(msg)
-
-def sql_on():
-    config['DBG_SQL'] = True
     
-def sql_off():
-    config['DBG_SQL'] = False
+def il2s(lst):
+    return ",".join(str(x) for x in lst)
+    
+def l2s(lst):
+    return ",".join(lst)
 
 #}}}
 # conf {{{
@@ -151,16 +151,43 @@ class Sort(object):
         else:
             vix = self.get_vix_by_name(vname.upper())
 
-        print("vix: %s" % vix)
-        print("vix(name): %s" % self.get_vname_by_vix(vix))
+        kpc = self.get_kixs_by_val(val=1,vix=vix)
+        knc = self.get_kixs_by_val(val=-1,vix=vix)
+        kuc = self.get_kixs_by_val(val=0,vix=vix)
+        supsets = self.get_vix_rel(relType=1,vix=vix)
+        subsets = self.get_vix_rel(relType=-1,vix=vix)
 
         print("")
-        print("subsets: %s"%self.get_vix_rel(relType=-1,vix=vix))
-        print("subsets(names): %s"%self.get_vname_by_vix(self.get_vix_rel(relType=-1,vix=vix)))
+        print("vix: %s - [%s]" % (self.get_vname_by_vix(vix),vix))
+        print("kpc: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc)),il2s(kpc)))
+        print("knc: %s - [%s]"%(l2s(self.get_kname_by_kix(knc)),il2s(knc)))
+        print("kuc: %s - [%s]"%(l2s(self.get_kname_by_kix(kuc)),il2s(kuc)))
+
+        if len(supsets):
+
+            print("")
+            print("supsets: %s - [%s]"%(l2s(self.get_vname_by_vix(supsets)),il2s(supsets)))
+
+            for sup in supsets:
+                kpc4sup = self.get_kixs_by_val(val=1,vix=sup)
+                print("  (sup) %s"%self.get_vname_by_vix(sup))
+                print("   - kpc4sup: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc4sup)),il2s(kpc4sup)))
+
+            print("")
+
+        if len(subsets):
+
+            print("subsets: %s - [%s]"%(l2s(self.get_vname_by_vix(subsets)),il2s(subsets)))
+
+            for sub in subsets:
+                print("  (sub) %s"%self.get_vname_by_vix(sub))
+                kpc4sub = self.get_kixs_by_val(val=1,vix=sub)
+                print("   - kpc4sub: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc4sub)),il2s(kpc4sub)))
+        
         print("")
-        print("supsets: %s"%self.get_vix_rel(relType=1,vix=vix))
-        print("supsets(names): %s"%self.get_vname_by_vix(self.get_vix_rel(relType=1,vix=vix)))
-        print("")
+        
+    def variant_proc(self,vname):
+        self.variant_info(vname)
         
     def matrix(self):
         self.dbo.db = self.dbo.db_init()
@@ -824,7 +851,7 @@ class Sort(object):
                 suffix = 'P' if override_val == 1 else 'N'
             print("[rels.2] rels%s: %s kpc: %s" % (suffix,",".join([str(i) for i in rels]),kpc))
 
-        return rels
+        return list(rels)
         
     def get_vix_subsets(self,kpc,vix):
 
@@ -1080,9 +1107,9 @@ class Sort(object):
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None and overrideData is not None: # we're sending in a custom evaluation
-            return np.argwhere(overrideData[0,] == val).T[1,] #with override data, there's only one line evaluated - 1d datset
+            return list(np.argwhere(overrideData[0,] == val).T[1,]) #with override data, there's only one line evaluated - 1d datset
         if vix is not None: #no override -- use self.NP (all data)
-            return np.argwhere(self.NP[vix,] == val).T[1,] #default data, it's the entire matrix - 2d dataset 
+            return list(np.argwhere(self.NP[vix,] == val).T[1,]) #default data, it's the entire matrix - 2d dataset 
         
     def get_vixs_by_val(self,val,kix=None,kname=None,overrideData=None): #like get_mx_variant_data but retrieves index info for given val
         if kname is not None:
