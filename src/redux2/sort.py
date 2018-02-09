@@ -149,7 +149,7 @@ class Sort(object):
         if vname.isdigit():
             vix = int(vname)
         else:
-            vix = self.get_vix_by_name(vname)
+            vix = self.get_vix_by_name(vname.upper())
 
         print("vix: %s" % vix)
         print("vix(name): %s" % self.get_vname_by_vix(vix))
