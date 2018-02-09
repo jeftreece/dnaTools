@@ -93,8 +93,10 @@ parser.add_argument('-ot', '--sorttree', help='sort tree data prototype (s_ sche
 # variant {{{
 
 #parser.add_argument('-gv', '--variant', help='variant', type=int, action='store_true')
-parser.add_argument('-gv', '--variant', help='variant', type=int)
-parser.add_argument('-uv', '--update_variant', help='update variant', action='store_true')
+parser.add_argument('-vi', '--variant_info', help='variant info', type=str)
+parser.add_argument('-vu', '--variant_update', help='update variant', type=str)
+parser.add_argument('-vsp', '--variant_supsets', help='variant supsets', type=str)
+parser.add_argument('-vsb', '--variant_subsets', help='variant subsets', type=str)
 
 #}}}
 
@@ -208,13 +210,23 @@ else: #this area calls controllers
     # }}}
     # variant {{{
 
-    if args.variant:
+    if args.variant_info:
         #print(args)
         #c_sort_sample_db()
-        c_variant(args.variant)
+        c_variant_info(args.variant_info)
 
-    if args.update_variant:
-        c_upd_variant()
+    if args.variant_supsets:
+        #print(args)
+        #c_sort_sample_db()
+        c_variant_supsets(args.variant_supsets)
+
+    if args.variant_subsets:
+        #print(args)
+        #c_sort_sample_db()
+        c_variant_subsets(args.variant_subsets)
+
+    if args.variant_update:
+        c_variant_update(args.variant_update)
 
     # }}}
 

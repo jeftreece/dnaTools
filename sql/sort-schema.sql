@@ -17,6 +17,7 @@ drop table if exists s_kits;
 -- drop table if exists s_sort_kits;
 drop table if exists s_dupes;
 drop table if exists s_dupe_joins;
+drop table if exists s_matrix_idxs;
 
 -- CREATES
 
@@ -26,7 +27,6 @@ create table s_variants (
  variant_loc varchar(10),
  name varchar(20) --,
  -- old_reference varchar(2), -- commenting out right now cuz not part of ian's doc
- -- sort_order int
 );
 
 create table s_calls(
@@ -68,8 +68,13 @@ create table call_fails (
 
 create table s_kits(
  -- kit_id  int,  -- later this can be person_id
- kit_id  varchar(10),  -- later this can be person_id
- sort_order int
+ kit_id  varchar(10)  -- later this can be person_id
+);
+
+create table s_matrix_idxs(
+ type_id int,      -- 0 = variants, 1 = kits
+ axis_id int,      -- either the variant id or the kit_id 
+ matrix_idx int
 );
 
 -- hide-me {{{

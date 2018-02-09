@@ -138,7 +138,27 @@ class Sort(object):
                         sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,vv,kv)
                         self.dbo.sql_exec(sql1)
 
-    # matrix
+    # variant calls
+
+    def variant_info(self,vname):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        
+    def variant_supsets(self,vname):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        vix = self.get_vix_by_vname(vname)
+        print(vix)
+        
+    def variant_subsets(self,vname):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        
+    def variant_update(vname):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+
+    # matrix calls
 
     def sort_matrix(self):
 
@@ -746,17 +766,29 @@ class Sort(object):
 
         #method 1
         if override_val is not None and kix is not None:
+            if config['DBG_RELS']:
+                print("")
+                print("[rels.0] MODE (get_vix_rel) - ONE (override val w/vix)")
+                print("")
             overrideData = self.get_row_when_override_coord(override_val,kix=kix,vix=vix)
             #pos conditions when override coord with a value
             kpc = self.get_kixs_by_val(1,vix=vix,overrideData=overrideData)
 
         #method 2
         elif kpc is None:
+            if config['DBG_RELS']:
+                print("")
+                print("[rels.0] MODE (get_vix_rel) - TWO (only use vix)")
+                print("")
             #default pos conditions when just use default target vix criteria
             kpc = self.get_kixs_by_val(1,vix=vix) #default pos conditions
     
         #method3
         #requires only sending in a kpc
+        else:
+            print("")
+            print("[rels.0] MODE (get_vix_rel) - THREE (sending in a kpc)")
+            print("")
 
         if relType == 1: #supsets
             rels_ = self.get_vix_supsets(kpc,vix)
@@ -771,13 +803,13 @@ class Sort(object):
         rels = self.filter_perfect_variants(vix=rels_[:,0].tolist()) #.tolist()
 
         #debugging
-        if config['DBG_KIXS']:
-            print("[rel.1] rels: %s" % rels)
-        if config['DBG_KIXS']:
+        if config['DBG_RELS']:
+            print("[rels.1] rels: %s" % rels)
+        if config['DBG_RELS']:
             suffix=''
             if override_val is not None and kix is not None:
                 suffix = 'P' if override_val == 1 else 'N'
-            print("[rel.2] rels%s: %s kpc: %s" % (suffix,",".join([str(i) for i in rels]),kpc))
+            print("[rels.2] rels%s: %s kpc: %s" % (suffix,",".join([str(i) for i in rels]),kpc))
 
         return rels
         
@@ -796,7 +828,15 @@ class Sort(object):
         # - VAR7 - merge of VAR5 and VAR6
         #-------------------------------------------------------------------------------------------------}}}
 
-        #looking for variants w/pos assignments like the incoming variant's pos conditions
+        #of the top ones ... are they supsets? subsets? (start with top 2 - top)
+        #what additional positives might they have that my variant has an unk for?
+        #perfect fit? if so .. done
+
+        if config['DBG_SUBS_IN']:
+            print("[subin.0] kpc: %s"%kpc)
+            print("[subin.0] kpc(names): %s"%self.get_kname_by_kix(kpc))
+
+        #looking for variants w/pos assignments that overlap the target variant
         VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0]
         if config['DBG_SUBS_IN']:
             print("[subin.1] VAR1: %s"%VAR1)
@@ -807,15 +847,12 @@ class Sort(object):
         if config['DBG_SUBS_IN']:
             print("[subin.2] VAR2p: %s"%VAR2)
 
-        #???
+        #get uniques of VAR2 with counts
         unique_elements, counts_elements = np.unique(VAR2, return_counts=True)
         VAR3 = np.asarray((unique_elements, counts_elements)).T #get uniques
         if config['DBG_SUBS_IN']:
             print("")
             print("[subin.3] VAR3: %s"%VAR3)
-        #VAR3 = self.get_uniq_counts(VAR2)
-        #if config['DBG_SUBS_IN']:
-        #    print("[subin.3] VAR3: %s"%VAR3)
 
         #for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
         #adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
@@ -890,23 +927,27 @@ class Sort(object):
             print("[supin.0] kpc: %s"%kpc)
             print("[supin.0] kpc(names): %s"%self.get_kname_by_kix(kpc))
 
-        VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0] #looking for variants w/pos assignments like the incoming variant condition
+        #looking for variants w/pos assignments that overlap the target variant
+        #VAR1 = np.argwhere(self.NP[:,kpc]==1)[:,0]
+        VAR1 = np.argwhere(np.all(self.NP[:,kpc]==[1]*len(kpc),axis=1)==True)[:,0]
         if config['DBG_SUPS_IN']:
             print("[supin.1] VAR1: %s"%VAR1)
 
+        #get uniques of VAR1 with counts
         unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
         VAR2 = np.asarray((unique_elements, counts_elements)).T #get uniques
         if config['DBG_SUBS_IN']:
             print("")
-            print("[subin.2] VAR3: %s"%VAR2)
+            print("[supin.2] VAR3: %s"%VAR2)
 
         #has to have at least what the target variant had in positive calls count
-        VAR3 = VAR2[VAR2[:,1]==len(kpc)]
-        if config['DBG_SUPS_IN']:
-            print("[supin.3] VAR3: %s"%VAR3)
+        #VAR3 = VAR2[VAR2[:,1]==len(kpc)]
+        #if config['DBG_SUPS_IN']:
+        #    print("[supin.3] VAR3: %s"%VAR3)
 
-        idx = np.argwhere(VAR3[:,0]==vix) #idx make sure we exclude the incoming variant
-        VAR4 = np.delete(VAR3[:,0], idx) #idx again/delete
+        #idx make sure we exclude the incoming variant
+        idx = np.argwhere(VAR2[:,0] == vix)
+        VAR4 = np.delete(VAR2[:,0], idx)
         if config['DBG_SUPS_IN']:
             print("[supin.4] VAR4: %s"%VAR4)
 
@@ -1118,6 +1159,7 @@ class Sort(object):
         foo = 1
 
     def stdout_tbl_mx(self):
+        self.set_axes_to_db()
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"big_matrix view{{"+"{",1)
         debug_chk('DBG_MATRIX',"",1)
@@ -1537,6 +1579,18 @@ class Sort(object):
     def get_uniq_counts(self,arr):
         unique_elements, counts_elements = np.unique(arr, return_counts=True)
         return np.asarray((unique_elements, counts_elements)).T #get uniques
+
+    def set_axes_to_db(self):
+        #create table s_matrix_idxs(
+        #    type_id int,      -- 0 = variants, 1 = kits
+        #    axis_id int,      -- either the variant id or the kit_id
+        #    matrix_idx int    
+        #    );
+        sql = "delete from s_matrix_idx();"
+        print("11111111111")
+        print(self.get_axis('kits'))
+        print(self.get_axis('variants'))
+        print("22222222222")
 
     # not used
     def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is vname

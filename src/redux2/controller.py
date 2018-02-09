@@ -514,8 +514,23 @@ def c_sort_db_tree():
 
 #variant
 
-def c_sort_db_tree(vix):
-    sort = Sort()
+def c_variant_info(vname):
     sort = Sort()
     sort.dbo = DB()
-    sort.stdout_variant(vix)
+    sort.variant_info(vname)
+    
+def c_variant_supsets(vname):
+    sort = Sort()
+    sort.dbo = DB()
+    sort.variant_supsets(vname)
+    
+def c_variant_subsets(vname):
+    sort = Sort()
+    sort.dbo = DB()
+    sort.variant_subsets(vname)
+    
+def c_variant_update(vname):
+    sort = Sort()
+    sort.dbo = DB()
+    sort.variant_update(vname)
+
