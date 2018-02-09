@@ -68,14 +68,14 @@ class DB(object):
             fh.close()
         
     def sql_exec(self,sql):
-        if config['DEBUG_SQL']:
+        if config['DBG_SQL']:
             print("[SQL] "+sql)
         self.dc.execute(sql)
         if config['COMMITS_ON']:
             self.commit()
         
     def sql_exec_many(self,sql):
-        if config['DEBUG_SQL']:
+        if config['DBG_SQL']:
             print("[SQL] "+sql)
         self.dc.executemany(sql)
         if config['COMMITS_ON']:
