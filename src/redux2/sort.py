@@ -142,6 +142,7 @@ class Variant(object):
         self.kncn = "knc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
         self.kucn = "kuc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
         self.sups = self.sort.get_vix_rel(relType=1,vix=vix)
+        self.sups.remove(0) #remove 'top'
         self.subs = self.sort.get_vix_rel(relType=-1,vix=vix)
         self.subsn = "subs: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
         self.supsn = "sups: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
