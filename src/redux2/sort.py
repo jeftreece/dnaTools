@@ -76,7 +76,68 @@ class Variant(object):
     def __init__(self):
         self.dbo = None
         
-    def variant_info(self,tp=None):
+    def variant_proc(self,vname):
+        self.sort.get_mx_data(recreateFlg = False)
+        if vname.isdigit():
+            vix = int(vname)
+        else:
+            vix = self.sort.get_vix_by_name(vname.upper())
+        self.set_info(vix,lev=2)
+        self.sort.test_rule1_supsets(vix=vix)
+        
+    def variant_info(self,vname):
+        self.sort.get_mx_data(recreateFlg = False)
+        if vname.isdigit():
+            vix = int(vname)
+        else:
+            vix = self.sort.get_vix_by_name(vname.upper())
+        self.set_info(vix,lev=2)
+        self.stdout_info()
+        
+    def set_info(self,vix,lev=1):
+        lev = lev-1
+        self.vix = vix
+        self.name = self.sort.get_vname_by_vix(vix)
+        self.vixn = "%s - [%s]"%(self.name,vix)
+        self.kpc = self.sort.get_kixs_by_val(val=1,vix=vix)
+        self.knc = self.sort.get_kixs_by_val(val=-1,vix=vix)
+        self.kuc = self.sort.get_kixs_by_val(val=0,vix=vix)
+        self.kpcn = "kpc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
+        self.kncn = "knc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
+        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
+        #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
+        #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+        self.sups = self.sort.get_vix_rel(relType=1,vix=vix)
+        self.sups.remove(0) #remove 'top'
+        self.subs = self.sort.get_vix_rel(relType=-1,vix=vix)
+        self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
+        self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
+        if lev > 0:
+            self.supOs = []
+            self.subOs = []
+            for sup in self.sups:
+                supO = Variant()
+                supO.sort = self.sort
+                supO.dbo = self.dbo
+                supO.set_info(sup,lev)
+                self.supOs.append(supO)
+            for sub in self.subs:
+                subO = Variant()
+                subO.sort = self.sort
+                subO.dbo = self.dbo
+                subO.set_info(sub,lev)
+                self.subOs.append(subO)
+        
+    def set_info_equiv(self):
+        overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
+        self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+        self.eqv1 = np.argwhere(self.sort.NP[:,self.kpuc]==1)[:,0]
+        self.eqv2 = np.unique(self.eqv1)
+        self.kpucn = "kpuc: %s %s:"%(self.kpuc,self.sort.get_kname_by_kix(kix=self.kpuc))
+        self.eqv1n = "kpuc equiv/uniq (not quite): %s - %s:"%(self.eqv1,self.sort.get_kname_by_kix(kix=self.eqv1))
+        self.eqv2n = "kpuc equiv/uniq/names: %s - %s:"%(self.eqv2,self.sort.get_vname_by_vix(vix=self.eqv2))
+        
+    def stdout_info(self,tp=0):
 
         print("")
         if tp is None:
@@ -95,6 +156,16 @@ class Variant(object):
         print("%s%s" %(sp,self.kpcn))
         print("%s%s" %(sp,self.kncn))
         print("%s%s" %(sp,self.kucn))
+        noKpuc = 0
+        try:
+            self.kpuc
+        except:
+            noKpuc = 1
+        if noKpuc == 0:
+            print("%s%s" %(sp,self.kpucn))
+            print("%s%s" %(sp,self.eqv1n))
+            print("%s%s" %(sp,self.eqv2n))
+
         print("%s%s" %(sp,self.supsn))
         print("%s%s" %(sp,self.subsn))
 
@@ -112,65 +183,16 @@ class Variant(object):
         if noSupOs == 0:
             for sup in self.supOs:
                 if sup.name != 'top':
-                    sup.variant_info(tp=1)
+                    sup.stdout_info(tp=1)
         if noSubOs == 0:
             for sub in self.subOs:
-                sub.variant_info(tp=-1)
+                sub.stdout_info(tp=-1)
 
         if tp is None:
             print("---------------------------------------------------------------------")
             print("")
         
-    def variant_proc(self,vname):
-        self.sort.get_mx_data(recreateFlg = False)
-        if vname.isdigit():
-            vix = int(vname)
-        else:
-            vix = self.sort.get_vix_by_name(vname.upper())
-        self.set_info(vix,lev=2)
-        self.sort.test_rule1_supsets(vix=vix)
-        
-    def get_info(self,vname):
-        self.sort.get_mx_data(recreateFlg = False)
-        if vname.isdigit():
-            vix = int(vname)
-        else:
-            vix = self.sort.get_vix_by_name(vname.upper())
-        self.set_info(vix,lev=2)
-        self.variant_info()
-        
-    def set_info(self,vix,lev=1):
-        lev = lev-1
-        self.vix = vix
-        self.name = self.sort.get_vname_by_vix(vix)
-        self.vixn = "%s - [%s]"%(self.name,vix)
-        self.kpc = self.sort.get_kixs_by_val(val=1,vix=vix)
-        self.knc = self.sort.get_kixs_by_val(val=-1,vix=vix)
-        self.kuc = self.sort.get_kixs_by_val(val=0,vix=vix)
-        self.kpcn = "kpc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
-        self.kncn = "knc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
-        self.kucn = "kuc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
-        self.sups = self.sort.get_vix_rel(relType=1,vix=vix)
-        self.sups.remove(0) #remove 'top'
-        self.subs = self.sort.get_vix_rel(relType=-1,vix=vix)
-        self.subsn = "subs: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
-        self.supsn = "sups: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
-        if lev > 0:
-            self.supOs = []
-            self.subOs = []
-            for sup in self.sups:
-                supO = Variant()
-                supO.sort = self.sort
-                supO.dbo = self.dbo
-                supO.set_info(sup,lev)
-                self.supOs.append(supO)
-            for sub in self.subs:
-                subO = Variant()
-                subO.sort = self.sort
-                subO.dbo = self.dbo
-                subO.set_info(sub,lev)
-                self.subOs.append(subO)
-    
+
 class Sort(object):
 
     def __init__(self):
@@ -241,12 +263,37 @@ class Sort(object):
 
     # argparser special routines
 
-    def matrix(self):
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
-        self.get_mx_data(recreateFlg = False)
-        self.stdout_tbl_mx()
-    def unknowns(self):
+    def stdout_matrix(self,vix=None,refreshDbFlg=False):
+        if refreshDbFlg:
+            self.dbo.db = self.dbo.db_init()
+            self.dbo.dc = self.dbo.cursor()
+            self.get_mx_data(recreateFlg = False)
+            self.stdout_matrix()
+
+        debug_chk('DBG_MATRIX',"",1)
+        debug_chk('DBG_MATRIX',"matrix{{"+"{",1)
+        debug_chk('DBG_MATRIX',"",1)
+
+        #(beg)matrix
+        table = BeautifulTable()
+        table.column_headers = ['c']+['v']+self.get_cur_kit_list()
+        table.append_row(['']+['']+[str(x) for x in list(range(10))])
+        table.append_row(['','','','','','','','','','','',''])
+        cntV = 0
+        for K,V in self.get_axis('variants',idx=vix):
+            table.append_row([cntV]+[K]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
+            table.row_seperator_char = ''
+            table.column_seperator_char = ''
+            table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
+            cntV = cntV + 1
+        debug_chk('DBG_MATRIX',table,1)
+        #(end)matrix
+
+        debug_chk('DBG_MATRIX',"",1)
+        debug_chk('DBG_MATRIX',"}}"+"}",1)
+        debug_chk('DBG_MATRIX',"",1)
+        
+    def stdout_unknowns(self):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
         self.get_mx_data(recreateFlg = False)
@@ -259,7 +306,7 @@ class Sort(object):
             vt.sort = self
             vt.dbo = self.dbo
             vt.set_info(vix)
-            print("[%s]  vix: %s" %(cnt,vt.vixn))
+            print("[%s]  var: %s" %(vt.vix,vt.name))
             print("     %s" %(vt.kucn))
             print("")
             cnt = cnt + 1
@@ -283,22 +330,22 @@ class Sort(object):
 
         #step 0
         debug_chk('DBG_MATRIX',"data - step 0 (default)",1)
-        self.stdout_tbl_mx()
+        self.stdout_matrix()
 
         #step 1
         debug_chk('DBG_MATRIX',"data - step 1",1)
         self.sort_step1()
-        self.stdout_tbl_mx()
+        self.stdout_matrix()
 
         #step 2
         debug_chk('DBG_MATRIX',"data - step 2",1)
         self.sort_step2()
-        self.stdout_tbl_mx()
+        self.stdout_matrix()
 
         #step 3
         debug_chk('DBG_MATRIX',"data - step 3",1)
         self.sort_step3()
-        self.stdout_tbl_mx()
+        self.stdout_matrix()
 
         #step 4
         #debug_chk('DBG_MATRIX',"data - step 4",1)
@@ -416,20 +463,12 @@ class Sort(object):
         vt.sort = self
         vt.dbo = self.dbo
         vt.set_info(vix=vix,lev=2)
-        vt.variant_info()
+        vt.set_info_equiv()
+        vt.stdout_info()
+        sys.exit()
 
-        overrideData = self.get_row_when_override_kixs(1,vix=vt.vix,kixs=vt.kuc)
-        kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-        eqv1 = np.argwhere(self.NP[:,kpuc]==1)[:,0]
-        eqv2 = np.unique(eqv1)
-
-        if config['DBG_RULE1']:
-            #print ("[R1.5] kpuc equiv (not quite): %s:"%eqv1)
-            print("[R1.3] kpuc: %s:"%kpuc)
-            print("[R1.4] kpuc(names): %s" % self.get_kname_by_kix(kix=kpuc))
-            print("[R1.5] kpuc equiv/uniq (not quite): %s:"%eqv2)
-            print("[R1.6] kpuc equiv/uniq/names: %s" % self.get_vname_by_vix(vix=eqv2))
-            print("")
+        #overrideData = self.get_row_when_override_kixs(1,vix=vt.vix,kixs=vt.kuc)
+        #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
 
         #{{{
         #what could it be with all unks to positive?
@@ -447,24 +486,11 @@ class Sort(object):
         #knc = self.get_kixs_by_val(-1,vix=vix)
         #}}}
 
-        if config['DBG_RULE1']:
-            print("[R1.5] GENERATE SUBS FOR kpuc")
-        subs4kpuc = self.get_vix_rel(relType=-1,vix=vix,kpc=kpuc)
-        if config['DBG_RULE1']:
-            print("")
-            print("[R1.5] GENERATE SUPS FOR kpuc")
-            print("")
-        sups4kpuc = self.get_vix_rel(relType=1,vix=vix,kpc=subs4kpuc)
-
-        if config['DBG_RULE1']:
-            print("[R1.5] subs4kpuc: %s" %subs4kpuc)
-            print("[R1.6] subs4kpuc(names): %s" % self.get_vname_by_vix(vix=subs4kpuc))
-            print("")
-            print("[R1.7] sups4kpuc: %s" %sups4kpuc)
-            print("[R1.8] sups4kpuc(names): %s" % self.get_vname_by_vix(vix=sups4kpuc))
-            print("")
-
-        print("")
+        kpuc = Variant()
+        kpuc.sort = self
+        kpuc.dbo = self.dbo
+        kpuc.set_info(vix=vt.kpuc,lev=2)
+        kpuc.stdout_info()
 
         #Need to redo how I'm approaching this 
         sys.exit()
@@ -1249,31 +1275,6 @@ class Sort(object):
     def stdout_variant(self):
         foo = 1
 
-    def stdout_tbl_mx(self,vix=None):
-
-        debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"matrix{{"+"{",1)
-        debug_chk('DBG_MATRIX',"",1)
-
-        #(beg)matrix
-        table = BeautifulTable()
-        table.column_headers = ['c']+['v']+self.get_cur_kit_list()
-        table.append_row(['']+['']+[str(x) for x in list(range(10))])
-        table.append_row(['','','','','','','','','','','',''])
-        cntV = 0
-        for K,V in self.get_axis('variants',idx=vix):
-            table.append_row([cntV]+[K]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
-            table.row_seperator_char = ''
-            table.column_seperator_char = ''
-            table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
-            cntV = cntV + 1
-        debug_chk('DBG_MATRIX',table,1)
-        #(end)matrix
-
-        debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"}}"+"}",1)
-        debug_chk('DBG_MATRIX',"",1)
-        
     def stdout_mx_relations_data(self,dataStr='',run=0):
         if dataStr != '' and run != 0:
             print("---")
@@ -1517,7 +1518,7 @@ class Sort(object):
             self.dbo.sql_exec(sql)
 
         #chk matrix (debugging)
-        #self.stdout_tbl_mx()
+        #self.stdout_matrix()
         #sys.exit()
 
         #get count data
@@ -1565,7 +1566,7 @@ class Sort(object):
             self.NP = np.matrix(list(DATA.values()))
 
         #chk matrix (debugging)
-        #self.stdout_tbl_mx()
+        #self.stdout_matrix()
         #sys.exit()
 
         #get count data

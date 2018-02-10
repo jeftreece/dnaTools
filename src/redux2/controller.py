@@ -521,7 +521,7 @@ def c_variant_info(vname):
     vt.dbo.dc = vt.dbo.cursor()
     vt.sort = Sort()
     vt.sort.dbo = vt.dbo
-    vt.get_info(vname)
+    vt.variant_info(vname)
     
 def c_variant_proc(vname):
     vt = Variant()
@@ -535,10 +535,10 @@ def c_variant_proc(vname):
 def c_unknowns():
     sort = Sort()
     sort.dbo = DB()
-    sort.unknowns()
+    sort.stdout_unknowns()
     
 def c_matrix():
     sort = Sort()
     sort.dbo = DB()
-    sort.matrix()
+    sort.stdout_matrix(refreshDbFlg=True)
     
