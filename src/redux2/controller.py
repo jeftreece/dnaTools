@@ -515,14 +515,25 @@ def c_sort_db_tree():
 #variant
 
 def c_variant_info(vname):
-    sort = Sort()
-    sort.dbo = DB()
-    sort.variant_info(vname)
+    vt = Variant()
+    vt.dbo = DB()
+    vt.dbo.db = vt.dbo.db_init()
+    vt.dbo.dc = vt.dbo.cursor()
+    vt.sort = Sort()
+    vt.sort.dbo = vt.dbo
+    vt.get_info(vname)
     
 def c_variant_proc(vname):
-    sort = Sort()
-    sort.dbo = DB()
-    sort.variant_proc(vname)
+    print("")
+    print("disabled. Exiting")
+    print("")
+    #vt = Variant()
+    #vt.dbo = DB()
+    #vt.dbo.db = vt.dbo.db_init()
+    #vt.dbo.dc = vt.dbo.cursor()
+    #vt.sort = Sort()
+    #vt.sort.dbo = vt.dbo
+    #vt.variant_proc(vname)
     
 def c_matrix():
     sort = Sort()

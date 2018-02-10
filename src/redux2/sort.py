@@ -70,8 +70,98 @@ WHITE = '\033[37m'
 6. write good notes and commenting for the rules
 7. put debugging code into subset/supset area
 '''
-class Sort(object):
+
+class Variant(object):
+
+    def __init__(self):
+        self.dbo = None
+        
+    def variant_info(self,tp=None):
+
+        print("")
+        if tp is None:
+            print("---------------------------------------------------------------------")
+
+        if tp==1:
+            print("[+] %s" %self.vixn)
+            sp = "    "
+        elif tp==-1:
+            print("[-] %s" %self.vixn)
+            sp = "    "
+        else:
+            print("vix: %s" %self.vixn)
+            sp = ""
+        #print("name: %s" %self.name)
+        print("%s%s" %(sp,self.kpcn))
+        print("%s%s" %(sp,self.kncn))
+        print("%s%s" %(sp,self.kucn))
+        print("%s%s" %(sp,self.supsn))
+        print("%s%s" %(sp,self.subsn))
+
+        noSupOs = 0
+        noSubOs = 0
+        try:
+            self.supOs
+        except:
+            noSupOs = 1
+        try:
+            self.subOs
+        except:
+            noSubOs = 1
+
+        if noSupOs == 0:
+            for sup in self.supOs:
+                    sup.variant_info(tp=1)
+        if noSubOs == 0:
+            for sub in self.subOs:
+                    sub.variant_info(tp=-1)
+
+        if tp is None:
+            print("---------------------------------------------------------------------")
+            print("")
+        
+    def get_info(self,vname):
+        self.sort.get_mx_data(recreateFlg = False)
+        if vname.isdigit():
+            vix = int(vname)
+        else:
+            vix = self.sort.get_vix_by_name(vname.upper())
+        self.set_info(vix,lev=2)
+        self.variant_info()
+        
+    def set_info(self,vix,lev=1):
+        lev = lev-1
+        self.vix = vix
+        self.name = self.sort.get_vname_by_vix(vix)
+        self.vixn = "%s - [%s]"%(self.name,vix)
+        self.kpc = self.sort.get_kixs_by_val(val=1,vix=vix)
+        self.knc = self.sort.get_kixs_by_val(val=-1,vix=vix)
+        self.kuc = self.sort.get_kixs_by_val(val=0,vix=vix)
+        self.kpcn = "kpc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
+        self.kncn = "knc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
+        self.kucn = "kuc: %s - [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
+        self.sups = self.sort.get_vix_rel(relType=1,vix=vix)
+        self.subs = self.sort.get_vix_rel(relType=-1,vix=vix)
+        self.subsn = "subs: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
+        self.supsn = "sups: %s - [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
+        if lev > 0:
+            self.supOs = []
+            self.subOs = []
+            for sup in self.sups:
+                supO = Variant()
+                supO.sort = self.sort
+                supO.dbo = self.dbo
+                supO.set_info(sup,lev)
+                self.supOs.append(supO)
+            for sub in self.subs:
+                subO = Variant()
+                subO.sort = self.sort
+                subO.dbo = self.dbo
+                subO.set_info(sub,lev)
+                self.subOs.append(subO)
     
+class Sort(object):
+
     def __init__(self):
 
         #db attributes
@@ -140,55 +230,6 @@ class Sort(object):
 
     # argparser special routines
 
-    def variant_info(self,vname):
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
-        self.get_mx_data(recreateFlg = False)
-
-        print("")
-        if vname.isdigit():
-            vix = int(vname)
-        else:
-            vix = self.get_vix_by_name(vname.upper())
-
-        kpc = self.get_kixs_by_val(val=1,vix=vix)
-        knc = self.get_kixs_by_val(val=-1,vix=vix)
-        kuc = self.get_kixs_by_val(val=0,vix=vix)
-        supsets = self.get_vix_rel(relType=1,vix=vix)
-        subsets = self.get_vix_rel(relType=-1,vix=vix)
-
-        print("")
-        print("vix: %s - [%s]" % (self.get_vname_by_vix(vix),vix))
-        print("kpc: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc)),il2s(kpc)))
-        print("knc: %s - [%s]"%(l2s(self.get_kname_by_kix(knc)),il2s(knc)))
-        print("kuc: %s - [%s]"%(l2s(self.get_kname_by_kix(kuc)),il2s(kuc)))
-
-        if len(supsets):
-
-            print("")
-            print("sups: %s - [%s]"%(l2s(self.get_vname_by_vix(supsets)),il2s(supsets)))
-
-            for sup in supsets:
-                kpc4sup = self.get_kixs_by_val(val=1,vix=sup)
-                print("  (sup) %s"%self.get_vname_by_vix(sup))
-                print("   - kpc4sup: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc4sup)),il2s(kpc4sup)))
-
-            print("")
-
-        if len(subsets):
-
-            print("subs: %s - [%s]"%(l2s(self.get_vname_by_vix(subsets)),il2s(subsets)))
-
-            for sub in subsets:
-                print("  (sub) %s"%self.get_vname_by_vix(sub))
-                kpc4sub = self.get_kixs_by_val(val=1,vix=sub)
-                print("   - kpc4sub: %s - [%s]"%(l2s(self.get_kname_by_kix(kpc4sub)),il2s(kpc4sub)))
-        
-        print("")
-        
-    def variant_proc(self,vname):
-        self.variant_info(vname)
-        
     def matrix(self):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
