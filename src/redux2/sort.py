@@ -121,6 +121,15 @@ class Variant(object):
             print("---------------------------------------------------------------------")
             print("")
         
+    def variant_proc(self,vname):
+        self.sort.get_mx_data(recreateFlg = False)
+        if vname.isdigit():
+            vix = int(vname)
+        else:
+            vix = self.sort.get_vix_by_name(vname.upper())
+        self.set_info(vix,lev=2)
+        self.sort.test_rule1_supsets(vix=vix)
+        
     def get_info(self,vname):
         self.sort.get_mx_data(recreateFlg = False)
         if vname.isdigit():
