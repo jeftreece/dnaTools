@@ -96,6 +96,7 @@ parser.add_argument('-ot', '--sorttree', help='sort tree data prototype (s_ sche
 parser.add_argument('-vi', '--variant_info', help='variant info', type=str)
 parser.add_argument('-vp', '--variant_proc', help='variant process', type=str)
 parser.add_argument('-m', '--matrix', help='matrix', action='store_true')
+parser.add_argument('-u', '--unknowns', help='unknowns', action='store_true')
 #parser.add_argument('-vu', '--variant_update', help='update variant', type=str)
 #parser.add_argument('-vsp', '--variant_supsets', help='variant supsets', type=str)
 #parser.add_argument('-vsb', '--variant_subsets', help='variant subsets', type=str)
@@ -220,6 +221,9 @@ else: #this area calls controllers
 
     if args.matrix:
         c_matrix()
+
+    if args.unknowns:
+        c_unknowns()
 
     #if args.variant_supsets:
         #print(args)

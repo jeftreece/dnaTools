@@ -237,6 +237,25 @@ class Sort(object):
         self.dbo.dc = self.dbo.cursor()
         self.get_mx_data(recreateFlg = False)
         self.stdout_tbl_mx()
+    def unknowns(self):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        self.get_mx_data(recreateFlg = False)
+        print("")
+        print("---------------------------------------------------------------------")
+        print("")
+        cnt = 1
+        for vix in self.get_imperfect_variants_idx():
+            vt = Variant()
+            vt.sort = self
+            vt.dbo = self.dbo
+            vt.set_info(vix)
+            print("[%s]  vix: %s" %(cnt,vt.vixn))
+            print("     %s" %(vt.kucn))
+            print("")
+            cnt = cnt + 1
+        print("---------------------------------------------------------------------")
+        print("")
 
     # matrix calls
 
@@ -1224,10 +1243,10 @@ class Sort(object):
     def stdout_tbl_mx(self,vix=None):
 
         debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"big_matrix view{{"+"{",1)
+        debug_chk('DBG_MATRIX',"matrix{{"+"{",1)
         debug_chk('DBG_MATRIX',"",1)
 
-        #(beg)big matrix
+        #(beg)matrix
         table = BeautifulTable()
         table.column_headers = ['c']+['v']+self.get_cur_kit_list()
         table.append_row(['']+['']+[str(x) for x in list(range(10))])
@@ -1240,7 +1259,7 @@ class Sort(object):
             table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
             cntV = cntV + 1
         debug_chk('DBG_MATRIX',table,1)
-        #(end)big matrix
+        #(end)matrix
 
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"}}"+"}",1)
