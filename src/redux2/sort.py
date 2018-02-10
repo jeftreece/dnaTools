@@ -111,10 +111,11 @@ class Variant(object):
 
         if noSupOs == 0:
             for sup in self.supOs:
+                if sup.name != 'top':
                     sup.variant_info(tp=1)
         if noSubOs == 0:
             for sub in self.subOs:
-                    sub.variant_info(tp=-1)
+                sub.variant_info(tp=-1)
 
         if tp is None:
             print("---------------------------------------------------------------------")
