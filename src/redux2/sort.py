@@ -212,7 +212,7 @@ class Sort(object):
         sql = "INSERT into s_variants (variant_id,variant_loc,name) VALUES (%s,'%s','%s');" % (-999,'top','top')
         self.dbo.sql_exec(sql)
         for k in kits.split():
-            sql = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,'top',1)
+            sql = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('%s','%s',%s);" % (k,'top',1)
             self.dbo.sql_exec(sql)
 
         #variants + calls
@@ -227,7 +227,7 @@ class Sort(object):
                     vv = str(row['v']) #variant_loc
                     #s_calls
                     if kv != 0:
-                        sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('k%s','%s',%s);" % (k,vv,kv)
+                        sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('%s','%s',%s);" % (k,vv,kv)
                         self.dbo.sql_exec(sql1)
 
     # argparser special routines
@@ -383,34 +383,13 @@ class Sort(object):
 
         #what is the kpc of this variant}}}
 
-        if config['DBG_RULE1']:
-            print("[R1.0] START RULE 1")
-            print("")
-            print("[R1.1] vix: %s" %vix)
-            print("[R1.1] vix(name): %s" %self.get_vname_by_vix(vix))
-            print("[R1.2] kzc: %s" %kzc)
-            print("[R1.1] kzc(name): %s" %self.get_kname_by_kix(kzc))
-            print("")
-            print("[R1.3] GENERATE SUPS FOR VIX")
-            print("")
+        vt = Variant()
+        vt.sort = self
+        vt.dbo = self.dbo
+        vt.set_info(vix=vix,lev=2)
+        vt.variant_info()
 
-        sups4vix = self.get_vix_rel(relType=1,vix=vix)
-
-        if config['DBG_RULE1']:
-            print("[R1.3] sups4vix: %s" %sups4vix)
-            print("[R1.4] sups4vix(names): %s" % self.get_vname_by_vix(vix=sups4vix))
-            print("")
-            print("[R1.5] GENERATE SUBS FOR VIX")
-            print("")
-
-        subs4vix = self.get_vix_rel(relType=-1,vix=vix)
-
-        if config['DBG_RULE1']:
-            print("[R1.1] subs4vix: %s" %subs4vix)
-            print("[R1.2] subs4vix(names): %s" % self.get_vname_by_vix(vix=subs4vix))
-            print("")
-
-        overrideData = self.get_row_when_override_kixs(1,vix=vix,kixs=kzc)
+        overrideData = self.get_row_when_override_kixs(1,vix=vt.vix,kixs=vt.kuc)
         kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
         eqv1 = np.argwhere(self.NP[:,kpuc]==1)[:,0]
         eqv2 = np.unique(eqv1)
@@ -1068,7 +1047,7 @@ class Sort(object):
             return row
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
-        for kx in kixs.tolist():
+        for kx in kixs: #.tolist():
             rowO[0,kx] = override_val
         return rowO
 
@@ -1249,54 +1228,59 @@ class Sort(object):
 
         #(beg)big matrix
         table = BeautifulTable()
-        table.column_headers = ['']+self.get_cur_kit_list()
-        #cntV = 0
+        table.column_headers = ['c']+['v']+self.get_cur_kit_list()
+        cntV = 0
         for K,V in self.get_axis('variants',idx=vix):
             #table.append_row([str(cntV)+":"+K]+self.get_mx_row_as_list(V[1]))
-            table.append_row([K]+self.get_mx_row_as_list(V[1]))
-            #cntV = cntV + 1
+            table.append_row([cntV]+[K]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
+            table.row_seperator_char = ''
+            table.column_seperator_char = ''
+            table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
+            cntV = cntV + 1
         debug_chk('DBG_MATRIX',table,1)
         #(end)big matrix
 
-        debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"}}"+"}",1)
-        debug_chk('DBG_MATRIX',"small_matrix view{{"+"{",1)
-        debug_chk('DBG_MATRIX',"",1)
+        #debug_chk('DBG_MATRIX',"",1)
+        #debug_chk('DBG_MATRIX',"}}"+"}",1)
+        #debug_chk('DBG_MATRIX',"small_matrix view{{"+"{",1)
+        #debug_chk('DBG_MATRIX',"",1)
 
         #(beg)axes
-        table2 = BeautifulTable()
-        table2.column_headers = self.get_cur_variant_list()
-        table2.append_row(list(range(len(self.get_cur_variant_list()))))
-        for itm in self.get_cur_variant_list():
-            table2.left_padding_widths[itm] = 1
-            table2.right_padding_widths[itm] = 0
-        debug_chk('DBG_MATRIX',table2,1)
+        #table2 = BeautifulTable()
+        #table2.column_headers = self.get_cur_variant_list()
+        #table2.append_row(list(range(len(self.get_cur_variant_list()))))
+        #for itm in self.get_cur_variant_list():
+        #    table2.left_padding_widths[itm] = 1
+        #    table2.right_padding_widths[itm] = 0
+        #debug_chk('DBG_MATRIX',table2,1)
 
         table1 = BeautifulTable()
         table1.column_headers = self.get_cur_kit_list()
         table1.append_row(list(range(len(self.get_cur_kit_list()))))
         for itm in self.get_cur_kit_list():
             table1.left_padding_widths[itm] = 1
-            table1.right_padding_widths[itm] = 0
+            table1.right_padding_widths[itm] = 1
+            table1.row_seperator_char = ''
+            table1.column_seperator_char = ''
         debug_chk('DBG_MATRIX',table1,1)
 
         debug_chk('DBG_MATRIX',"",1)
         #(end)axes
 
         #(beg)small matrix
-        if vix is None:
-            if config['MATRIX_COLORS']:
-                debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
-            else:
-                debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -"),1)
-        else:
-            if config['MATRIX_COLORS']:
-                debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
-            else:
-                debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -"),1)
+        #if vix is None:
+        #    if config['MATRIX_COLORS']:
+        #        debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+        #    else:
+        #        debug_chk('DBG_MATRIX',str(self.NP).replace("-1"," -"),1)
+        #else:
+        #    if config['MATRIX_COLORS']:
+        #        debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -").replace("0",'%s0%s'%(RED,WHITE)),1)
+        #    else:
+        #        debug_chk('DBG_MATRIX',str(self.NP[:,[vix]]).replace("-1"," -"),1)
         #(end)small matrix
 
-        debug_chk('DBG_MATRIX',"",1)
+        #debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"}}"+"}",1)
         debug_chk('DBG_MATRIX',"",1)
         
