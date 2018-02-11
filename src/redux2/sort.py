@@ -86,15 +86,16 @@ class Variant(object):
         self.sort.test_rule1_supsets(vix=vix)
         
     def info(self,vname):
+        allowImperfect = config['allowImperfectWithVInfo']
         self.sort.get_mx_data(recreateFlg = False)
         if vname.isdigit():
             vix = int(vname)
         else:
             vix = self.sort.get_vix_by_name(vname.upper())
-        self.set_info(vix,lev=2)
+        self.set_info(vix,lev=2,allowImperfect=allowImperfect)
         self.stdout_info()
         
-    def set_info(self,vix,lev=1):
+    def set_info(self,vix,lev=1,allowImperfect=False):
 
         lev = lev-1
         self.vix = vix
@@ -118,9 +119,9 @@ class Variant(object):
         #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
         #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
 
-        self.sups = self.get_rel(relType=1,allowImperfect=True)
+        self.sups = self.get_rel(relType=1,allowImperfect=allowImperfect)
         self.sups.remove(0) #remove 'top'
-        self.subs = self.get_rel(relType=-1,allowImperfect=True)
+        self.subs = self.get_rel(relType=-1,allowImperfect=allowImperfect)
         self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
         self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
 
@@ -131,13 +132,13 @@ class Variant(object):
                 supO = Variant()
                 supO.sort = self.sort
                 supO.dbo = self.dbo
-                supO.set_info(sup,lev)
+                supO.set_info(sup,lev,allowImperfect)
                 self.supOs.append(supO)
             for sub in self.subs:
                 subO = Variant()
                 subO.sort = self.sort
                 subO.dbo = self.dbo
-                subO.set_info(sub,lev)
+                subO.set_info(sub,lev,allowImperfect)
                 self.subOs.append(subO)
         
     def stdout_info(self,tp=None):
