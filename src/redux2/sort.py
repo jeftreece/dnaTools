@@ -118,7 +118,7 @@ class Variant(object):
             self.eqv.remove(0) #remove 'top'
             self.eqvn = "kpuc overlaps: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
 
-        if lev > 0 and self.noSups == False:
+        if lev >= 0 and self.noSups == False:
             self.sups = self.get_rel(relType=1)
             #self.sups = self.supsT[:] #sometimes we need this top version?
             self.sups.remove(0) #remove 'top'
@@ -127,7 +127,7 @@ class Variant(object):
             self.sups = []
             self.supsn = "sups: recursion limit hit - %s" % lev
 
-        if lev > 0 and self.noSups == False:
+        if lev >= 0 and self.noSups == False:
 
             self.supOs = OrderedDict()
             for sup in self.sups:
@@ -136,7 +136,7 @@ class Variant(object):
                 supO.dbo = self.dbo
                 supO.set_info(sup,lev)
 
-        if lev > 0 and self.noSubs == False:
+        if lev >= 0 and self.noSubs == False:
             #if 1 == 1:
             self.subs = self.get_rel(relType=-1)
             self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
@@ -144,7 +144,7 @@ class Variant(object):
             self.subs = []
             self.subsn = "subs: recursion limit hit - %s" % lev
 
-        if lev > 0 and self.noSubs == False:
+        if lev >= 0 and self.noSubs == False:
 
             self.subOs = OrderedDict()
             for sub in self.subs:
@@ -367,7 +367,7 @@ class Variant(object):
         if config['DBG_SUBS_IN']:
             print("[subin.12] VAR6: %s"%VAR6)
 
-        #subsets shouldn't have diff things in common with common supersets
+        #subsets shouldn't have diff intersecting positives with common supersets
         subsc = list(VAR5)
         invalid_subs = []
         for v in subsc:
@@ -379,7 +379,6 @@ class Variant(object):
             if len(v1sups):
                 common_sups = set(v1sups).intersection(set(self.sups))
                 v1kpc = self.sort.get_kixs_by_val(val=1,vix=v)
-                #v1kpc.remove(0)
                 for sup in common_sups:
                     v2 = Variant()
                     v2.dbo = self.dbo
@@ -387,45 +386,26 @@ class Variant(object):
                     v2.vix = sup
                     v2kpc = self.sort.get_kixs_by_val(val=1,vix=sup)
                     common_kpc1 = set(self.kpc).intersection(set(v2kpc))
-                    #print("---------------------------------------")
-                    #print("self.kpc: %s"%self.kpc) #target v's kpc
-                    #print("self.kpc: %s"%self.sort.get_kname_by_kix(self.kpc)) #target v's kpc
-                    #print("v1kpc: %s"%v1kpc) #cand subset kpc
-                    #print("v1kpc: %s"%self.sort.get_kname_by_kix(v1kpc)) #cand subset kpc
-                    #print("v2kpc: %s"%v2kpc) #common supset kpc
-                    #print("v2kpc: %s"%self.sort.get_kname_by_kix(v2kpc)) #common supset kpc
-                    #print("v: %s"%str(v)) # the candidate subset
-                    #print("v: %s"%self.sort.get_vname_by_vix(v)) # the candidate subset
-                    #print("sup: %s"%str(sup)) #the superset
-                    #print("sup: %s"%self.sort.get_vname_by_vix(sup)) #the superset
-                    #print("111")
-                    #print(common_kpc1) #intersection btw target-v's kpc v and sup's kpc 
-                    #print("222")
                     common_kpc2 = set(v1kpc).intersection(set(v2kpc))
-                    #print(common_kpc2) #intersection btw cand subset and supset kpc
-                    #print("333")
                     for c in common_kpc2:
                         if c not in common_kpc1:
                             valid_sub = 0
                             invalid_subs.append(v)
                             break 
                     if valid_sub == 0 : break
-        #print("bef: %s" % subsc)
         if len(invalid_subs):
-            subsx = subsc[:]
-            for v in subsx:
+            for v in invalid_subs:
                 subsc.remove(v)
-        #print("aft: %s" % subsc)
-        #if self.vix == 9 : sys.exit()
-        #if self.vix == 9 : sys.exit()
-        
-        #Zak - working here... I need to something like this:
-        #np.argwhere(arr==[1,2,0])[:,0]
-        #such that 1,2,0 are the values I want to delete in VAR5 ... I need to
-        #get that index ... and delete stuff in VAR6 too.
+        search = np.array(invalid_subs)
+        #(beg) technique found here: https://stackoverflow.com/questions/32191029/getting-the-indices-of-several-elements-in-a-numpy-array-at-once/32191125#32191125
+        sorter = np.argsort(VAR5)
+        idx = sorter[np.searchsorted(VAR5,invalid_subs,sorter=sorter)]
+        #(end)
+        VAR5a = np.delete(VAR5, idx)
+        VAR6a = np.delete(VAR6, idx)
 
         #merged for return
-        VAR7 = np.asarray((VAR5,VAR6)).T
+        VAR7 = np.asarray((VAR5a,VAR6a)).T
 
         if config['DBG_SUBS_IN']:
             print("[subin.13] VAR7: %s"%VAR7)
