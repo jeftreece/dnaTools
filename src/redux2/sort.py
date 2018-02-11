@@ -75,8 +75,6 @@ class Variant(object):
 
     def __init__(self):
         self.dbo = None
-        self.noSubs = False # use this to stop recursion
-        self.noSups = False # use this to stop recursion (perhaps not needed)
 
     def proc(self,vname):
         self.sort.get_mx_data(recreateFlg = False)
@@ -97,6 +95,106 @@ class Variant(object):
         self.stdout_info()
         
     def set_info(self,vix,lev=1):
+
+        lev = lev-1
+        self.vix = vix
+        self.name = self.sort.get_vname_by_vix(vix)
+        self.vixn = "%s - [%s]"%(self.name,vix)
+        self.kpc = self.sort.get_kixs_by_val(val=1,vix=vix)
+        self.knc = self.sort.get_kixs_by_val(val=-1,vix=vix)
+        self.kuc = self.sort.get_kixs_by_val(val=0,vix=vix)
+        self.kpcn = "kpc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
+        self.kncn = "knc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
+        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
+
+        overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
+        self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+        self.kpucn = "kpuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpuc)),il2s(self.kpuc))
+        self.eqv = np.unique(np.argwhere(self.sort.NP[:,self.kpuc]==1)[:,0]).tolist()
+        #self.eqv = self.supsT[:] #sometimes we need this top version?
+        self.eqv.remove(0) #remove 'top'
+        self.eqvn = "kpuc overlaps: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
+
+        #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
+        #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
+
+        self.sups = self.get_rel(relType=1)
+        self.sups.remove(0) #remove 'top'
+        self.subs = self.get_rel(relType=-1)
+        self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
+        self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
+
+        if lev > 0:
+            self.supOs = []
+            self.subOs = []
+            for sup in self.sups:
+                supO = Variant()
+                supO.sort = self.sort
+                supO.dbo = self.dbo
+                supO.set_info(sup,lev)
+                self.supOs.append(supO)
+            for sub in self.subs:
+                subO = Variant()
+                subO.sort = self.sort
+                subO.dbo = self.dbo
+                subO.set_info(sub,lev)
+                self.subOs.append(subO)
+        
+    def stdout_info(self,tp=0):
+
+        print("")
+        if tp is None:
+            print("---------------------------------------------------------------------")
+
+        if tp==1:
+            print("[+] %s" %self.vixn)
+            sp = "    "
+        elif tp==-1:
+            print("[-] %s" %self.vixn)
+            sp = "    "
+        else:
+            print("vix: %s" %self.vixn)
+            sp = ""
+        #print("name: %s" %self.name)
+        print("%s%s" %(sp,self.kpcn))
+        print("%s%s" %(sp,self.kncn))
+        print("%s%s" %(sp,self.kucn))
+        noKpuc = 0
+        try:
+            self.kpuc
+        except:
+            noKpuc = 1
+        if noKpuc == 0:
+            print("%s%s" %(sp,self.kpucn))
+            print("%s%s" %(sp,self.eqvn))
+
+        print("%s%s" %(sp,self.supsn))
+        print("%s%s" %(sp,self.subsn))
+
+        noSupOs = 0
+        noSubOs = 0
+        try:
+            self.supOs
+        except:
+            noSupOs = 1
+        try:
+            self.subOs
+        except:
+            noSubOs = 1
+
+        if noSupOs == 0:
+            for sup in self.supOs:
+                if sup.name != 'top':
+                    sup.stdout_info(tp=1)
+        if noSubOs == 0:
+            for sub in self.subOs:
+                sub.stdout_info(tp=-1)
+
+        if tp is None:
+            print("---------------------------------------------------------------------")
+            print("")
+        
+    def _old_set_info1(self,vix,lev=1):
         
         lev = lev-1
         self.vix = vix
@@ -118,7 +216,7 @@ class Variant(object):
             self.eqv.remove(0) #remove 'top'
             self.eqvn = "kpuc overlaps: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
 
-        if lev >= 0 and self.noSups == False:
+        if lev >= 0:
             self.sups = self.get_rel(relType=1)
             #self.sups = self.supsT[:] #sometimes we need this top version?
             self.sups.remove(0) #remove 'top'
@@ -127,7 +225,7 @@ class Variant(object):
             self.sups = []
             self.supsn = "sups: recursion limit hit - %s" % lev
 
-        if lev >= 0 and self.noSups == False:
+        if lev >= 0:
 
             self.supOs = OrderedDict()
             for sup in self.sups:
@@ -136,7 +234,7 @@ class Variant(object):
                 supO.dbo = self.dbo
                 supO.set_info(sup,lev)
 
-        if lev >= 0 and self.noSubs == False:
+        if lev >= 0:
             #if 1 == 1:
             self.subs = self.get_rel(relType=-1)
             self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
@@ -144,7 +242,7 @@ class Variant(object):
             self.subs = []
             self.subsn = "subs: recursion limit hit - %s" % lev
 
-        if lev >= 0 and self.noSubs == False:
+        if lev >= 0:
 
             self.subOs = OrderedDict()
             for sub in self.subs:
@@ -153,7 +251,7 @@ class Variant(object):
                 subO.dbo = self.dbo
                 subO.set_info(sub,lev)
         
-    def stdout_info(self,tp=None):
+    def _old_stdout_info1(self,tp=None):
 
         print("")
         if tp is None:
@@ -294,9 +392,6 @@ class Variant(object):
         # - VAR7 - merge of VAR5 and VAR6
         #-------------------------------------------------------------------------------------------------}}}
 
-        if self.noSubs == True:
-            return [] #recursion setting set
-
         #of the top ones ... are they supsets? subsets? (start with top 2 - top)
         #what additional positives might they have that my variant has an unk for?
         #perfect fit? if so .. done
@@ -434,9 +529,6 @@ class Variant(object):
         # - VAR6 - merge VAR4 and VAR5 together to combine superset idxs with their hit counts
         # - VAR7 - reverse sort VAR6 - so the bigger ones are first
         #-------------------------------------------------------------------------------------------------}}}
-
-        if self.noSups == True:
-            return [] #recursion setting set
 
         if config['DBG_SUPS_IN']:
             print("[supin.0] kpc: %s"%kpc)
