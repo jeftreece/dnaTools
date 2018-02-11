@@ -118,9 +118,9 @@ class Variant(object):
         #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
         #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
 
-        self.sups = self.get_rel(relType=1)
+        self.sups = self.get_rel(relType=1,allowImperfect=True)
         self.sups.remove(0) #remove 'top'
-        self.subs = self.get_rel(relType=-1)
+        self.subs = self.get_rel(relType=-1,allowImperfect=True)
         self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
         self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
 
@@ -140,7 +140,7 @@ class Variant(object):
                 subO.set_info(sub,lev)
                 self.subOs.append(subO)
         
-    def stdout_info(self,tp=0):
+    def stdout_info(self,tp=None):
 
         print("")
         if tp is None:
@@ -308,7 +308,7 @@ class Variant(object):
             print("---------------------------------------------------------------------")
             print("")
 
-    def get_rel(self,relType,override_val=None,kix=None,kpc=None):
+    def get_rel(self,relType,override_val=None,kix=None,kpc=None,allowImperfect=False):
 
         #-------------------------------------------------------------------------------------------------{{{
         # 3 Ways to use this routine
@@ -364,7 +364,10 @@ class Variant(object):
             return []
         #two ways to return the data. with or without counts.
         #rels = self.filter_perfect_variants(vix=rel_.tolist()).tolist()
-        rels = self.sort.filter_perfect_variants(vix=rels_[:,0].tolist()) #.tolist()
+        if allowImperfect is False:
+            rels = self.sort.filter_perfect_variants(vix=rels_[:,0].tolist()) #.tolist()
+        else:
+            rels = rels_[:,0].tolist()
 
         #debugging
         if config['DBG_RELS']:
@@ -397,6 +400,11 @@ class Variant(object):
         #perfect fit? if so .. done
 
         if config['DBG_SUBS_IN']:
+            print("")
+            print("---------------------------------------------------------------------")
+            print("")
+            print("[subin.0] vix: %s"%self.vix)
+            print("[subin.0] vix(name): %s"%self.sort.get_vname_by_vix(self.vix))
             print("[subin.0] kpc: %s"%kpc)
             print("[subin.0] kpc(names): %s"%self.sort.get_kname_by_kix(kpc))
 
@@ -410,7 +418,7 @@ class Variant(object):
         VAR2 = np.delete(VAR1, idx)
         #print(VAR2)
         if config['DBG_SUBS_IN']:
-            print("[subin.2] VAR2p: %s"%VAR2)
+            print("[subin.2] VAR2: %s"%VAR2)
 
         #print (set(x for l in VAR1.tolist() for x in l))
         #get uniques of VAR2 with counts
@@ -471,6 +479,7 @@ class Variant(object):
             v1.sort = self.sort
             v1.vix = v
             v1sups = v1.get_rel(relType=1)
+            valid_sub = 1
             if len(v1sups):
                 common_sups = set(v1sups).intersection(set(self.sups))
                 v1kpc = self.sort.get_kixs_by_val(val=1,vix=v)
@@ -531,6 +540,11 @@ class Variant(object):
         #-------------------------------------------------------------------------------------------------}}}
 
         if config['DBG_SUPS_IN']:
+            print("")
+            print("---------------------------------------------------------------------")
+            print("")
+            print("[supin.0] vix: %s"%self.vix)
+            print("[supin.0] vix(name): %s"%self.sort.get_vname_by_vix(self.vix))
             print("[supin.0] kpc: %s"%kpc)
             print("[supin.0] kpc(names): %s"%self.sort.get_kname_by_kix(kpc))
 
