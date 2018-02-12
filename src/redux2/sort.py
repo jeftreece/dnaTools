@@ -296,11 +296,32 @@ class Variant(object):
 
         #starting unk list
         unkL = self.kuc
+        unkD = {}
+        splitChk = 0
+        for k in unkL:
+            unkD[k] = [0,0]
+        #print(unkK)
+        othK = {}
+
+        #1st arg of set : sup test1 check
+        #0 - nothing observed yet
+        #1 = ambiguous promotion to positive
+        #2 = hard promotion to positive
+        #3 = hard negative
+        
+        #2nd arg of set : fill a need xP test2 check
+        #0 - nothing observed yet
+        #1 - means (so far it's seen as filling a need)
+
+        #3rd arg of set : split xP test2 check
+        #0 - nothing observed yet
+        #1 = split required
 
         #look for sups
         if len(self.sups):
 
             print("vix: %s [%s]"%(self.sort.get_vname_by_vix(self.vix),self.vix))
+            print("unks: %s [%s]" % (l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc)))
             print("")
             for sup in reversed(self.sups):
 
@@ -316,9 +337,16 @@ class Variant(object):
                         for k in pN:
                             if k in unkL:
                                 unkL.remove(k)
+                            unkD[k][0] = 3 #hard failure
                         print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),il2s(unkL)))
+                    else:
+                        print(" - [1] sup is truly sup to target variant, but all unks open to promotion")
                 else:
                     print(" - [1] sup is sub/eq/sup to target variant")
+                #for whatever hasn't been noted as a failure ... promote 
+                for k in unkL:
+                    if unkD[k] != 3:
+                        unkD[k][0] = 1 #ambiguous promotions
                 #(end)sup check
 
                 #(beg)consistency check 
@@ -344,18 +372,27 @@ class Variant(object):
                         at_common_kpc = list(set(akpc).intersection(set(self.kpc)))
                         #(msP) common kpc btw v1sub and common sup
                         as_common_kpc = list(set(akpc).intersection(set(v1.kpc)))
-                        #(xP) as_common_kpc-at_common_kpc
+                        #(xP) diff_common_kpc = [msP-mtP]
                         diff_common_kpc = list(set(as_common_kpc)-set(at_common_kpc))
+                        #(cP) common_kp c = intersection btw msP and mtP
                         common_kpc = list(set(as_common_kpc).intersection(set(at_common_kpc)))
                         print(" - [2] v1sub: %s [%s]"%(self.sort.get_vname_by_vix(v),v))
                         print("       (mtP) shared btw vix + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(at_common_kpc)),il2s(at_common_kpc)))
                         print("       (msP) shared btw sup + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(as_common_kpc)),il2s(as_common_kpc)))
                         print("       (xP) msP-mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(diff_common_kpc)),il2s(diff_common_kpc)))
                         print("       (cP) common btw msP+mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(common_kpc)),il2s(common_kpc)))
+                        for k in common_kpc:
+                            if k in unkL:
+                                unkD[k][1] = 1
+                            else:
+                                splitChk = 1
 
                 #(end)consistency check 
 
                     print("")
+
+        print(unkD)
+        print("split chk: %s" % splitChk)
 
         '''{{{
         [9] Z381
@@ -365,9 +402,12 @@ class Variant(object):
 
                *                                       *
         L48:   mtP(Z381):C,H,I   msP(U106):C,D,H,I       xP:D   commonP: C,H,I
-        Z9:    mtP(Z381):I       msp(U106):D,I           xP:D   commonP: I
+        Z9:    mtP(Z381):I       msP(U106):D,I           xP:D   commonP: I
 
         These xP's ... resolved with any unk's? Yes -- so then the D is promotion confirmed.
+
+        if whatever is in XP is the only think missing and it's und ... that's
+        the one.
 
         [12] A297
 
