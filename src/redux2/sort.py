@@ -386,6 +386,7 @@ class Variant(object):
 
         sys.exit()
 
+        '''{{{
         #target vix's combined kpc + knc idxs
         kpnc = sorted(self.kpc+self.knc)
         kpnc = self.kpc
@@ -493,6 +494,7 @@ class Variant(object):
         #    are also shared?
         #    if so, there's an opportunity for even more +'s?
         #[3] are there any irregularities that prevent a promotion?
+        }}}'''
 
     def _old_set_info1(self,vix,lev=1):
         lev = lev-1
