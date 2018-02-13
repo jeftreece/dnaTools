@@ -164,6 +164,7 @@ class Variant(object):
         for k in unkL:
             unkD[k] = [0,0] #0's are defaults
         othK = {}
+        splitReq = False
 
         #1st arg of set : sup test1 result
         #1 = ambiguous promotion to positive
@@ -195,7 +196,8 @@ class Variant(object):
                             if k in unkL:
                                 unkL.remove(k)
                             unkD[k][0] = 3 #hard failure
-                        print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
+                        if len(unkL):
+                            print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
                     else:
                         print(" - [1] sup is truly sup to target variant, but all unks open to promotion")
                 else:
@@ -245,15 +247,50 @@ class Variant(object):
                             splitL.append(common_kpc)
                         
                 #splits
-                unique_splits = [list(x) for x in set(tuple(x) for x in splitL)]
-                if len(unique_splits) > 0:
-                    split_intersects = list(set.intersection(*map(set, unique_splits)))
-                    if (len(unique_splits) > 1 and len(split_intersects) == 0):
-                        print(" - [2] split required: btw %s" % unique_splits)
+                uniq_splits = [list(x) for x in set(tuple(x) for x in splitL)]
+                if len(uniq_splits) > 0:
+                    split_intersects = list(set.intersection(*map(set, uniq_splits)))
+                    if (len(uniq_splits) > 1 and len(split_intersects) == 0):
+                        print(" - [2] split required: btw %s" % uniq_splits)
+                        splitReq = True
 
                 print("")
 
-        print(unkD)
+        #print(unkD)
+        pos = []
+        pos_a = []
+        neg = []
+        s_ = []
+        lenS = 1
+        #print(uniq_splits)
+        if splitReq:
+            for s in uniq_splits:
+                if len(s) > 1 : lenS = len(s)
+                else: s_.append(s[0])
+            if len(uniq_splits)>1:
+                print("splits: %s [%s]" % (l2s(self.sort.get_kname_by_kix(s_)),l2s(s_)))
+            else:
+                print("splits: %s" % l2s(uniq_splits))
+        else:
+            for k,v in unkD.items():
+                if v[0] == 3:
+                    neg.append(k)
+                elif v[0] == 2:
+                    pos.append(k)
+                elif v[1] > 1:
+                    pos.append(k)
+                elif v[0] == 1:
+                    pos_a.append(k)
+            if len(pos):
+                print("pos: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos)),l2s(pos)))
+            if len(pos_a):
+                print("pos_a: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos_a)),l2s(pos_a)))
+            if len(neg):
+                print("neg: %s [%s]" %  (l2s(self.sort.get_kname_by_kix(neg)),l2s(neg)))
+        
+        print("")
+        print("---------------------------------------------------------------------")
+        print("")
 
     def get_rel(self,relType,override_val=None,kix=None,kpc=None,allowImperfect=False):
 
