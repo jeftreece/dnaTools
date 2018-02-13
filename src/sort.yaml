@@ -26,4 +26,4 @@ REDUX_DATA: /Users/jazdrv/_prj/dnatools/data
 
 DBG_SQL: False 
 COMMITS_ON: True
-DB_FILE: variants.db
+DB_FILE: sort.db

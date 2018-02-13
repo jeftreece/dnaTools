@@ -11,8 +11,6 @@ from collections import OrderedDict
 
 #}}}
 
-#config
-
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
 except:
