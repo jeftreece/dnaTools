@@ -39,15 +39,13 @@ class DB(object):
             fh.close()
         
     def sql_exec(self,sql):
-        if config['DBG_SQL']:
-            print("[SQL] "+sql)
+        if config['DBG_SQL']: print("[SQL] "+sql)
         self.dc.execute(sql)
         if config['COMMITS_ON']:
             self.commit()
         
     def sql_exec_many(self,sql,itms):
-        if config['DBG_SQL']:
-            print("[SQL] "+sql)
+        if config['DBG_SQL']: print("[SQL] "+sql)
         self.dc.executemany(sql,itms)
         if config['COMMITS_ON']:
             self.commit()
