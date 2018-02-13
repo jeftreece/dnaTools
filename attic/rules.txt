@@ -1,0 +1,83 @@
+        [9] Z381:{{{
+        ---------------------------------------------------------------------------------------------------------------
+
+        +'s: B,C,G,H,I
+        U: D
+
+        sups are:
+
+        U106:     pP:D              mN:E,J                   subBef: Yes  rel: sub (cuz of A-F-)
+
+        So: with the sup issue alone, it's an ambiguous promotion.
+
+        any other sup U106 subs (that overlap Z381) - that Z381 doesn't see as eq/sub?:
+        Yes:
+
+        L48:   mP(Z381):C,H,I   mP(U106):C,D,H,I       xP:D   commonP: C,H,I
+        Z9:    mP(Z381):I       mp(U106):D,I           xP:D   commonP: I
+
+        These xP's ... resolved with any unk's? Yes -- so then the D is promotion confirmed.
+
+        }}}
+        [10] Z301:{{{
+        ---------------------------------------------------------------------------------------------------------------
+
+        +'s: C,H
+        -'s: F
+        U: A,B,D,E,G,I,J
+
+        sups are:
+
+        L48:  pP:D       pN:A,B,E,J mU:-  mP:C,H  mN: F      subBef: Yes  rel: Subset/Equal+
+        U106: pP:A,B,D   pN:E,J     mU:-  mP:C,H  mN: -      subBef: Yes  rel: Subset (cuz of F-)
+
+        So: sub2U106 means: whatever u106 is negative for ... Z301 has to be neg too: E,J
+        So: sub/eq+L48 means -- outside of E and J (unk>neg) and C,H (already +), the others could be - or + (in this case, we put ambiguous positve for all)
+
+        any other sup L48/U106 subs (that overlap Z301) - that Z301 doesn't see as eq/sub?:
+        No
+
+        }}}
+        [11] Z28:{{{
+        ---------------------------------------------------------------------------------------------------------------
+         
+        +'s: D,I (Z9 eq)
+        U: F
+
+        sups are:
+
+
+        L48:               pN:F     mN:A,B,E,G,J             subBef: Yes  rel: sub (cuz of C-H-)
+        U106:     pP:F     pN:      mN:E,J                   subBef: Yes  rel: eq
+
+        So: sub2L48 means: whatever L48 is negative for ... Z28 has to be neg too: F
+
+        any other sup L48/U106 subs (that overlap Z28) - that Z28 doesn't see as eq/sub?:
+        No
+
+        }}}
+        [12] A297:{{{
+        ---------------------------------------------------------------------------------------------------------------
+
+        +'s: D,G
+        U: B,I
+
+        sups are:
+
+        U106:   pP:B,I              mN:E,J                 subBef: Yes  rel: sub (cuz of A-C-F-H-)
+
+        So: with the sup issue alone: it's an ambiguous promotion for B,I
+
+        any other sup U106 subs (that overlap A297) - that Z381 doesn't see as eq/sub?:
+       
+        L48:   mP(A297):D     mP(U106):C,D,H,I     xP:C,H,I       commonP: D (split.1)
+        Z9:    mP(A297):D     mP(U106):I           xP:I           commonP: D
+
+        Can the unk's resolve the XP's? No
+        What commonP can be split? D (split.1)
+        What remains? G (split.2)
+
+        Everything else becomes neg
+
+        }}}
+
