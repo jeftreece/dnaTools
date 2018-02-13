@@ -297,25 +297,22 @@ class Variant(object):
         #starting unk list
         unkL = self.kuc
         unkD = {}
-        splitChk = 0
+        #splitD = {}
+        #splitChk = 0
         for k in unkL:
             unkD[k] = [0,0]
         #print(unkK)
         othK = {}
 
-        #1st arg of set : sup test1 check
+        #1st arg of set : sup test1 result
         #0 - nothing observed yet
         #1 = ambiguous promotion to positive
         #2 = hard promotion to positive
         #3 = hard negative
         
-        #2nd arg of set : fill a need xP test2 check
+        #2nd arg of set : sup test2 result
         #0 - nothing observed yet
         #1 - means (so far it's seen as filling a need)
-
-        #3rd arg of set : split xP test2 check
-        #0 - nothing observed yet
-        #1 = split required
 
         #look for sups
         if len(self.sups):
@@ -325,6 +322,7 @@ class Variant(object):
             print("")
             for sup in reversed(self.sups):
 
+                splitL = []
                 print("sup: %s [%s]" % (self.sort.get_vname_by_vix(sup),sup))
 
                 #(beg)sup check
@@ -381,21 +379,26 @@ class Variant(object):
                         print("       (msP) shared btw sup + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(as_common_kpc)),il2s(as_common_kpc)))
                         print("       (xP) msP-mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(diff_common_kpc)),il2s(diff_common_kpc)))
                         print("       (cP) common btw msP+mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(common_kpc)),il2s(common_kpc)))
-                        for k in common_kpc:
+                        for k in diff_common_kpc:
                             if k in unkL:
-                                unkD[k][1] = 1
-                            else:
-                                splitChk = 1
-
+                                unkD[k][1] = unkD[k][1] + 1
+                        if len(common_kpc) > 0:
+                            splitL.append(common_kpc)
+                        
+                unique_splits = [list(x) for x in set(tuple(x) for x in splitL)]
+                if len(unique_splits) > 0:
+                    split_intersects = list(set.intersection(*map(set, unique_splits)))
+                    if (len(unique_splits) > 1 and len(split_intersects) == 0):
+                        print(" - [2] split required: btw %s" % unique_splits)
                 #(end)consistency check 
 
-                    print("")
+                print("")
 
         print(unkD)
-        print("split chk: %s" % splitChk)
+        #print("split chk: %s" % splitChk)
 
         '''{{{
-        [9] Z381
+        [9] Z381{{{
 
         any other sup U106 subs (that overlap Z381) - that Z381 doesn't see as eq/sub?:
         Yes:
@@ -408,20 +411,22 @@ class Variant(object):
 
         if whatever is in XP is the only think missing and it's und ... that's
         the one.
-
-        [12] A297
+        }}}
+        [12] A297{{{
 
         any other sup U106 subs (that overlap A297) - that Z381 doesn't see as eq/sub?:
        
                *                                       *
         L48:   mtP(A297):D       msP(U106):C,D,H,I       xP:C,H,I       commonP: D (split.1)
-        Z9:    mtP(A297):D       msP(U106):I             xP:I           commonP: D
+        Z9:    mtP(A297):D       msP(U106):D,I           xP:I           commonP: D
+        Z156   mtP(A297):G       msP(U106):B,G           xP:B           commonP: G
 
         Can the unk's resolve the XP's? No
         What commonP can be split? D (split.1)
         What remains? G (split.2)
 
         Everything else becomes neg
+        }}}
         }}}'''
 
         sys.exit()
