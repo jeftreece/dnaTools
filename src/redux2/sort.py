@@ -956,7 +956,7 @@ class Sort(object):
         sys.exit()
 
     def sort_step1(self):
-        self.mx_vertical_sort_new()
+        self.mx_vertical_sort()
         self.save_mx_to_db()
         
     def sort_step2(self):
@@ -1097,43 +1097,6 @@ class Sort(object):
 
     #...
 
-    def mx_vertical_sort_new(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        for K,V in self.get_axis('variants'):
-            if -1 not in self.get_mx_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('vp'):
-            if -1 in self.get_mx_row_as_list(V[1]) and 0 not in self.get_mx_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for K,V in self.get_axis('variants'):
-            if -1 in self.get_mx_row_as_list(V[1]) and 0 in self.get_mx_row_as_list(V[1]):
-                new_orders.append([K,cnt])
-                DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
-                cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],variantType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        
-    def mx_horizontal_sort_new(self):
-        DATA = OrderedDict()
-        cnt = 0 
-        new_orders = []
-        self.NP = np.transpose(self.NP)
-        for K,V in self.get_axis('kp'):
-            new_orders.append([K,cnt])
-            DATA[K] = self.get_mx_row_as_list(V[1],noneToStr=False)
-            cnt = cnt + 1
-        for NO in new_orders:
-            self.set_new_order(NO[0],NO[1],kitType=True)
-        self.NP = np.matrix(list(DATA.values()))
-        self.NP = np.transpose(self.NP)
-        
     def mx_vertical_sort(self):
         DATA = OrderedDict()
         cnt = 0 
@@ -1195,17 +1158,6 @@ class Sort(object):
         sql = "insert into s_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
         self.dbo.sql_exec_many(sql,itms)
 
-    def get_coord(self,kix,vix,moreInfo=False):
-        buf = ""
-        if moreInfo:
-            buf = "coord: "+str(kix)+","+str(vix)
-        kit = self.get_kname_by_kix(kix)
-        variant = self.get_vname_by_vix(vix)
-        buf = buf +  "k|v: "+str(kit)+"|"+(variant)
-        if moreInfo:
-            buf = buf + "value:"+str(self.NP[vix,kix])
-        return buf
-        
     def get_cur_kit_list(self):
         return self.get_axis('kits',keysOnly=True)
         
@@ -1231,13 +1183,6 @@ class Sort(object):
                 if orderByType in ['kp','kn','kx']:
                     return [(key, self.KITS[key]) for key in listByCount]
         
-    def get_coord_name_by_order(self,coord_order):
-        coord_name = []
-        for C in coord_order:
-            vname = self.get_vname_by_vix(vix=C[0])
-            kname = self.get_kname_by_kix(kix=C[1])
-            coord_name.append((vname,kname))
-        return coord_name
 
     def get_mx_row_as_list(self,rownum,noneToStr=True):
         if noneToStr:
@@ -1257,15 +1202,6 @@ class Sort(object):
         if kix is not None:
             return self.NP[:,kix].T
 
-    def get_imperfect_variants(self):
-        #TODO: need to fix this. I had the def wrong.
-        variant_idx = np.argwhere(self.NP==-1) #get index to negative data
-        variant_idx_r = np.unique(variant_idx[:,0]) #get unique rows of those indices
-        variant_data = self.NP[variant_idx_r]
-        vnames = self.get_vname_by_vix(variant_idx_r)
-        self.set_new_axis(vnames,variant_idx_r,variantType=True) #reset variant axis
-        self.NP = variant_data #reset data
-        
     def get_perfect_variants_idx(self):
         idx = list(range(len(self.VARIANTS)))
         prf_idx = idx[:] #copy idx so I have this one for deleting
@@ -1289,15 +1225,6 @@ class Sort(object):
                 if itm[1] in self.get_imperfect_variants_idx():
                     vix.remove(vix[itm[0]])
             return vix
-
-    def get_coord_value(self,kix=None,vix=None,kname=None,vname=None):
-        if kix is not None and vix is not None:
-            return self.NP[vix][kix]
-        if kname is not None and vname is not None:
-            get_kix_by_name(kname)
-            get_vix_by_name(vname)
-            return self.NP[vix][kix]
-        
 
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
         #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
@@ -1349,24 +1276,9 @@ class Sort(object):
                     self.dbo.sql_exec(sql)
                 cntV = cntV + 1
 
-        #create axes (saved version)
-        #elif 1==2:
-        #    sql = "select * from s_mx_idxs;"
-        #    self.dbo.sql_exec(sql)
-        #    F = self.dbo.fetchall()
-        #    for row in F:
-        #        if row[0] == 0: #variant
-        #            self.VARIANTS[row[1]] = [row[2],row[2]]
-        #        else: #kit
-        #            self.KITS[row[1]] = [row[2],row[2]]
-      
         #create numpy version of data
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
-
-        #print(self.VARIANTS)
-        #print(self.KITS)
-        #sys.exit()
 
         #create numpy version of data
         for key,value in DATA.items():
@@ -1377,54 +1289,9 @@ class Sort(object):
             sql = "insert into s_mx_calls (kit_id,variant_loc,assigned) select kit_id,variant_loc,assigned from perfect_assignments;"
             self.dbo.sql_exec(sql)
 
-        #chk matrix (debugging)
-        #self.stdout_matrix()
-        #sys.exit()
-
         #get count data
         self.get_mx_count_data()
         
-    def get_variant_data_by_vname(self,vname):
-
-        #sql - exclude perfect variants
-        sql = '''
-            SELECT C.kit_id, V.name, C.assigned, V.variant_id
-            FROM s_calls C, s_variants V,
-            WHERE C.variant_loc = V.variant_loc AND
-            V.vname = %s
-            ORDER by 4;
-            ''' %vname
-
-        #get data
-        self.dbo.sql_exec(sql)
-        F = self.dbo.fetchall()
-
-        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
-        DATA = OrderedDict()
-        self.KITS = {}
-        self.VARIANTS = {}
-        cntV = 0
-        cntK = 0
-        for row in F:
-            if row[1] not in DATA:
-                DATA[row[1]] = []
-            DATA[row[1]].append(row[2])
-            #TODO: numpy way to do this? still needed? get rid of dupe info?
-            if row[0] not in self.KITS:
-                self.KITS[row[0]] = [cntK,cntK]
-                cntK = cntK + 1
-            #TODO: numpy way to do this? still needed? get rid of dupe info?
-            if row[1] not in self.VARIANTS:
-                self.VARIANTS[row[1]] = [cntV,cntV]
-                cntV = cntV + 1
-      
-       #create numpy version of data
-        for key,value in DATA.items():
-            self.NP = np.matrix(list(DATA.values()))
-
-        #get count data
-        self.get_mx_count_data()
-
     def get_mx_count_data(self):
 
         #NOTE: this could be done with numpy - which is better? does it matter?
