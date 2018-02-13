@@ -344,7 +344,7 @@ class Variant(object):
             suffix=''
             if override_val is not None and kix is not None:
                 suffix = 'P' if override_val == 1 else 'N'
-            print("[rels.2] rels%s: %s kpc: %s" % (suffix,",".join([str(i) for i in rels]),kpc))
+            print("[rels.2] rels%s: %s kpc: %s" % (suffix,l2s(rels),kpc))
 
         return list(rels)
         
