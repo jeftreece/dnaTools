@@ -111,6 +111,7 @@ class Variant(object):
         print("")
         if tp is None:
             print("---------------------------------------------------------------------")
+            print("")
 
         if tp==1:
             print("[+] %s" %self.vixn)
@@ -149,6 +150,7 @@ class Variant(object):
                 sub.stdout_info(tp=-1)
 
         if tp is None:
+            print("")
             print("---------------------------------------------------------------------")
             print("")
         
@@ -199,8 +201,6 @@ class Variant(object):
                             if k in unkL:
                                 unkL.remove(k)
                             unkD[k][0] = 3 #hard failure
-                        if len(unkL):
-                            print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
                     else:
                         print(" - [1] sup is truly sup to target variant, all unks open to promotion")
                 else:
@@ -209,6 +209,7 @@ class Variant(object):
                 for k in unkL:
                     if unkD[k] != 3:
                         unkD[k][0] = 1 
+                print(" - [1] remaining unk - ambig pos: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
                 #(end)sup check
 
                 #(beg)consistency check 
@@ -246,6 +247,8 @@ class Variant(object):
                         for k in diff_common_kpc:
                             if k in unkL:
                                 unkD[k][1] = unkD[k][1] + 1
+                                if unkD[k][1] > 1:
+                                    print(" - [2] %s [%s] is a req positive" % (self.sort.get_kname_by_kix(k),k))
                         if len(common_kpc) > 0:
                             splitL.append(common_kpc)
                         
@@ -255,6 +258,7 @@ class Variant(object):
                     split_intersects = list(set.intersection(*map(set, uniq_splits)))
                     if (len(uniq_splits) > 1 and len(split_intersects) == 0):
                         print(" - [2] split required: btw %s" % uniq_splits)
+                        print(" - [2] all unk to negative")
                         splitReq = True
 
                 print("")
@@ -621,9 +625,9 @@ class Sort(object):
             self.dbo.dc = self.dbo.cursor()
             self.get_mx_data(recreateFlg = False)
 
-        debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"matrix{{"+"{",1)
-        debug_chk('DBG_MATRIX',"",1)
+        print("")
+        print("---------------------------------------------------------------------")
+        print("")
 
         #(beg)matrix
         table = BeautifulTable()
@@ -640,9 +644,10 @@ class Sort(object):
         debug_chk('DBG_MATRIX',table,1)
         #(end)matrix
 
-        debug_chk('DBG_MATRIX',"",1)
-        debug_chk('DBG_MATRIX',"}}"+"}",1)
-        debug_chk('DBG_MATRIX',"",1)
+        print("")
+        print("---------------------------------------------------------------------")
+        print("")
+
         
     def stdout_unknowns(self):
         self.dbo.db = self.dbo.db_init()
