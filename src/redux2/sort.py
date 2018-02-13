@@ -583,23 +583,6 @@ class Variant(object):
         
     def get_subsets(self,kpc):
 
-        #-------------------------------------------------------------------------------------------------{{{
-        # How subsets are determined:
-        #-------------------------------------------------------------------------------------------------
-        # - VAR1 - evaluate the incoming kpc for positives along the matrix - create an index with the results
-        # - VAR2 - delete any mention of the vix in these index results (since we are looking for other variants)
-        # - VAR3 - get a count of how many times these other variants hit the kpc we're looking at
-        # - out/out1 - can't remember what the out logic does again, check that
-        # - VAR4 - then filter out those variants that have less kpc hits than the vix
-        # - VAR5 - the supersets
-        # - VAR6 - the superset counts to vpc
-        # - VAR7 - merge of VAR5 and VAR6
-        #-------------------------------------------------------------------------------------------------}}}
-
-        #of the top ones ... are they supsets? subsets? (start with top 2 - top)
-        #what additional positives might they have that my variant has an unk for?
-        #perfect fit? if so .. done
-
         if config['DBG_SUBS_IN']:
             print("")
             print("---------------------------------------------------------------------")
@@ -724,21 +707,6 @@ class Variant(object):
         
     def get_supsets_or_eqv(self,kpc,eq_override=False):
 
-        #-------------------------------------------------------------------------------------------------{{{
-        # How supsets are determined:
-        #-------------------------------------------------------------------------------------------------
-        # - VAR1 - evaluate the incoming kpc for positives along the matrix - create an index with the results
-        # - VAR2 - get a count of how many times these other variants hit the kpc we're looking at
-        # - VAR3 - has to have at least what the incoming variant had in count
-        # - VAR4 - delete any mention of the vix in these index results (since we are looking for other variants)
-        # -      - give an opportunity to return [] if no results
-        # - allPos - all idx situations in the matrix where there are positives (we just want the col-variant idxs)
-        # - AP   - a unique count on how many positives there were per variant of allPos
-        # - VAR5 - use the VAR4 and AP idxs together to the hit counts on those variants that can be considered supersets
-        # - VAR6 - merge VAR4 and VAR5 together to combine superset idxs with their hit counts
-        # - VAR7 - reverse sort VAR6 - so the bigger ones are first
-        #-------------------------------------------------------------------------------------------------}}}
-
         if config['DBG_SUPS_IN']:
             print("")
             print("---------------------------------------------------------------------")
@@ -811,18 +779,7 @@ class Variant(object):
 class Sort(object):
 
     def __init__(self):
-
-        #db attributes
         self.dbo = None #db object
-
-        #tree attributes    
-        #self.TREE = {}
-        #self.REF = None
-        #self.MATRIX_MODE = config['MATRIX_MODE']
-        #self.TREE_MODE = config['TREE_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
-        #self.TDATA = None
-
-        #matrix attributes
         self.KITS = None
         self.VARIANTS = None
         self.DATA = None
@@ -830,7 +787,6 @@ class Sort(object):
         self.NP = None
         self.NONES = []
         self.MDATA = None
-
         self.perfect_variants = None
         self.imperfect_variants = None
 
@@ -878,7 +834,6 @@ class Sort(object):
             self.dbo.db = self.dbo.db_init()
             self.dbo.dc = self.dbo.cursor()
             self.get_mx_data(recreateFlg = False)
-            #self.stdout_matrix()
 
         debug_chk('DBG_MATRIX',"",1)
         debug_chk('DBG_MATRIX',"matrix{{"+"{",1)
@@ -1067,7 +1022,7 @@ class Sort(object):
         return self.KITS[kname][1]
         
 
-    def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None): #like get_mx_kdata but retrieves index info for given val
+    def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None):
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None and overrideData is not None: # we're sending in a custom evaluation
@@ -1075,13 +1030,13 @@ class Sort(object):
         if vix is not None: #no override -- use self.NP (all data)
             return list(np.argwhere(self.NP[vix,] == val).T[1,]) #default data, it's the entire matrix - 2d dataset 
         
-    def get_knames_by_val(self,val,vix=None,vname=None,overrideData=None,toStr=True): #like get_mx_kdata but retrieves index info for given val
+    def get_knames_by_val(self,val,vix=None,vname=None,overrideData=None,toStr=True):
         if toStr:
             return l2s(self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData)))
         else:
             return self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData))
         
-    def get_vixs_by_val(self,val,kix=None,kname=None,overrideData=None): #like get_mx_variant_data but retrieves index info for given val
+    def get_vixs_by_val(self,val,kix=None,kname=None,overrideData=None):
         if kname is not None:
             kix = self.get_kix_by_name(kname)
         if kix is not None and overrideData is not None:
@@ -1089,13 +1044,11 @@ class Sort(object):
         if kix is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[:,kix] == val).T[0,] #default data, it's the entire matrix - 2d dataset
         
-    def get_vnames_by_val(self,val,kix=None,kname=None,overrideData=None,toStr=True): #like get_mx_variant_data but retrieves index info for given val
+    def get_vnames_by_val(self,val,kix=None,kname=None,overrideData=None,toStr=True):
         if toStr:
             return l2s(self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData)))
         else:
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
-
-    #...
 
     def mx_vertical_sort(self):
         DATA = OrderedDict()
@@ -1164,7 +1117,7 @@ class Sort(object):
     def get_cur_variant_list(self):
         return self.get_axis('variants',keysOnly=True)
         
-    def get_axis(self,orderByType=None,keysOnly=False,idx=None): # gets the variant/col or kit/row names (and optionally order info too)
+    def get_axis(self,orderByType=None,keysOnly=False,idx=None):
         if orderByType in ['variants','kits']:
             if orderByType == 'variants' : SCH = self.VARIANTS
             if orderByType == 'kits' : SCH = self.KITS
@@ -1190,13 +1143,13 @@ class Sort(object):
         else:
             return self.NP[rownum,:].tolist()[0]
         
-    def get_mx_kdata(self,vix=None,vname=None): #get same type variant data for each kit
+    def get_mx_kdata(self,vix=None,vname=None):
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None:
             return self.NP[vix,]
         
-    def get_mx_variant_data(self,kix=None,kname=None): #get all type variant data for one kit
+    def get_mx_variant_data(self,kix=None,kname=None):
         if kname is not None:
             kix = self.get_kix_by_name(kname)
         if kix is not None:
