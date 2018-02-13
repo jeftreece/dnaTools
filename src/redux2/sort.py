@@ -8,38 +8,22 @@
 # }}}
 # libs {{{
 
-import sys,os,sqlite3,yaml,time,csv,json,numpy as np
+import sys,os,yaml,csv,json,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
-from lib import *
-
-# }}}
-
-#debugging {{{
-
-def trace (level, msg):
-    print(msg)
-    
-def debug_chk(var,msg,lev=0):
-    if config[var] > lev:
-        print(msg)
-    
-def l2s(lst):
-    return ",".join(str(x) for x in lst)
-    
 
 #}}}
-# conf {{{
 
-global config
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
 except:
-    trace(0,"Missing environment variable REDUX_CONF. Aborting.")
+    print("Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
-#}}}
+def l2s(lst):
+    return ",".join(str(x) for x in lst)
+    
 
 class Variant(object):
 
@@ -169,12 +153,12 @@ class Variant(object):
         splitReq = False
 
         #1st arg of set : sup test1 result
-        #1 = ambiguous promotion to positive
-        #2 = hard promotion to positive
-        #3 = hard negative
+        #1 - ambiguous promotion to positive
+        #2 - hard promotion to positive
+        #3 - hard negative
         
         #2nd arg of set : consistency test2 result
-        #2+ = if it gets to 2+ ... it means this unk should be positive to appease other variants
+        #2+ - if it gets to 2+ ... it means this unk should be positive to appease other variants
 
         #3rd arg of set : consistency test2 result (split override)
         #1 - means neg (due to split)
@@ -322,30 +306,21 @@ class Variant(object):
 
         #method 1
         if override_val is not None and kix is not None:
-            if config['DBG_RELS']:
-                print("")
-                print("[rels.0] MODE (get_vix_rel) - ONE (override val w/vix)")
-                print("")
+            if config['DBG_RELS']: print("\n[rels.0] MODE (get_vix_rel) - ONE (override val w/vix)\n")
             overrideData = self.sort.get_row_when_override_coord(override_val,kix=kix,vix=self.vix)
             #pos conditions when override coord with a value
             kpc = self.sort.get_kixs_by_val(1,vix=self.vix,overrideData=overrideData)
 
         #method 2
         elif kpc is None:
-            if config['DBG_RELS']:
-                print("")
-                print("[rels.0] MODE (get_vix_rel) - TWO (only use vix)")
-                print("")
+            if config['DBG_RELS']: print("\n[rels.0] MODE (get_vix_rel) - TWO (only use vix)\n")
             #default pos conditions when just use default target vix criteria
             kpc = self.sort.get_kixs_by_val(1,vix=self.vix) #default pos conditions
     
         #method3
         #requires only sending in a kpc
         else:
-            if config['DBG_RELS']:
-                print("")
-                print("[rels.0] MODE (get_vix_rel) - THREE (sending in a kpc)")
-                print("")
+            if config['DBG_RELS']: print("\n[rels.0] MODE (get_vix_rel) - THREE (sending in a kpc)\n")
 
         if relType == 1: #supsets
             rels_ = self.get_supsets_or_eqv(kpc)
@@ -367,8 +342,7 @@ class Variant(object):
             rels = rels_[:,0].tolist()
 
         #debugging
-        if config['DBG_RELS']:
-            print("[rels.1] rels: %s" % rels)
+        if config['DBG_RELS']: print("[rels.1] rels: %s" % rels)
         if config['DBG_RELS']:
             suffix=''
             if override_val is not None and kix is not None:
@@ -380,9 +354,7 @@ class Variant(object):
     def get_subsets(self,kpc):
 
         if config['DBG_SUBS_IN']:
-            print("")
-            print("---------------------------------------------------------------------")
-            print("")
+            print("\n---------------------------------------------------------------------\n")
             print("[subin.0] vix: %s"%self.vix)
             print("[subin.0] vix(name): %s"%self.sort.get_vname_by_vix(self.vix))
             print("[subin.0] kpc: %s"%kpc)
@@ -390,22 +362,18 @@ class Variant(object):
 
         #looking for variants w/pos assignments that overlap the target variant
         VAR1 = np.argwhere(self.sort.NP[:,kpc]==1)[:,0]
-        if config['DBG_SUBS_IN']:
-            print("[subin.1] VAR1: %s"%VAR1)
+        if config['DBG_SUBS_IN']: print("[subin.1] VAR1: %s"%VAR1)
 
         #idx make sure we exclude the target variant
         idx = np.argwhere(VAR1==self.vix)
         VAR2 = np.delete(VAR1, idx)
-        if config['DBG_SUBS_IN']:
-            print("[subin.2] VAR2: %s"%VAR2)
+        if config['DBG_SUBS_IN']: print("[subin.2] VAR2: %s"%VAR2)
 
         #print (set(x for l in VAR1.tolist() for x in l))
         #get uniques of VAR2 with counts
         unique_elements, counts_elements = np.unique(VAR2, return_counts=True)
         VAR3 = np.asarray((unique_elements, counts_elements)).T #get uniques
-        if config['DBG_SUBS_IN']:
-            print("")
-            print("[subin.3] VAR3: %s"%VAR3)
+        if config['DBG_SUBS_IN']: print("\n[subin.3] VAR3: %s"%VAR3)
 
         #for the following "adding technique" -- we need to exclude unk situations for the comparison (special handling)
         #adding technique - got this idea here: https://stackoverflow.com/questions/30041286/sum-rows-where-value-equal-in-column
@@ -413,8 +381,7 @@ class Variant(object):
         out = np.zeros((len(unq), VAR3.shape[1]), dtype=VAR3.dtype) #create empty array to put the added values
         out[:, 0] = unq #fill the first column
         np.add.at(out[:, 1:], unq_inv, VAR3[:, 1:])
-        if config['DBG_SUBS_IN']:
-            print("[subin.4] out: %s"%out)
+        if config['DBG_SUBS_IN']: print("[subin.4] out: %s"%out)
 
         #sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
         out1 = out[out[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
@@ -425,18 +392,15 @@ class Variant(object):
 
         #subsets need to have less kpc than the target variant (cuz subsets)
         VAR4 = np.argwhere(out1[:,1]<len(kpc)) #[:,0]
-        if config['DBG_SUBS_IN']:
-            print("[subin.7] VAR4: %s"%VAR4)
+        if config['DBG_SUBS_IN']: print("[subin.7] VAR4: %s"%VAR4)
 
         #separate the cols - for debugging (this is the subset variants)
         out2a = out1[:,0]
-        if config['DBG_SUBS_IN']:
-            print("[subin.8] out2a: %s"%out2a)
+        if config['DBG_SUBS_IN']: print("[subin.8] out2a: %s"%out2a)
 
         #and this is their kpc count data
         out2b = out1[:,1]
-        if config['DBG_SUBS_IN']:
-            print("[subin.9] out2b: %s"%out2b)
+        if config['DBG_SUBS_IN']: print("[subin.9] out2b: %s"%out2b)
 
         #the subset variants
         VAR5 = out2a[list(VAR4.T[0])]
@@ -446,8 +410,7 @@ class Variant(object):
 
         #the subset variant counts
         VAR6 = out2b[list(VAR4.T[0])]
-        if config['DBG_SUBS_IN']:
-            print("[subin.12] VAR6: %s"%VAR6)
+        if config['DBG_SUBS_IN']: print("[subin.12] VAR6: %s"%VAR6)
 
         #subsets shouldn't have diff intersecting positives with common supersets
         subsc = list(VAR5)
@@ -490,17 +453,14 @@ class Variant(object):
         #merged for return
         VAR7 = np.asarray((VAR5a,VAR6a)).T
 
-        if config['DBG_SUBS_IN']:
-            print("[subin.13] VAR7: %s"%VAR7)
+        if config['DBG_SUBS_IN']: print("[subin.13] VAR7: %s"%VAR7)
 
         return VAR7
         
     def get_supsets_or_eqv(self,kpc,eq_override=False):
 
         if config['DBG_SUPS_IN']:
-            print("")
-            print("---------------------------------------------------------------------")
-            print("")
+            print("\n---------------------------------------------------------------------\n")
             print("[supin.0] vix: %s"%self.vix)
             print("[supin.0] vix(name): %s"%self.sort.get_vname_by_vix(self.vix))
             print("[supin.0] kpc: %s"%kpc)
@@ -508,29 +468,24 @@ class Variant(object):
 
         #looking for variants w/pos assignments that overlap the target variant
         VAR1 = np.argwhere(np.all(self.sort.NP[:,kpc]==[1]*len(kpc),axis=1)==True)[:,0]
-        if config['DBG_SUPS_IN']:
-            print("[supin.1] VAR1: %s"%VAR1)
+        if config['DBG_SUPS_IN']: print("[supin.1] VAR1: %s"%VAR1)
 
         #get uniques of VAR1 with counts
         unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
         VAR2 = np.asarray((unique_elements, counts_elements)).T #get uniques
-        if config['DBG_SUBS_IN']:
-            print("")
-            print("[supin.2] VAR3: %s"%VAR2)
+        if config['DBG_SUBS_IN']: print("\n[supin.2] VAR3: %s"%VAR2)
 
         #idx make sure we exclude the incoming variant
         idx = np.argwhere(VAR2[:,0] == self.vix)
         VAR4 = np.delete(VAR2[:,0], idx)
-        if config['DBG_SUPS_IN']:
-            print("[supin.4] VAR4: %s"%VAR4)
+        if config['DBG_SUPS_IN']: print("[supin.4] VAR4: %s"%VAR4)
 
         #if there are no supsets, end here
         if len(VAR4) == 0: return []
 
         #get master idx of all positives for all data (+deal with equivalent variants)
         allPos = np.argwhere(self.sort.NP==1)[:,0]
-        if config['DBG_SUPS_IN']:
-            print("[supin.5] allPos: %s"%allPos)
+        if config['DBG_SUPS_IN']: print("[supin.5] allPos: %s"%allPos)
         unqA, cntA = np.unique(allPos, return_counts=True)
         if len(VAR4):
             for idx, val in enumerate(unqA):
@@ -547,22 +502,18 @@ class Variant(object):
                     idx1 = np.argwhere(VAR4==val)
                     VAR4 = np.delete(VAR4, idx1)
         AP = np.asarray((unqA, cntA))[1,]
-        if config['DBG_SUPS_IN']:
-            print("[supin.6] AP: %s"%AP)
+        if config['DBG_SUPS_IN']: print("[supin.6] AP: %s"%AP)
 
         #extrapolate the right supset mix using the master list idx
         VAR5 = AP[list(VAR4),]
-        if config['DBG_SUPS_IN']:
-            print("[supin.7] VAR5: %s"%VAR5)
+        if config['DBG_SUPS_IN']: print("[supin.7] VAR5: %s"%VAR5)
 
         VAR6 = np.asarray((VAR4,VAR5)).T
-        if config['DBG_SUPS_IN']:
-            print("[supin.8] VAR6: %s"%VAR6)
+        if config['DBG_SUPS_IN']: print("[supin.8] VAR6: %s"%VAR6)
 
         #sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
         VAR7 = VAR6[VAR6[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-        if config['DBG_SUPS_IN']:
-            print("[supin.9] VAR7: %s"%VAR7)
+        if config['DBG_SUPS_IN']: print("[supin.9] VAR7: %s"%VAR7)
 
         return VAR7
 
@@ -631,7 +582,7 @@ class Sort(object):
 
         #(beg)matrix
         table = BeautifulTable()
-        table.column_headers = ['c']+['v']+self.get_cur_kit_list()
+        table.column_headers = ['c']+['v']+self.get_axis('kits',keysOnly=True)
         table.append_row(['']+['']+[str(x) for x in list(range(10))])
         table.append_row(['','','','','','','','','','','',''])
         cntV = 0
@@ -641,7 +592,7 @@ class Sort(object):
             table.column_seperator_char = ''
             table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
             cntV = cntV + 1
-        debug_chk('DBG_MATRIX',table,1)
+        print(table)
         #(end)matrix
 
         print("")
@@ -681,7 +632,6 @@ class Sort(object):
         self.get_mx_data()
 
         #proc
-        debug_chk('DBG_MATRIX',"data - sort 1",1)
         self.mx_vertical_sort()
         self.mx_horizontal_sort()
         self.stdout_matrix()
@@ -689,43 +639,36 @@ class Sort(object):
         sys.exit()
 
         #step x
-        debug_chk('DBG_MATRIX',"data - step 2",1)
-        self.sort_step1()
+        self.sort_step() # this can be expanded upon
         self.stdout_matrix()
         self.save_mx_to_db()
         sys.exit()
         
-    def sort_step1(self):
-        print("---------------------------------------------------------------------")
+    def sort_step(self):
         print("Processing Imperfect Variants:")
         print("disabled. exiting.")
         sys.exit()
         for vix in self.get_imperfect_variants_idx():
-            print("---------------------------------------------------------------------")
-            print("{{"+"{") #beg vim marker
             results = []
-            print("}}"+"}") #end vim marker
             for R in results:
                 print(R[1])
 
-        print("----------------")
         print("")
         self.get_mx_count_data()
         self.mx_vertical_sort()
         self.mx_horizontal_sort()
 
     def get_row_when_override_kixs(self,override_val,vix,kixs):
-        row = self.get_mx_kdata(vix=vix)
+        row = self.get_mx_kit_data(vix=vix)
         if len(kixs) == 0:
             return row
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
-        for kx in kixs: #.tolist():
+        for kx in kixs:
             rowO[0,kx] = override_val
         return rowO
 
-    def get_vname_by_vix(self,vix,listFlg=False): #get vname (can also take a list)
-        #listFlg: force listFlg as return data type
+    def get_vname_by_vix(self,vix,listFlg=False):
         intFlg = True
         try:
             value = int(vix)
@@ -750,7 +693,6 @@ class Sort(object):
                 return variant
         else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
             variantList = []
-            #print("here1am2")
             for vo in list(vix):
                 #normal variants in the matrix
                 for itm in list(self.VARIANTS.items()):
@@ -760,7 +702,6 @@ class Sort(object):
             return(variantList)
         
     def get_kname_by_kix(self,kix,listFlg=False):
-        #listFlg: force listFlg as return data type
         intFlg = True
         try:
             value = int(kix)
@@ -791,10 +732,10 @@ class Sort(object):
                         break
             return(kitList)
         
-    def get_vix_by_name(self,vname): #get vix from its name
+    def get_vix_by_name(self,vname):
         return self.VARIANTS[vname][1]
         
-    def get_kix_by_name(self,kname): #get kix from its name
+    def get_kix_by_name(self,kname):
         return self.KITS[kname][1]
         
 
@@ -806,12 +747,6 @@ class Sort(object):
         if vix is not None: #no override -- use self.NP (all data)
             return list(np.argwhere(self.NP[vix,] == val).T[1,]) #default data, it's the entire matrix - 2d dataset 
         
-    def get_knames_by_val(self,val,vix=None,vname=None,overrideData=None,toStr=True):
-        if toStr:
-            return l2s(self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData)))
-        else:
-            return self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData))
-        
     def get_vixs_by_val(self,val,kix=None,kname=None,overrideData=None):
         if kname is not None:
             kix = self.get_kix_by_name(kname)
@@ -819,6 +754,12 @@ class Sort(object):
             return np.argwhere(overrideData[:,0] == val).T[0,] #with override data, there's only one line evaluated - 1d dataset
         if kix is not None: #no override -- use self.NP (all data)
             return np.argwhere(self.NP[:,kix] == val).T[0,] #default data, it's the entire matrix - 2d dataset
+        
+    def get_knames_by_val(self,val,vix=None,vname=None,overrideData=None,toStr=True):
+        if toStr:
+            return l2s(self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData)))
+        else:
+            return self.get_kname_by_kix(self.get_kix_by_val(val,vix,vname,overrideData))
         
     def get_vnames_by_val(self,val,kix=None,kname=None,overrideData=None,toStr=True):
         if toStr:
@@ -884,12 +825,6 @@ class Sort(object):
         sql = "insert into s_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
         self.dbo.sql_exec_many(sql,itms)
 
-    def get_cur_kit_list(self):
-        return self.get_axis('kits',keysOnly=True)
-        
-    def get_cur_variant_list(self):
-        return self.get_axis('variants',keysOnly=True)
-        
     def get_axis(self,orderByType=None,keysOnly=False,idx=None):
         if orderByType in ['variants','kits']:
             if orderByType == 'variants' : SCH = self.VARIANTS
@@ -914,7 +849,7 @@ class Sort(object):
         else:
             return self.NP[rownum,:].tolist()[0]
         
-    def get_mx_kdata(self,vix=None,vname=None):
+    def get_mx_kit_data(self,vix=None,vname=None):
         if vname is not None:
             vix = self.get_vix_by_name(vname)
         if vix is not None:
@@ -951,7 +886,7 @@ class Sort(object):
             return vix
 
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
-        row = self.get_mx_kdata(vix=vix)
+        row = self.get_mx_kit_data(vix=vix)
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
         rowO[0,kix] = override_val

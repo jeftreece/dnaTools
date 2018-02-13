@@ -8,53 +8,25 @@
 # }}}
 # libs {{{
 
-import sys,os,sqlite3,yaml,time,csv,json,numpy as np
-from beautifultable import BeautifulTable
-from anytree import Node, RenderTree
-#import string
-import copy #only used for STASHprint (debugging)
-from collections import OrderedDict
+import sys,os,sqlite3,yaml,csv,json,numpy as np
 
 # }}}
-
-#debugging {{{
-
-def trace (level, msg):
-    print(msg)
-    #if level <= config['verbosity']:
-    #    print(msg)
-    #TODO: below line in clades.py
-    #sys.stderr(flush)
-    
-def debug_chk(TYPE,msg):
-    if config[TYPE]:
-        print(msg)
-
-#}}}
-# conf {{{
 
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
 except:
-    trace(0,"Missing environment variable REDUX_CONF. Aborting.")
+    print("Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
-
-#}}}
-
-#TODO: fix this
-#start_time = 0 
 
 class DB(object):
     
     def __init__(self):
-        #proper db class attributes
         self.db = None
         self.dc = None
         
     def db_init(self):
-        #trace (1, "Initialising database...")
-        return sqlite3.connect('variant.db')
+        return sqlite3.connect(config['DB_FILE'])
         
     def cursor(self):
         return self.db.cursor()
@@ -62,7 +34,6 @@ class DB(object):
     def sql_exec_file(self,FILE):
         fh = open(config['REDUX_SQL']+'/'+FILE,'r');
         try:
-            #print(fh.read())
             self.dc.executescript(fh.read())
         finally:
             fh.close()

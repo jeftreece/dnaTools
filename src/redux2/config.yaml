@@ -1,5 +1,4 @@
 ---
-# env {{{
 
 #where the code is
 REDUX_PATH: /Users/jazdrv/_prj/dnatools/_env/redux2
@@ -14,57 +13,5 @@ REDUX_DATA: /Users/jazdrv/_prj/dnatools/data
 DEBUG_SQL: True
 COMMITS_ON: True
 
-# }}}
-# redux2 {{{
-
+#db
 DB_FILE: variants.db
-
-snp_csv_19: snps_hg19.csv
-snp_csv_38: snps_hg38.csv
-SNP_CSV: snps_hg19.csv
-
-backup_files: variant-*.txt snps_hg19.csv snp-names.csv snp-used.csv report.csv short-report.csv clades.csv tree.txt raw-ages.txt
-
-haplogroup: R
-top_snp: U106
-
-skip_to: 11
-skip_to: 0
-
-make_report: True
-make_ages: True
-make_short_report: True
-make_html_report: True
-skip_zip: 3
-check_data: True
-zip_update_only: True
-test_for_ref_pos: False
-
-zip_dir: zips #hg19 
-unzip_dir: unzips #hg19 
-unzip_dir_clades: unzips.clades #hg19 
-
-zip2_dir: zips2 #hg38 
-unzip2_dir: unzips2 #hg38 
-
-zip_set: -s 6:1,2,3,4,5,6 
-
-bash_only: True
-recreate_db: True
-
-zero_age: 1950.33
-err_zero_age: 15.02
-
-VERSION: x.0
-VERSION: 2.0.0.20180108.ALPHA
-
-# }}}
-# clades {{{
-
-DEBUG: 0
-verbosity: 30
-b37_snp_file: "snps_hg19.csv"
-b38_snp_file: "snps_hg38.csv"
-drop_tables: 1
-
-# }}}

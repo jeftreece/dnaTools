@@ -10,32 +10,25 @@
 # }}}
 # libs {{{
 
-import sys,argparse,yaml,os,glob,shutil,re,time,csv,zipfile
-from collections import defaultdict
-from lib import *
+import sys,argparse,yaml,os
+from sort import *
+from db import *
 
 # }}}
-
-def trace (level, msg):
-    print(msg)
-    
-def debug_chk(TYPE,msg):
-    if config[TYPE]:
-        print(msg)
 
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
 except:
-    trace(0,"Missing environment variable REDUX_CONF. Aborting.")
+    print("Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema currently)', action='store_true')
 parser.add_argument('-vi', '--variant_info', help='variant info', type=str)
 parser.add_argument('-vp', '--variant_proc', help='variant process', type=str)
 parser.add_argument('-m', '--matrix', help='matrix', action='store_true')
 parser.add_argument('-u', '--unknowns', help='unknowns', action='store_true')
+parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema currently)', action='store_true')
 
 args = parser.parse_args()
 
