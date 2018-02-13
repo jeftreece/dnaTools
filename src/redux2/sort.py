@@ -100,21 +100,10 @@ class Variant(object):
         self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
         self.kpnc = sorted(self.kpc + self.knc)
 
-        #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
-        #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-        #self.kpucn = "kpuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpuc)),il2s(self.kpuc))
-        #self.eqv = np.unique(np.argwhere(self.sort.NP[:,self.kpuc]==1)[:,0]).tolist()
-        #self.eqv = self.supsT[:] #sometimes we need this top version?
-        #self.eqv.remove(0) #remove 'top'
-
-        #overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
-        #self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-
         self.sups = self.get_rel(relType=1,allowImperfect=allowImperfect)
         self.sups.remove(0) #remove 'top'
         self.subs = self.get_rel(relType=-1,allowImperfect=allowImperfect)
         self.eqv = self.get_rel(relType=0,allowImperfect=allowImperfect)
-        #self.eqv = list(set(eq_)-set(self.sups))
         self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
         self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
         self.eqvn = "eqv: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
@@ -150,18 +139,9 @@ class Variant(object):
         else:
             print("vix: %s" %self.vixn)
             sp = ""
-        #print("name: %s" %self.name)
         print("%s%s" %(sp,self.kpcn))
         print("%s%s" %(sp,self.kncn))
         print("%s%s" %(sp,self.kucn))
-        #noKpuc = 0
-        #try:
-        #    self.kpuc
-        #except:
-        #    noKpuc = 1
-        #if noKpuc == 0:
-        #    print("%s%s" %(sp,self.kpucn))
-        #    print("%s%s" %(sp,self.eqvn))
 
         print("%s%s" %(sp,self.supsn))
         print("%s%s" %(sp,self.subsn))
@@ -284,11 +264,8 @@ class Variant(object):
         #starting unk list
         unkL = self.kuc
         unkD = {}
-        #splitD = {}
-        #splitChk = 0
         for k in unkL:
             unkD[k] = [0,0]
-        #print(unkK)
         othK = {}
 
         #1st arg of set : sup test1 result
@@ -382,7 +359,6 @@ class Variant(object):
                 print("")
 
         print(unkD)
-        #print("split chk: %s" % splitChk)
 
         '''{{{
         [9] Z381{{{
@@ -830,7 +806,6 @@ class Variant(object):
         if config['DBG_SUPS_IN']:
             print("[supin.9] VAR7: %s"%VAR7)
 
-        #if self.vix == 11: sys.exit()
         return VAR7
 
 class Sort(object):
@@ -839,15 +814,13 @@ class Sort(object):
 
         #db attributes
         self.dbo = None #db object
-        #self.db = None #sqlite db instance
-        #self.dc = None #sqlite db cursor
 
         #tree attributes    
-        self.TREE = {}
-        self.REF = None
-        self.MATRIX_MODE = config['MATRIX_MODE']
-        self.TREE_MODE = config['TREE_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
-        self.TDATA = None
+        #self.TREE = {}
+        #self.REF = None
+        #self.MATRIX_MODE = config['MATRIX_MODE']
+        #self.TREE_MODE = config['TREE_MODE'] #(sort tree presentation) 1=letters, 2=names, 3=letters+names 
+        #self.TDATA = None
 
         #matrix attributes
         self.KITS = None
@@ -860,9 +833,6 @@ class Sort(object):
 
         self.perfect_variants = None
         self.imperfect_variants = None
-        #self.perfect_variants = None
-        #self.imperfect_variants = None
-        self.resolved_variants = []
 
     # schema / sample data
 
@@ -1413,9 +1383,6 @@ class Sort(object):
 
         #get count data
         self.get_mx_count_data()
-
-        #get relations data
-        #self.get_mx_relations_data()
         
     def get_variant_data_by_vname(self,vname):
 
@@ -1455,15 +1422,8 @@ class Sort(object):
         for key,value in DATA.items():
             self.NP = np.matrix(list(DATA.values()))
 
-        #chk matrix (debugging)
-        #self.stdout_matrix()
-        #sys.exit()
-
         #get count data
         self.get_mx_count_data()
-
-        #get relations data
-        #self.get_mx_relations_data()
 
     def get_mx_count_data(self):
 
@@ -1502,110 +1462,3 @@ class Sort(object):
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
         
-    def get_mx_relations_data(self):
-        #sql - get negatives (without kits){{{
-        sql = '''
-            SELECT distinct V1.name, V2.name
-            FROM s_calls C1, s_calls C2,
-            s_variants V1, s_variants V2
-            WHERE
-            C1.kit_id = C2.kit_id AND
-            C1.assigned = 1 AND
-            C2.assigned = -1 AND
-            C1.variant_loc = V1.variant_loc AND
-            C2.variant_loc = V2.variant_loc
-            ORDER by 1,2;
-            '''
-
-        self.dbo.sql_exec(sql)
-        self.NEGA = self.dbo.fetchall()
-
-        #}}}
-        #sql - get positives (without kits) {{{
-
-        sql = '''
-            SELECT distinct V1.name, V2.name
-            FROM s_calls C1, s_calls C2,
-            s_variants V1, s_variants V2
-            WHERE
-            C1.kit_id = C2.kit_id AND
-            C1.assigned = 1 AND
-            C2.assigned = 1 AND
-            C1.variant_loc = V1.variant_loc AND
-            C2.variant_loc = V2.variant_loc AND
-            V1.variant_loc != V2.variant_loc AND
-            V1.name||'|'||V2.name NOT IN (
-                SELECT distinct QV1.name||'|'||QV2.name as name
-                FROM s_calls QC1, s_calls QC2,
-                s_variants QV1, s_variants QV2
-                WHERE
-                QC1.kit_id = QC2.kit_id AND
-                QC1.assigned = 1 AND
-                QC2.assigned = -1 AND
-                QC1.variant_loc = QV1.variant_loc AND
-                QC2.variant_loc = QV2.variant_loc)
-            ORDER by 1,2;
-            '''
-        self.dbo.sql_exec(sql)
-        self.POSA = self.dbo.fetchall()
-
-        #}}}
-        #sql - get mixes (without kits){{{
-
-        sql = '''
-            SELECT distinct V1.name, V2.name
-            FROM s_calls C1, s_calls C2,
-            s_variants V1, s_variants V2
-            WHERE
-            C1.kit_id = C2.kit_id AND
-            C1.assigned = 1 AND
-            C2.assigned = 1 AND
-            C1.variant_loc = V1.variant_loc AND
-            C2.variant_loc = V2.variant_loc AND
-            V1.variant_loc != V2.variant_loc AND
-            V1.name||'|'||V2.name IN (
-                SELECT distinct QV1.name||'|'||QV2.name as name
-                FROM s_calls QC1, s_calls QC2,
-                s_variants QV1, s_variants QV2
-                WHERE
-                QC1.kit_id = QC2.kit_id AND
-                QC1.assigned = 1 AND
-                QC2.assigned = -1 AND
-                QC1.variant_loc = QV1.variant_loc AND
-                QC2.variant_loc = QV2.variant_loc)
-            ORDER by 1,2;
-            '''
-
-        self.dbo.sql_exec(sql)
-        self.MIXA = self.dbo.fetchall()
-
-        #}}}
-        #sql - get unknowns (without kits) {{{
-
-        sql = '''
-            SELECT distinct V1.name, V2.name
-            FROM s_calls C1, s_calls C2,
-            s_variants V1, s_variants V2
-            WHERE
-            C1.kit_id = C2.kit_id AND
-            C1.assigned = 1 AND
-            C2.assigned = 0 AND
-            C1.variant_loc = V1.variant_loc AND
-            C2.variant_loc = V2.variant_loc AND
-            V1.variant_loc != V2.variant_loc AND
-            V1.name||'|'||V2.name NOT IN (
-                SELECT distinct QV1.name||'|'||QV2.name as name
-                FROM s_calls QC1, s_calls QC2,
-                s_variants QV1, s_variants QV2
-                WHERE
-                QC1.kit_id = QC2.kit_id AND
-                QC1.assigned = 1 AND
-                (QC2.assigned = -1 OR QC2.assigned == 1) AND
-                QC1.variant_loc = QV1.variant_loc AND
-                QC2.variant_loc = QV2.variant_loc)
-            ORDER by 1,2;
-            '''
-        self.dbo.sql_exec(sql)
-        self.UNKA = self.dbo.fetchall()
-
-        #}}}
