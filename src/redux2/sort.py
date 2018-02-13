@@ -669,7 +669,7 @@ class Sort(object):
         print("---------------------------------------------------------------------")
         print("")
 
-    # matrix calls
+    # matrix 
 
     def sort_matrix(self):
 
@@ -956,6 +956,8 @@ class Sort(object):
         rowO[:] = row #make duplicate copy - important!
         rowO[0,kix] = override_val
         return rowO
+
+    # data 
 
     def get_mx_data(self,recreateFlg=True):
 
