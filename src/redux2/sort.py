@@ -10,12 +10,8 @@
 
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
 from beautifultable import BeautifulTable
-import itertools
-from anytree import Node, RenderTree
-import copy #only used for STASHprint (debugging)
 from collections import OrderedDict
 from lib import *
-#import string
 
 # }}}
 
@@ -23,20 +19,14 @@ from lib import *
 
 def trace (level, msg):
     print(msg)
-    #if level <= config['verbosity']:
-    #    print(msg)
-    #TODO: below line in clades.py
-    #sys.stderr(flush)
     
 def debug_chk(var,msg,lev=0):
     if config[var] > lev:
         print(msg)
     
-def il2s(lst):
+def l2s(lst):
     return ",".join(str(x) for x in lst)
     
-def l2s(lst):
-    return ",".join(lst)
 
 #}}}
 # conf {{{
@@ -44,19 +34,12 @@ def l2s(lst):
 global config
 try:
     config = yaml.load(open(os.environ['REDUX_CONF']))
-    #print(conf)
 except:
     trace(0,"Missing environment variable REDUX_CONF. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
 #}}}
-
-#TODO: order of priority
-'''
-1. (x) split checker ... anything with a split needs to be flagged. doesn't get an ambiguous bump up
-2. redo the horiz/vert sort
-'''
 
 class Variant(object):
 
@@ -72,7 +55,6 @@ class Variant(object):
         self.vix = vix
         self.set_info(lev=2)
         self.chk_var(allowImperfect=False)
-        #self.sort.test_rule1_supsets(vix=vix)
         
     def info(self,vname):
         allowImperfect = config['allowImperfectWithVInfo']
@@ -95,18 +77,18 @@ class Variant(object):
         self.kpc = self.sort.get_kixs_by_val(val=1,vix=self.vix)
         self.knc = self.sort.get_kixs_by_val(val=-1,vix=self.vix)
         self.kuc = self.sort.get_kixs_by_val(val=0,vix=self.vix)
-        self.kpcn = "kpc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
-        self.kncn = "knc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
-        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
+        self.kpcn = "kpc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),l2s(self.kpc))
+        self.kncn = "knc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),l2s(self.knc))
+        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),l2s(self.kuc))
         self.kpnc = sorted(self.kpc + self.knc)
 
         self.sups = self.get_rel(relType=1,allowImperfect=allowImperfect)
         self.sups.remove(0) #remove 'top'
         self.subs = self.get_rel(relType=-1,allowImperfect=allowImperfect)
         self.eqv = self.get_rel(relType=0,allowImperfect=allowImperfect)
-        self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
-        self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
-        self.eqvn = "eqv: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
+        self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),l2s(self.subs))
+        self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),l2s(self.sups))
+        self.eqvn = "eqv: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),l2s(self.eqv))
 
         if lev > 0:
             self.supOs = []
@@ -172,91 +154,6 @@ class Variant(object):
         
     def chk_var(self,allowImperfect):
 
-        '''{{{
-        [9] Z381:{{{
-        ---------------------------------------------------------------------------------------------------------------
-
-        +'s: B,C,G,H,I
-        U: D
-
-        sups are:
-
-        U106:     pP:D              mN:E,J                   subBef: Yes  rel: sub (cuz of A-F-)
-
-        So: with the sup issue alone, it's an ambiguous promotion.
-
-        any other sup U106 subs (that overlap Z381) - that Z381 doesn't see as eq/sub?:
-        Yes:
-
-        L48:   mP(Z381):C,H,I   mP(U106):C,D,H,I       xP:D   commonP: C,H,I
-        Z9:    mP(Z381):I       mp(U106):D,I           xP:D   commonP: I
-
-        These xP's ... resolved with any unk's? Yes -- so then the D is promotion confirmed.
-
-        }}}
-        [10] Z301:{{{
-        ---------------------------------------------------------------------------------------------------------------
-
-        +'s: C,H
-        -'s: F
-        U: A,B,D,E,G,I,J
-
-        sups are:
-
-        L48:  pP:D       pN:A,B,E,J mU:-  mP:C,H  mN: F      subBef: Yes  rel: Subset/Equal+
-        U106: pP:A,B,D   pN:E,J     mU:-  mP:C,H  mN: -      subBef: Yes  rel: Subset (cuz of F-)
-
-        So: sub2U106 means: whatever u106 is negative for ... Z301 has to be neg too: E,J
-        So: sub/eq+L48 means -- outside of E and J (unk>neg) and C,H (already +), the others could be - or + (in this case, we put ambiguous positve for all)
-
-        any other sup L48/U106 subs (that overlap Z301) - that Z301 doesn't see as eq/sub?:
-        No
-
-        }}}
-        [11] Z28:{{{
-        ---------------------------------------------------------------------------------------------------------------
-         
-        +'s: D,I (Z9 eq)
-        U: F
-
-        sups are:
-
-
-        L48:               pN:F     mN:A,B,E,G,J             subBef: Yes  rel: sub (cuz of C-H-)
-        U106:     pP:F     pN:      mN:E,J                   subBef: Yes  rel: eq
-
-        So: sub2L48 means: whatever L48 is negative for ... Z28 has to be neg too: F
-
-        any other sup L48/U106 subs (that overlap Z28) - that Z28 doesn't see as eq/sub?:
-        No
-
-        }}}
-        [12] A297:{{{
-        ---------------------------------------------------------------------------------------------------------------
-
-        +'s: D,G
-        U: B,I
-
-        sups are:
-
-        U106:   pP:B,I              mN:E,J                 subBef: Yes  rel: sub (cuz of A-C-F-H-)
-
-        So: with the sup issue alone: it's an ambiguous promotion for B,I
-
-        any other sup U106 subs (that overlap A297) - that Z381 doesn't see as eq/sub?:
-       
-        L48:   mP(A297):D     mP(U106):C,D,H,I     xP:C,H,I       commonP: D (split.1)
-        Z9:    mP(A297):D     mP(U106):I           xP:I           commonP: D
-
-        Can the unk's resolve the XP's? No
-        What commonP can be split? D (split.1)
-        What remains? G (split.2)
-
-        Everything else becomes neg
-
-        }}}
-        }}}'''
-
         print("")
         print("---------------------------------------------------------------------")
         print("")
@@ -265,24 +162,22 @@ class Variant(object):
         unkL = self.kuc
         unkD = {}
         for k in unkL:
-            unkD[k] = [0,0]
+            unkD[k] = [0,0] #0's are defaults
         othK = {}
 
         #1st arg of set : sup test1 result
-        #0 - nothing observed yet
         #1 = ambiguous promotion to positive
         #2 = hard promotion to positive
         #3 = hard negative
         
-        #2nd arg of set : sup test2 result
-        #0 - nothing observed yet
-        #1 - means (so far it's seen as filling a need)
+        #2nd arg of set : consistency test2 result
+        #2+ = if it gets to 2+ ... it means this unk should be positive to appease other variants
 
         #look for sups
         if len(self.sups):
 
             print("vix: %s [%s]"%(self.sort.get_vname_by_vix(self.vix),self.vix))
-            print("unks: %s [%s]" % (l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc)))
+            print("unks: %s [%s]" % (l2s(self.sort.get_kname_by_kix(self.kuc)),l2s(self.kuc)))
             print("")
             for sup in reversed(self.sups):
 
@@ -295,20 +190,20 @@ class Variant(object):
                 if len(diffKnc) > 0:
                     pN = list(set(self.kuc).intersection(set(knc4sup)))
                     if len(pN) > 0:
-                        print(" - [1] vix unk %s [%s] is/are neg" % (il2s(self.sort.get_kname_by_kix(pN)),il2s(pN)))
+                        print(" - [1] vix unk %s [%s] is/are neg" % (l2s(self.sort.get_kname_by_kix(pN)),l2s(pN)))
                         for k in pN:
                             if k in unkL:
                                 unkL.remove(k)
                             unkD[k][0] = 3 #hard failure
-                        print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),il2s(unkL)))
+                        print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
                     else:
                         print(" - [1] sup is truly sup to target variant, but all unks open to promotion")
                 else:
                     print(" - [1] sup is sub/eq/sup to target variant")
-                #for whatever hasn't been noted as a failure ... promote 
+                #ambiguous promotions
                 for k in unkL:
                     if unkD[k] != 3:
-                        unkD[k][0] = 1 #ambiguous promotions
+                        unkD[k][0] = 1 
                 #(end)sup check
 
                 #(beg)consistency check 
@@ -339,170 +234,26 @@ class Variant(object):
                         #(cP) common_kp c = intersection btw msP and mtP
                         common_kpc = list(set(as_common_kpc).intersection(set(at_common_kpc)))
                         print(" - [2] v1sub: %s [%s]"%(self.sort.get_vname_by_vix(v),v))
-                        print("       (mtP) shared btw vix + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(at_common_kpc)),il2s(at_common_kpc)))
-                        print("       (msP) shared btw sup + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(as_common_kpc)),il2s(as_common_kpc)))
-                        print("       (xP) msP-mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(diff_common_kpc)),il2s(diff_common_kpc)))
-                        print("       (cP) common btw msP+mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(common_kpc)),il2s(common_kpc)))
+                        print("       (mtP) shared btw vix + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(at_common_kpc)),l2s(at_common_kpc)))
+                        print("       (msP) shared btw sup + v1sub: %s [%s]"%(l2s(self.sort.get_kname_by_kix(as_common_kpc)),l2s(as_common_kpc)))
+                        print("       (xP) msP-mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(diff_common_kpc)),l2s(diff_common_kpc)))
+                        print("       (cP) common btw msP+mtP: %s [%s]"%(l2s(self.sort.get_kname_by_kix(common_kpc)),l2s(common_kpc)))
                         for k in diff_common_kpc:
                             if k in unkL:
                                 unkD[k][1] = unkD[k][1] + 1
                         if len(common_kpc) > 0:
                             splitL.append(common_kpc)
                         
+                #splits
                 unique_splits = [list(x) for x in set(tuple(x) for x in splitL)]
                 if len(unique_splits) > 0:
                     split_intersects = list(set.intersection(*map(set, unique_splits)))
                     if (len(unique_splits) > 1 and len(split_intersects) == 0):
                         print(" - [2] split required: btw %s" % unique_splits)
-                #(end)consistency check 
 
                 print("")
 
         print(unkD)
-
-        '''{{{
-        [9] Z381{{{
-
-        any other sup U106 subs (that overlap Z381) - that Z381 doesn't see as eq/sub?:
-        Yes:
-
-               *                                       *
-        L48:   mtP(Z381):C,H,I   msP(U106):C,D,H,I       xP:D   commonP: C,H,I
-        Z9:    mtP(Z381):I       msP(U106):D,I           xP:D   commonP: I
-
-        These xP's ... resolved with any unk's? Yes -- so then the D is promotion confirmed.
-
-        if whatever is in XP is the only think missing and it's und ... that's
-        the one.
-        }}}
-        [12] A297{{{
-
-        any other sup U106 subs (that overlap A297) - that Z381 doesn't see as eq/sub?:
-       
-               *                                       *
-        L48:   mtP(A297):D       msP(U106):C,D,H,I       xP:C,H,I       commonP: D (split.1)
-        Z9:    mtP(A297):D       msP(U106):D,I           xP:I           commonP: D
-        Z156   mtP(A297):G       msP(U106):B,G           xP:B           commonP: G
-
-        Can the unk's resolve the XP's? No
-        What commonP can be split? D (split.1)
-        What remains? G (split.2)
-
-        Everything else becomes neg
-        }}}
-        }}}'''
-
-        sys.exit()
-
-        '''{{{
-        #target vix's combined kpc + knc idxs
-        kpnc = sorted(self.kpc+self.knc)
-        kpnc = self.kpc
-
-        #NP data based on target vix's kpnc
-        kpncNP = self.sort.NP[:,kpnc]
-
-        ##NP data based on  target vix's kuc
-        ##kucNP = self.sort.NP[:,self.kuc]
-        ##print("")
-        ##print(kucNP)
-        ##print("")
-
-        #target vix's data for its kpnc
-        VkpncNP = kpncNP[self.vix]
-
-        #other vixes that match target vix's kpnc based data
-        VAR1 = np.argwhere(np.all(self.sort.NP[:,kpnc]==VkpncNP,axis=1)==True)[:,0]
-
-        #other vixes (w/cnts) that have 1's somewhere in target vix's kuc 
-        VAR2 = np.argwhere(self.sort.NP[:,self.kuc] == 1)
-
-        #uniq VAR2 (just the vixes)
-        VAR3 = np.unique(VAR2[:,0])
-
-        #vix's are in both VAR1 and VAR2 lists
-        VAR4 = list(set(list(VAR1)).intersection(list(VAR3)))
-        #print(self.sort.get_vname_by_vix(VAR4))
-
-
-        vList = []
-        vnList = []
-        if len(VAR4):
-            for v in reversed(VAR4):
-                #pos variants that 2nd variant has, that target vix doesn't 
-                x = list(set(self.sort.get_kixs_by_val(val=1,vix=v))-set(self.kpc))
-                #neg variants that 2nd variant has, that target vix doesn't 
-                y = list(set(self.sort.get_kixs_by_val(val=-1,vix=v))-set(self.knc))
-                if v != 0:
-                    vList.append((v,x,y))
-                    vnList.append((self.sort.get_vname_by_vix(v), l2s(self.sort.get_kname_by_kix(x)), l2s(self.sort.get_kname_by_kix(y))))
-                #vkpc = self.sort.get_kix_by
-                #self.sort.NP[:,kpnc]P
-                #self.sort.NP[:,kpnc]
-
-        print("")
-        print("vix: %s]" % self.sort.get_vname_by_vix(self.vix))
-        print("kpc: %s [%s]" % (il2s(self.kpc),l2s(self.sort.get_kname_by_kix(self.kpc))))
-        print("knc: %s [%s]" % (il2s(self.knc),l2s(self.sort.get_kname_by_kix(self.knc))))
-        print("kuc: %s [%s]" % (il2s(self.kuc),l2s(self.sort.get_kname_by_kix(self.kuc))))
-        print("")
-        print("vList(#'s)")
-        print("")
-        print(vList)
-        print("")
-        print("vList(names) - vixes that have all the +'s tvix has and then some, extra +'s to unks, shared -'s")
-        print("")
-        print(vnList)
-        print("")
-
-        
-        #[(9, [1, 2, 4]), (2, [0, 1])]
-        #...
-        #what needs to happen:  is there any overlap btw results here? 
-        #...
-        #scenarios:
-        #...
-        #(1) completely separate (and target variant is parent to them both)
-        #(2) they completely match - so they're dupes
-        #(3) one is a superset of another
-        #(4) they overlap but also have distinct things too. in this case ...  ???
-        #...
-        #how target variant fits in: 
-        #...
-        #(1) assume target variant is a parent - so matches all  positive vals
-        #(2) assume target variant is a dupe as well ... matches all positive vals
-        #(3) assume target variant is a dupe with the bigger variant - matches all +'s
-        #...
-        #is there something I need to do about checking the commonality with a
-        #superset variant too? (like with subsets?)
-        #what to do with other unks? (that don't fit?)
-
-        #print(VAR4)
-        #print(VAR2)
-
-        #sorter = np.argsort(VAR2[:,0)
-        #        idx = sorter[np.searchsorted(VAR2[:,0],,sorter=sorter)]
-        #...
-        #kpncNP = NP[:,kpnc]
-        #VAR3 = np.argwhere(VAR2[:,self.kuc] == 1)
-
-        #print(VAR1)
-        #print(self.sort.get_vname_by_vix(VAR1))
-        #(x) I want to just filter the kpc + knc columns
-        #(x) vals = [-1,0]
-        #(x) sorter = np.argsort(self.sort.NP)
-        #(x) idx = sorter[np.searchsorted(self.sort.NP,vals,sorter=sorter)]
-        #(x) [1] kpc+knc of the variant when not optimizing unk to pos  
-        #(x) [1a] what other variants have an exact match at this kpc+knc?
-
-        #[2] then further filter out those variants that have additional +'s for when the
-        #    target has unks.
-        #    if so, the variants could be at least this.(or a subset of these)
-        #[2] do they have any common supsets where these "additional variants"
-        #    are also shared?
-        #    if so, there's an opportunity for even more +'s?
-        #[3] are there any irregularities that prevent a promotion?
-        }}}'''
 
     def get_rel(self,relType,override_val=None,kix=None,kpc=None,allowImperfect=False):
 
@@ -653,7 +404,7 @@ class Variant(object):
         if config['DBG_SUBS_IN']:
             print("[subin.12] VAR6: %s"%VAR6)
 
-        #subsets shouldn't have diff intersecting positives with common supersets{{{
+        #subsets shouldn't have diff intersecting positives with common supersets
         subsc = list(VAR5)
         invalid_subs = []
         for v in subsc:
@@ -687,7 +438,7 @@ class Variant(object):
         #(beg) technique found here: https://stackoverflow.com/questions/32191029/getting-the-indices-of-several-elements-in-a-numpy-array-at-once/32191125#32191125
         sorter = np.argsort(VAR5)
         idx = sorter[np.searchsorted(VAR5,invalid_subs,sorter=sorter)]
-        #(end)#}}}
+        #(end)
         VAR5a = np.delete(VAR5, idx)
         VAR6a = np.delete(VAR6, idx)
 
@@ -697,13 +448,7 @@ class Variant(object):
         if config['DBG_SUBS_IN']:
             print("[subin.13] VAR7: %s"%VAR7)
 
-        #if len(VAR6) == 0:
-        #    return []
-
-        #question is does it share other things in common with common supersets
-        #of the target variant. if so, not subet.
-
-        return VAR7 #[:,0]
+        return VAR7
         
     def get_supsets_or_eqv(self,kpc,eq_override=False):
 
@@ -748,7 +493,7 @@ class Variant(object):
                     kpc_ = self.kpc
                 except:
                     kpc_ = self.sort.get_kixs_by_val(val=1,vix=self.vix)
-                #this logic drops equivalents
+                #this logic drops equivalents (eq_override arg)
                 if eq_override is False and val in VAR4 and cntA[idx] == len(kpc_):
                     idx1 = np.argwhere(VAR4==val)
                     VAR4 = np.delete(VAR4, idx1)
@@ -889,41 +634,27 @@ class Sort(object):
         #get data
         self.get_mx_data()
 
-        #step 0
-        debug_chk('DBG_MATRIX',"data - step 0 (default)",1)
+        #proc
+        debug_chk('DBG_MATRIX',"data - sort 1",1)
+        self.mx_vertical_sort()
+        self.mx_horizontal_sort()
         self.stdout_matrix()
-
-        #step 1
-        debug_chk('DBG_MATRIX',"data - step 1",1)
-        self.sort_step1()
-        self.stdout_matrix()
-
-        #step 2
-        debug_chk('DBG_MATRIX',"data - step 2",1)
-        self.sort_step2()
-        self.stdout_matrix()
-
-        #step 3
-        debug_chk('DBG_MATRIX',"data - step 3",1)
-        self.sort_step3()
-        self.stdout_matrix()
-
+        self.save_mx_to_db()
         sys.exit()
 
+        #step x
+        debug_chk('DBG_MATRIX',"data - step 2",1)
+        self.sort_step1()
+        self.stdout_matrix()
+        self.save_mx_to_db()
+        sys.exit()
+        
     def sort_step1(self):
-        self.mx_vertical_sort()
-        self.save_mx_to_db()
-        
-    def sort_step2(self):
-        self.mx_horizontal_sort()
-        self.save_mx_to_db()
-        
-    def sort_step3(self):
         print("---------------------------------------------------------------------")
         print("Processing Imperfect Variants:")
         print("disabled. exiting.")
         sys.exit()
-        for impVix in self.get_imperfect_variants_idx():
+        for vix in self.get_imperfect_variants_idx():
             print("---------------------------------------------------------------------")
             print("{{"+"{") #beg vim marker
             results = []
@@ -936,7 +667,6 @@ class Sort(object):
         self.get_mx_count_data()
         self.mx_vertical_sort()
         self.mx_horizontal_sort()
-        self.save_mx_to_db()
 
     def get_row_when_override_kixs(self,override_val,vix,kixs):
         row = self.get_mx_kdata(vix=vix)
@@ -1100,9 +830,6 @@ class Sort(object):
         
     def save_mx_to_db(self):
         sql = "delete from s_mx_idxs;"
-        #sql = sql+"delete from s_mx_kits;"
-        #sql = sql+"delete from s_mx_calls;"
-        #sql = sql+"delete from s_mx_idxs;"
         self.dbo.sql_exec(sql)
         itms = [(k,c2) for (n,(k,(c1,c2))) in enumerate(self.get_axis('variants'))]
         sql = "insert into s_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
@@ -1131,11 +858,9 @@ class Sort(object):
             else:
                 listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
                 if orderByType in ['vp','vn','vx']:
-                    #print(self.VARIANTS)
                     return [(key, self.VARIANTS[key]) for key in listByCount]
                 if orderByType in ['kp','kn','kx']:
                     return [(key, self.KITS[key]) for key in listByCount]
-        
 
     def get_mx_row_as_list(self,rownum,noneToStr=True):
         if noneToStr:
@@ -1155,7 +880,7 @@ class Sort(object):
         if kix is not None:
             return self.NP[:,kix].T
 
-    def get_perfect_variants_idx(self):
+    def get_perfect_variants_idx(self): #TODO: is this even being used?
         idx = list(range(len(self.VARIANTS)))
         prf_idx = idx[:] #copy idx so I have this one for deleting
         unk_idx = list(np.unique(np.argwhere(self.NP==0)[:,0]))
@@ -1180,7 +905,6 @@ class Sort(object):
             return vix
 
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
-        #override_val -- is the override val (ie: check what conditions are after setting a coord to be 1 and not 0, for example)
         row = self.get_mx_kdata(vix=vix)
         rowO = np.empty_like(row)
         rowO[:] = row #make duplicate copy - important!
@@ -1247,7 +971,7 @@ class Sort(object):
         
     def get_mx_count_data(self):
 
-        #NOTE: this could be done with numpy - which is better? does it matter?
+        #TODO: is this needed? better with numpy?
 
         #vars
         self.CNTS = {}
