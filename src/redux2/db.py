@@ -1,12 +1,9 @@
-# license {{{
+# license + libs{{{
 
 # Purpose: Y-DNA NGS analytics
 # Git repo: https://github.com/jazdrv/dnaTools
 # For free distribution under the terms of the GNU General Public License,
 # version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
-
-# }}}
-# libs {{{
 
 import sys,os,sqlite3,yaml,csv,json,numpy as np
 

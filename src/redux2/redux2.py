@@ -7,9 +7,6 @@
 # For free distribution under the terms of the GNU General Public License,
 # version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
 
-# }}}
-# libs {{{
-
 import sys,argparse,yaml,os
 from sort import *
 from db import *
@@ -23,14 +20,17 @@ except:
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
+#parser
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-vi', '--variant_info', help='variant info', type=str)
 parser.add_argument('-vp', '--variant_proc', help='variant process', type=str)
 parser.add_argument('-m', '--matrix', help='matrix', action='store_true')
 parser.add_argument('-u', '--unknowns', help='unknowns', action='store_true')
 parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema currently)', action='store_true')
-
 args = parser.parse_args()
+
+#arg handling
 
 if args.sort:
     sort = Sort()
@@ -66,4 +66,3 @@ if args.unknowns:
     sort = Sort()
     sort.dbo = DB()
     sort.stdout_unknowns()
-

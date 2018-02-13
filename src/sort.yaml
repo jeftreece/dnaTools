@@ -6,7 +6,6 @@ DBG_SUPS: False
 DBG_SUPS_IN: False 
 DBG_SUBS: False 
 DBG_SUBS_IN: False
-DBG_MATRIX: 2
 
 # special handling
 
