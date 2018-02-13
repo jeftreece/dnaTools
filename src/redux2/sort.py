@@ -162,7 +162,7 @@ class Variant(object):
         unkL = self.kuc
         unkD = {}
         for k in unkL:
-            unkD[k] = [0,0] #0's are defaults
+            unkD[k] = [0,0,0] #0's are defaults
         othK = {}
         splitReq = False
 
@@ -173,6 +173,9 @@ class Variant(object):
         
         #2nd arg of set : consistency test2 result
         #2+ = if it gets to 2+ ... it means this unk should be positive to appease other variants
+
+        #3rd arg of set : consistency test2 result (split override)
+        #1 - means neg (due to split)
 
         #look for sups
         if len(self.sups):
@@ -256,13 +259,14 @@ class Variant(object):
 
                 print("")
 
-        #print(unkD)
+        #resolution vars
         pos = []
         pos_a = []
         neg = []
         s_ = []
         lenS = 1
-        #print(uniq_splits)
+
+        #resolutions
         if splitReq:
             for s in uniq_splits:
                 if len(s) > 1 : lenS = len(s)
@@ -271,22 +275,22 @@ class Variant(object):
                 print("splits: %s [%s]" % (l2s(self.sort.get_kname_by_kix(s_)),l2s(s_)))
             else:
                 print("splits: %s" % l2s(uniq_splits))
-        else:
-            for k,v in unkD.items():
-                if v[0] == 3:
-                    neg.append(k)
-                elif v[0] == 2:
-                    pos.append(k)
-                elif v[1] > 1:
-                    pos.append(k)
-                elif v[0] == 1:
-                    pos_a.append(k)
-            if len(pos):
-                print("pos: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos)),l2s(pos)))
-            if len(pos_a):
-                print("pos_a: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos_a)),l2s(pos_a)))
-            if len(neg):
-                print("neg: %s [%s]" %  (l2s(self.sort.get_kname_by_kix(neg)),l2s(neg)))
+            for k in self.kuc:
+                unkD[k][2] = 1
+
+        for k,v in unkD.items():
+            if v[0] == 3 or v[2] == 1:
+                neg.append(k)
+            elif v[0] == 2 or v[1] > 1:
+                pos.append(k)
+            elif v[0] == 1:
+                pos_a.append(k)
+        if len(pos):
+            print("pos: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos)),l2s(pos)))
+        if len(pos_a):
+            print("pos_a: %s [%s]" % (l2s(self.sort.get_kname_by_kix(pos_a)),l2s(pos_a)))
+        if len(neg):
+            print("neg: %s [%s]" %  (l2s(self.sort.get_kname_by_kix(neg)),l2s(neg)))
         
         print("")
         print("---------------------------------------------------------------------")
