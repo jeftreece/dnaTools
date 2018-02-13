@@ -54,7 +54,7 @@ class Variant(object):
             vix = self.sort.get_vix_by_name(vname.upper())
         self.vix = vix
         self.set_info(lev=2)
-        self.chk_var(allowImperfect=False)
+        self.proc_chk(allowImperfect=False)
         
     def info(self,vname):
         allowImperfect = config['allowImperfectWithVInfo']
@@ -152,7 +152,7 @@ class Variant(object):
             print("---------------------------------------------------------------------")
             print("")
         
-    def chk_var(self,allowImperfect):
+    def proc_chk(self,allowImperfect):
 
         print("")
         print("---------------------------------------------------------------------")
