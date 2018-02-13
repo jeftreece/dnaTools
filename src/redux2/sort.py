@@ -55,7 +55,6 @@ sys.path.append(config['REDUX_PATH'])
 #TODO: order of priority
 '''
 1. (x) split checker ... anything with a split needs to be flagged. doesn't get an ambiguous bump up
-1. (x) A297 junk rule
 2. redo the horiz/vert sort
 '''
 
@@ -529,114 +528,6 @@ class Variant(object):
         #[3] are there any irregularities that prevent a promotion?
         }}}'''
 
-    def _old_set_info1(self,vix,lev=1):
-        lev = lev-1
-        self.vix = vix
-        self.name = self.sort.get_vname_by_vix(vix)
-        self.vixn = "%s [%s]"%(self.name,vix)
-        self.kpc = self.sort.get_kixs_by_val(val=1,vix=vix)
-        self.knc = self.sort.get_kixs_by_val(val=-1,vix=vix)
-        self.kuc = self.sort.get_kixs_by_val(val=0,vix=vix)
-        self.kpcn = "kpc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpc)),il2s(self.kpc))
-        self.kncn = "knc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.knc)),il2s(self.knc))
-        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),il2s(self.kuc))
-
-        if len(self.kuc) > 0:
-            overrideData = self.sort.get_row_when_override_kixs(1,vix=self.vix,kixs=self.kuc)
-            self.kpuc = np.argwhere(overrideData[0,] == 1).T[1,]
-            self.kpucn = "kpuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kpuc)),il2s(self.kpuc))
-            self.eqv = np.unique(np.argwhere(self.sort.NP[:,self.kpuc]==1)[:,0]).tolist()
-            #self.eqv = self.supsT[:] #sometimes we need this top version?
-            self.eqv.remove(0) #remove 'top'
-            self.eqvn = "kpuc overlaps: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),il2s(self.eqv))
-
-        if lev >= 0:
-            self.sups = self.get_rel(relType=1)
-            #self.sups = self.supsT[:] #sometimes we need this top version?
-            self.sups.remove(0) #remove 'top'
-            self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),il2s(self.sups))
-        else:
-            self.sups = []
-            self.supsn = "sups: recursion limit hit - %s" % lev
-
-        if lev >= 0:
-
-            self.supOs = OrderedDict()
-            for sup in self.sups:
-                supO = self.supOs[self.sort.get_vname_by_vix(sup)] = Variant()
-                supO.sort = self.sort
-                supO.dbo = self.dbo
-                supO.set_info(sup,lev)
-
-        if lev >= 0:
-            #if 1 == 1:
-            self.subs = self.get_rel(relType=-1)
-            self.subsn = "subs: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.subs)),il2s(self.subs))
-        else:
-            self.subs = []
-            self.subsn = "subs: recursion limit hit - %s" % lev
-
-        if lev >= 0:
-
-            self.subOs = OrderedDict()
-            for sub in self.subs:
-                subO = self.subOs[self.sort.get_vname_by_vix(sub)] = Variant()
-                subO.sort = self.sort
-                subO.dbo = self.dbo
-                subO.set_info(sub,lev)
-        
-    def _old_stdout_info1(self,tp=None):
-        print("")
-        if tp is None:
-            print("---------------------------------------------------------------------")
-        #basic info 
-        if tp==1:
-            print("[+] %s" %self.vixn)
-            sp = "    "
-        elif tp==-1:
-            print("[-] %s" %self.vixn)
-            sp = "    "
-        else:
-            print("vix: %s" %self.vixn)
-            sp = ""
-        print("%s%s" %(sp,self.kpcn))
-        print("%s%s" %(sp,self.kncn))
-        #kupc
-        noKpuc = 0
-        try:
-            self.kpuc
-        except:
-            noKpuc = 1
-        if noKpuc == 1:
-            print("%s%s" %(sp,self.kucn))
-        else:
-            #print("")
-            print("%s%s" %(sp,self.kucn))
-            print("%s%s" %(sp,self.kpucn))
-            print("%s%s" %(sp,self.eqvn))
-        #supsets+subsets
-        print("%s%s" %(sp,self.supsn))
-        print("%s%s" %(sp,self.subsn))
-        noSupOs = 0
-        noSubOs = 0
-        #try:
-        #    self.supOs
-        #except:
-        #    noSupOs = 1
-        try:
-            self.subOs
-        except:
-            noSubOs = 1
-        if noSubOs == 0:
-            for sup,supO in self.supOs.items():
-                if sup != 'top':
-                    supO.stdout_info(tp=1)
-            for subO in self.subOs.values():
-                subO.stdout_info(tp=-1)
-        if tp is None:
-            print("---------------------------------------------------------------------")
-            print("")
-
     def get_rel(self,relType,override_val=None,kix=None,kpc=None,allowImperfect=False):
 
         #-------------------------------------------------------------------------------------------------{{{
@@ -1073,10 +964,6 @@ class Sort(object):
         #get data
         self.get_mx_data()
 
-        #stdout relations data
-        #if config['DBG_RELS']:
-        #    self.stdout_mx_relations_data()
-
         #step 0
         debug_chk('DBG_MATRIX',"data - step 0 (default)",1)
         self.stdout_matrix()
@@ -1095,10 +982,6 @@ class Sort(object):
         debug_chk('DBG_MATRIX',"data - step 3",1)
         self.sort_step3()
         self.stdout_matrix()
-
-        #step 4
-        #debug_chk('DBG_MATRIX',"data - step 4",1)
-        #self.sort_step4()
 
         sys.exit()
 
@@ -1403,23 +1286,15 @@ class Sort(object):
             kix = self.get_kix_by_name(kname)
         if kix is not None:
             return self.NP[:,kix].T
-        
 
     def get_imperfect_variants(self):
         #TODO: need to fix this. I had the def wrong.
         variant_idx = np.argwhere(self.NP==-1) #get index to negative data
         variant_idx_r = np.unique(variant_idx[:,0]) #get unique rows of those indices
         variant_data = self.NP[variant_idx_r]
-        #print(variant_data)
-        #sys.exit()
         vnames = self.get_vname_by_vix(variant_idx_r)
         self.set_new_axis(vnames,variant_idx_r,variantType=True) #reset variant axis
-        #sys.exit()
-        #self.NP = None
-        #print(variant_data)
         self.NP = variant_data #reset data
-        #print(self.NP)
-        #sys.exit()
         
     def get_perfect_variants_idx(self):
         idx = list(range(len(self.VARIANTS)))
@@ -1431,8 +1306,6 @@ class Sort(object):
         return idx
         
     def get_imperfect_variants_idx(self):
-        #print(list(np.unique(np.argwhere(self.NP==0)[:,0]))[:]) #make it a copy
-        #sys.exit()
         return list(np.unique(np.argwhere(self.NP==0)[:,0]))[:] #make it a copy
         
     def filter_perfect_variants(self,vix):
@@ -1590,7 +1463,7 @@ class Sort(object):
         self.get_mx_count_data()
 
         #get relations data
-        self.get_mx_relations_data()
+        #self.get_mx_relations_data()
 
     def get_mx_count_data(self):
 
@@ -1736,45 +1609,3 @@ class Sort(object):
         self.UNKA = self.dbo.fetchall()
 
         #}}}
-
-    def get_uniq_counts(self,arr):
-        unique_elements, counts_elements = np.unique(arr, return_counts=True)
-        return np.asarray((unique_elements, counts_elements)).T #get uniques
-
-    # not used
-
-    def stdout_mx_relations_data(self,dataStr='',run=0):
-        if dataStr != '' and run != 0:
-            print("---")
-            print(str(dataStr)+"{{"+"{") #beg vim marker
-        print("")
-        #print counts
-        print("relation counts:")
-        print("-------------------------")
-        print("mix:"+str(len(self.MIXA)))
-        print("pos:"+str(len(self.POSA)))
-        print("neg:"+str(len(self.NEGA)))
-        print("unk:"+str(len(self.UNKA)))
-        print("")
-        #print data
-        print("relation data:")
-        print("-------------------------")
-        for K in sorted(list(set([itm1[0] for itm1 in self.MIXA]+[itm1[0] for itm1 in self.POSA]+[itm1[0] for itm1 in self.NEGA]))):
-            M = ",".join(sorted([itm2[1] for itm2 in self.MIXA if itm2[0] == K]))
-            P = ",".join(sorted([itm2[1] for itm2 in self.POSA if itm2[0] == K]))
-            N = ",".join(sorted([itm2[1] for itm2 in self.NEGA if itm2[0] == K]))
-            U = ",".join(sorted([itm2[1] for itm2 in self.UNKA if itm2[0] == K]))
-            print (str(K.lower())+"| mix:["+str(M.lower())+"], pos:["+str(P.lower())+"], neg:["+str(N.lower())+"], unk:["+str(U.lower())+"]")
-        print("")
-        if dataStr != '' and run != 0:
-            print("}}"+"}") #end vim marker
-        
-    def get_min_superset_variant(self,vix=None,vname=None): #order is variant's order in matrix, name is vname
-        if vname is not None:
-            vix = self.get_vix_by_name(vname)
-        sups = self.get_vix_rel(relType=1,vix=vix)
-        if len(sups) is 0:
-            return None
-        else:
-            return sups[0]
-
