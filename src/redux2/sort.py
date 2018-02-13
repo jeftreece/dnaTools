@@ -199,7 +199,7 @@ class Variant(object):
                         if len(unkL):
                             print(" - [1] remaining unk: %s [%s]" %(l2s(self.sort.get_kname_by_kix(unkL)),l2s(unkL)))
                     else:
-                        print(" - [1] sup is truly sup to target variant, but all unks open to promotion")
+                        print(" - [1] sup is truly sup to target variant, all unks open to promotion")
                 else:
                     print(" - [1] sup is sub/eq/sup to target variant")
                 #ambiguous promotions
