@@ -261,10 +261,6 @@ create view x_perfect_assignments_with_unk_cnt_unk_k AS
 create view x_saved_kits AS 
   SELECT DISTINCT ID from x_mx_kits;
 
--- create view x_saved_variants AS 
---   SELECT DISTINCT name, pos, ID
---   FROM x_mx_variants;
-
 create view x_saved_variants AS 
   SELECT DISTINCT name, pos, ID
   FROM x_mx_variants limit 5;
@@ -280,14 +276,14 @@ create view x_saved_assignments AS
   WHERE SC.vID = SV.ID;
 
 create view x_saved_assignments_with_unk AS
-  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID -- , VI.idx, KI.idx
+  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID, VI.idx, KI.idx
   FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
   LEFT JOIN x_saved_assignments SVKA
   ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
   -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
-  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
-  KI.type_id = 1 AND KI.axis_id = SVK.pID;
-  -- ORDER BY 6,7;
+  WHERE VI.type_id = 0 AND VI.axis_id = SVK.name AND  -- fix this
+  KI.type_id = 1 AND KI.axis_id = SVK.pID
+  ORDER BY 6,7;
 
 -- }}}
 
