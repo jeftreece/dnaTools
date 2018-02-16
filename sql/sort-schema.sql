@@ -1,6 +1,6 @@
 -- sort prototype schema
 
--- DROP VIEWS
+-- (old) DROP VIEWS{{{
 
 drop view if exists saved_assignments_with_unk;
 drop view if exists saved_assignments;
@@ -14,7 +14,8 @@ drop view if exists perfect_variants_with_kits;
 drop view if exists perfect_variants;
 drop view if exists kits_view;
 
--- DROP TABLES
+-- }}}
+-- (old) DROP TABLES {{{
 
 drop table if exists s_variants;
 drop table if exists s_calls;
@@ -25,7 +26,8 @@ drop table if exists s_mx_idxs;
 drop table if exists s_mx_variants;
 drop table if exists s_mx_calls;
 
--- CREATE TABLES
+-- }}}
+-- (old) CREATE TABLES {{{
 
 create table s_variants (
  variant_id int,  
@@ -70,7 +72,8 @@ create table s_mx_calls (
  changed int
 );
 
--- CREATE VIEWS
+-- }}}
+-- (old) CREATE VIEWS (perfect) {{{
 
 create view kits_view AS 
   SELECT DISTINCT kit_id from s_calls;
@@ -98,6 +101,9 @@ create view perfect_assignments_with_unk AS
   ON PVK.variant_loc = PVKA.variant_loc AND
   PVK.kit_id = PVKA.kit_id;
 
+-- }}}
+-- (old) CREATE VIEWS (saved) {{{
+
 create view saved_kits AS 
   SELECT DISTINCT kit_id from s_mx_kits;
 
@@ -124,4 +130,121 @@ create view saved_assignments_with_unk AS
   WHERE VI.type_id = 0 and VI.axis_id = SVK.name AND 
   KI.type_id = 1 and KI.axis_id = SVK.kit_id
   ORDER BY 6,7;
+
+-- }}}
+
+-- (new) DROP VIEWS {{{
+
+drop view if exists x_kit_view;
+drop view if exists x_perfect_variants;
+drop view if exists x_perfect_variants_with_kits;
+drop view if exists x_perfect_assignments;
+drop view if exists x_perfect_assignments_with_unk;
+
+drop view if exists x_saved_kits;
+drop view if exists x_saved_variants;
+drop view if exists x_saved_variants_with_kits;
+drop view if exists x_saved_assignments;
+drop view if exists x_saved_assignments_with_unk;
+
+-- }}}
+-- (new) DROP TABLES {{{
+
+drop table if exists x_mx_kits;
+drop table if exists x_mx_variants;
+drop table if exists x_mx_idxs;
+drop table if exists x_mx_calls;
+
+-- }}}
+-- (new) CREATE TABLES {{{
+
+create table x_mx_kits(
+ ID int,
+ idx int
+);
+
+create table x_mx_variants (
+ ID int,  
+ ref_variant_id int,
+ pos int,
+ name text
+);
+
+create table x_mx_idxs(
+ type_id int,           -- 0 = variants, 1 = kits (people)
+ axis_id int,   -- either the variant id (vID) or the kit_id (pID) 
+ idx int
+);
+
+create table x_mx_calls (
+ pID int,
+ vID int,
+ assigned boolean,
+ confidence int,
+ changed int
+);
+
+-- }}}
+-- (new) CREATE VIEWS (perfect) {{{
+
+create view x_kit_view AS 
+  SELECT DISTINCT pID as kit_id from vcfcalls;
+
+create view x_perfect_variants AS
+  SELECT DISTINCT ifnull(S.snpname,V.pos) as name, V.pos, V.ID
+  FROM vcfcalls C, variants V 
+  LEFT JOIN snpnames S
+  ON S.vID = V.ID
+  WHERE (C.assigned = -1 OR S.snpname = 'top') AND -- C.assigned
+  V.ID = C.vID;
+
+create view x_perfect_variants_with_kits AS
+  SELECT K.kit_id, PV.name, PV.pos, PV.ID
+  FROM x_perfect_variants PV
+  CROSS JOIN x_kit_view K;
+
+create view x_perfect_assignments AS
+  SELECT C.pID as kit_id, PV.name, PV.pos, PV.ID, C.assigned -- C.assigned
+  FROM vcfcalls C, x_perfect_variants PV
+  WHERE C.vID = PV.ID;
+
+create view x_perfect_assignments_with_unk AS
+  SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.ID
+  FROM x_perfect_variants_with_kits PVK 
+  LEFT JOIN x_perfect_assignments PVKA
+  ON PVK.ID  = PVKA.ID AND
+  PVK.kit_id = PVKA.kit_id;
+
+-- }}}
+-- (new) CREATE VIEWS (saved) {{{
+
+create view x_saved_kits AS 
+  SELECT DISTINCT ID from x_mx_kits;
+
+create view x_saved_variants AS 
+  SELECT DISTINCT name, pos, ID
+  FROM x_mx_variants;
+
+create view x_saved_variants_with_kits AS
+  SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID
+  FROM x_saved_variants SV
+  CROSS JOIN x_saved_kits SK;
+
+create view x_saved_assignments AS
+  SELECT SC.pID, SV.name, SV.pos, SV.ID as vID, SC.assigned
+  FROM x_mx_calls SC, x_saved_variants SV
+  WHERE SC.vID = SV.ID;
+
+create view x_saved_assignments_with_unk AS
+  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, 
+  SVK.vID -- , VI.idx, KI.idx
+  FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
+  LEFT JOIN x_saved_assignments SVKA
+  ON SVK.pos = SVKA.pos AND
+  SVK.pID = SVKA.pID
+  WHERE VI.type_id = 0 and VI.axis_id = SVK.vID AND 
+  KI.type_id = 1 and KI.axis_id = SVK.pID;
+  -- ORDER BY 6,7;
+
+-- }}}
 

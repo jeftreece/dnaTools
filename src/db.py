@@ -78,4 +78,5 @@ class DB(object):
 if __name__=='__main__':
     db = DB()
     db.create_schema()
+    -- db.create_schema(schemafile='sort-schema.sql')
     db.commit()
