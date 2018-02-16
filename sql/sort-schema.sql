@@ -147,13 +147,13 @@ drop view if exists x_saved_variants_with_kits;
 drop view if exists x_saved_assignments;
 drop view if exists x_saved_assignments_with_unk;
 
-drop view x_perfect_assignments_with_unk_cnt_pos_v;
-drop view x_perfect_assignments_with_unk_cnt_neg_v;
-drop view x_perfect_assignments_with_unk_cnt_unk_v;
+drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
+drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
+drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
 
-drop view x_perfect_assignments_with_unk_cnt_pos_k;
-drop view x_perfect_assignments_with_unk_cnt_neg_k;
-drop view x_perfect_assignments_with_unk_cnt_unk_k;
+drop view if exists x_perfect_assignments_with_unk_cnt_pos_k;
+drop view if exists x_perfect_assignments_with_unk_cnt_neg_k;
+drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
 
 -- }}}
 -- (new) DROP TABLES {{{
@@ -284,7 +284,8 @@ create view x_saved_assignments_with_unk AS
   FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
   LEFT JOIN x_saved_assignments SVKA
   ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
-  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND 
+  -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
+  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
   KI.type_id = 1 AND KI.axis_id = SVK.pID;
   -- ORDER BY 6,7;
 
