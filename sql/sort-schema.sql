@@ -154,6 +154,9 @@ drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
 drop view if exists x_perfect_assignments_with_unk_cnt_pos_k;
 drop view if exists x_perfect_assignments_with_unk_cnt_neg_k;
 drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
+ 
+drop view if exists x_pos_call_chk;
+drop view if exists x_neg_call_chk;
 
 -- }}}
 -- (new) DROP TABLES {{{
@@ -206,12 +209,21 @@ create view x_kit_view AS
 --   WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
 --   V.ID = C.vID;
 
+create view x_pos_call_chk as 
+  SELECT DISTINCT vID from vcfcalls where assigned = 1;
+
+create view x_neg_call_chk as 
+  SELECT DISTINCT vID from vcfcalls where assigned = -1;
+
 create view x_perfect_variants AS
   SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
-  FROM vcfcalls C, variants V 
+  -- FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
+  FROM vcfcalls C, variants V
   LEFT JOIN snpnames S
   ON S.vID = V.ID
   WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
+  -- WHERE -- C.assigned
+  -- N.vID = V.ID and P.vID = V.ID AND 
   V.ID = C.vID limit 5;
 
 create view x_perfect_variants_with_kits AS
