@@ -123,7 +123,7 @@ if args.sort:
     sort = Sort()
     sort.dbo = DB1()
     sort.sort_schema()
-    sort.sort_ins_sample_data()
+    #sort.sort_ins_sample_data()
     sort.sort_matrix()
 
 if args.variant_info:

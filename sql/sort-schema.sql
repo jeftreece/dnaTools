@@ -147,6 +147,14 @@ drop view if exists x_saved_variants_with_kits;
 drop view if exists x_saved_assignments;
 drop view if exists x_saved_assignments_with_unk;
 
+drop view x_perfect_assignments_with_unk_cnt_pos_v;
+drop view x_perfect_assignments_with_unk_cnt_neg_v;
+drop view x_perfect_assignments_with_unk_cnt_unk_v;
+
+drop view x_perfect_assignments_with_unk_cnt_pos_k;
+drop view x_perfect_assignments_with_unk_cnt_neg_k;
+drop view x_perfect_assignments_with_unk_cnt_unk_k;
+
 -- }}}
 -- (new) DROP TABLES {{{
 
@@ -188,32 +196,64 @@ create table x_mx_calls (
 -- (new) CREATE VIEWS (perfect) {{{
 
 create view x_kit_view AS 
-  SELECT DISTINCT pID as kit_id from vcfcalls;
+  SELECT DISTINCT pID from vcfcalls;
+
+-- create view x_perfect_variants AS
+--   SELECT DISTINCT ifnull(S.snpname,V.pos) as name, V.pos, V.ID
+--   FROM vcfcalls C, variants V 
+--   LEFT JOIN snpnames S
+--   ON S.vID = V.ID
+--   WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
+--   V.ID = C.vID;
 
 create view x_perfect_variants AS
-  SELECT DISTINCT ifnull(S.snpname,V.pos) as name, V.pos, V.ID
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
   FROM vcfcalls C, variants V 
   LEFT JOIN snpnames S
   ON S.vID = V.ID
-  WHERE (C.assigned = -1 OR S.snpname = 'top') AND -- C.assigned
-  V.ID = C.vID;
+  WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
+  V.ID = C.vID limit 100;
 
 create view x_perfect_variants_with_kits AS
-  SELECT K.kit_id, PV.name, PV.pos, PV.ID
+  SELECT K.pID, PV.name, PV.pos, PV.ID as vID
   FROM x_perfect_variants PV
   CROSS JOIN x_kit_view K;
 
 create view x_perfect_assignments AS
-  SELECT C.pID as kit_id, PV.name, PV.pos, PV.ID, C.assigned -- C.assigned
+  SELECT C.pID, PV.name, PV.pos, PV.ID as vID, C.assigned -- C.assigned
   FROM vcfcalls C, x_perfect_variants PV
   WHERE C.vID = PV.ID;
 
 create view x_perfect_assignments_with_unk AS
-  SELECT PVK.kit_id, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.ID
+  SELECT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID
   FROM x_perfect_variants_with_kits PVK 
   LEFT JOIN x_perfect_assignments PVKA
-  ON PVK.ID  = PVKA.ID AND
-  PVK.kit_id = PVKA.kit_id;
+  ON PVK.vID = PVKA.vID AND
+  PVK.pID = PVKA.pID;
+
+create view x_perfect_assignments_with_unk_cnt_pos_v AS
+ SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+ GROUP BY 4;
+
+create view x_perfect_assignments_with_unk_cnt_neg_v AS
+ SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+ GROUP BY 4;
+
+create view x_perfect_assignments_with_unk_cnt_unk_v AS
+ SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+ GROUP BY 4;
+
+create view x_perfect_assignments_with_unk_cnt_pos_k AS
+ SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+ GROUP BY 2;
+
+create view x_perfect_assignments_with_unk_cnt_neg_k AS
+ SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+ GROUP BY 2;
+
+create view x_perfect_assignments_with_unk_cnt_unk_k AS
+ SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+ GROUP BY 2;
 
 -- }}}
 -- (new) CREATE VIEWS (saved) {{{
@@ -221,9 +261,13 @@ create view x_perfect_assignments_with_unk AS
 create view x_saved_kits AS 
   SELECT DISTINCT ID from x_mx_kits;
 
+-- create view x_saved_variants AS 
+--   SELECT DISTINCT name, pos, ID
+--   FROM x_mx_variants;
+
 create view x_saved_variants AS 
   SELECT DISTINCT name, pos, ID
-  FROM x_mx_variants;
+  FROM x_mx_variants limit 100;
 
 create view x_saved_variants_with_kits AS
   SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID
@@ -236,14 +280,12 @@ create view x_saved_assignments AS
   WHERE SC.vID = SV.ID;
 
 create view x_saved_assignments_with_unk AS
-  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, 
-  SVK.vID -- , VI.idx, KI.idx
+  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID -- , VI.idx, KI.idx
   FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
   LEFT JOIN x_saved_assignments SVKA
-  ON SVK.pos = SVKA.pos AND
-  SVK.pID = SVKA.pID
-  WHERE VI.type_id = 0 and VI.axis_id = SVK.vID AND 
-  KI.type_id = 1 and KI.axis_id = SVK.pID;
+  ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
+  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND 
+  KI.type_id = 1 AND KI.axis_id = SVK.pID;
   -- ORDER BY 6,7;
 
 -- }}}
