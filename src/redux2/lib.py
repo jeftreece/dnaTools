@@ -32,9 +32,9 @@ def debug_chk(TYPE,msg):
 # conf {{{
 
 try:
-    config = yaml.load(open(os.environ['REDUX_CONF']))
+    config = yaml.load(open(os.environ['REDUX_CONF_OLD']))
 except:
-    trace(0,"Missing environment variable REDUX_CONF. Aborting.")
+    trace(0,"Missing environment variable REDUX_CONF_OLD. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 

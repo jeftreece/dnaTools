@@ -15,9 +15,9 @@ from db_s import *
 # }}}
 
 try:
-    config = yaml.load(open(os.environ['REDUX_CONF']))
+    config = yaml.load(open(os.environ['REDUX_CONF_OLD']))
 except:
-    print("Missing environment variable REDUX_CONF. Aborting.")
+    print("Missing environment variable REDUX_CONF_OLD. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 

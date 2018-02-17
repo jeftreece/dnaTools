@@ -12,9 +12,9 @@ from collections import OrderedDict
 #}}}
 
 try:
-    config = yaml.load(open(os.environ['REDUX_CONF']))
+    config = yaml.load(open(os.environ['REDUX_CONF_OLD']))
 except:
-    print("Missing environment variable REDUX_CONF. Aborting.")
+    print("Missing environment variable REDUX_CONF_OLD. Aborting.")
     sys.exit()
 sys.path.append(config['REDUX_PATH'])
 
@@ -456,6 +456,9 @@ class Variant(object):
         
     def get_supsets_or_eqv(self,kpc,eq_override=False):
 
+        if len(kpc) == 0: #if there's no positive kpc to compare
+            return [] #then return nothing
+
         if config['DBG_SUPS_IN']:
             print("\n---------------------------------------------------------------------\n")
             print("[supin.0] vix: %s"%self.vix)
@@ -463,56 +466,30 @@ class Variant(object):
             print("[supin.0] kpc: %s"%kpc)
             print("[supin.0] kpc(names): %s"%self.sort.get_kname_by_kix(kpc))
 
-        #looking for variants w/pos assignments that overlap the target variant
-        VAR1 = np.argwhere(np.all(self.sort.NP[:,kpc]==[1]*len(kpc),axis=1)==True)[:,0]
-        if config['DBG_SUPS_IN']: print("[supin.1] VAR1: %s"%VAR1)
+        #look for variants that intersect target variant along its kpc (exclude target
+        #variant from results) -- these are the superset candidates
+        vixIntersects = np.argwhere(np.all(self.sort.NP[:,kpc]==[1]*len(kpc),axis=1)==True)[:,0]
+        if len(vixIntersects) == 0: return [] #if there are no kpc intersects, end here
+        if config['DBG_SUPS_IN']: print("[supin.1] vixIntersects: %s"%vixIntersects)
 
-        #get uniques of VAR1 with counts
-        unique_elements, counts_elements = np.unique(VAR1, return_counts=True)
-        VAR2 = np.asarray((unique_elements, counts_elements)).T #get uniques
-        if config['DBG_SUBS_IN']: print("\n[supin.2] VAR3: %s"%VAR2)
+        #get the kpc for each of these superset candidates
+        allPosVix = np.argwhere(self.sort.NP[vixIntersects]==1)[:,0]
+        unqA, cntA = np.unique(allPosVix, return_counts=True)
+        IC = np.asarray((vixIntersects,cntA)).T #IC = intersect counts
+        if config['DBG_SUPS_IN']: print("[supin.2] intersectCnts: %s"%IC)
 
-        #idx make sure we exclude the incoming variant
-        idx = np.argwhere(VAR2[:,0] == self.vix)
-        VAR4 = np.delete(VAR2[:,0], idx)
-        if config['DBG_SUPS_IN']: print("[supin.4] VAR4: %s"%VAR4)
+        #now check to see if these superset candidate vix have more/equal kpc to target variant
+        for itm in reversed([(idx,val) for idx,val in enumerate(vixIntersects.tolist())]):
+            #this logic drops equivalents (eq_override arg)
+            if eq_override is False and itm[1] == IC[itm[0]][0] and IC[itm[0]][1] == len(kpc):
+                IC = np.delete(IC,(itm[0]),axis=0)
+            #this logic drops everything but equivalents
+            elif eq_override is True and itm[1] == IC[itm[0]][0] and IC[itm[0]][1] != len(kpc):
+                IC = np.delete(IC,(itm[0]),axis=0)
 
-        #if there are no supsets, end here
-        if len(VAR4) == 0: return []
-
-        #get master idx of all positives for all data (+deal with equivalent variants)
-        allPos = np.argwhere(self.sort.NP==1)[:,0]
-        if config['DBG_SUPS_IN']: print("[supin.5] allPos: %s"%allPos)
-        unqA, cntA = np.unique(allPos, return_counts=True)
-        if len(VAR4):
-            for idx, val in enumerate(unqA):
-                try:
-                    kpc_ = self.kpc
-                except:
-                    kpc_ = self.sort.get_kixs_by_val(val=1,vix=self.vix)
-                #this logic drops equivalents (eq_override arg)
-                if eq_override is False and val in VAR4 and cntA[idx] == len(kpc_):
-                    idx1 = np.argwhere(VAR4==val)
-                    VAR4 = np.delete(VAR4, idx1)
-                #this logic drops everything but equivalents
-                if eq_override is True and val in VAR4 and cntA[idx] != len(kpc_):
-                    idx1 = np.argwhere(VAR4==val)
-                    VAR4 = np.delete(VAR4, idx1)
-        AP = np.asarray((unqA, cntA))[1,]
-        if config['DBG_SUPS_IN']: print("[supin.6] AP: %s"%AP)
-
-        #extrapolate the right supset mix using the master list idx
-        VAR5 = AP[list(VAR4),]
-        if config['DBG_SUPS_IN']: print("[supin.7] VAR5: %s"%VAR5)
-
-        VAR6 = np.asarray((VAR4,VAR5)).T
-        if config['DBG_SUPS_IN']: print("[supin.8] VAR6: %s"%VAR6)
-
-        #sorting without fields - https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
-        VAR7 = VAR6[VAR6[:,1].argsort()[::-1]] #reverse sort (2nd col) -- to get the max ones first
-        if config['DBG_SUPS_IN']: print("[supin.9] VAR7: %s"%VAR7)
-
-        return VAR7
+        #return filtered results ... includes counts (in case they're needed)
+        if config['DBG_SUPS_IN']: print("[supin.3] intersectCnts: %s"%IC)
+        return IC
 
 class Sort(object):
 

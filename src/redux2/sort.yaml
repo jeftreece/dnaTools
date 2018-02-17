@@ -2,14 +2,14 @@
 # debugging
 
 DBG_RELS: False 
-DBG_SUPS: True
-DBG_SUPS_IN: True
+DBG_SUPS: False #True
+DBG_SUPS_IN: False #True
 DBG_SUBS: False 
 DBG_SUBS_IN: False
 
 # special handling
 
-allowImperfectWithVInfo: True
+allowImperfectWithVInfo: False #True
 
 #env
 
