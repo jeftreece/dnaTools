@@ -32,14 +32,15 @@ trace (1, "Beginning run [%s]" % time.strftime("%H:%M:%S"))
 
 # environment variable required
 try:
-    sys.path.append(os.environ['REDUX_PATH'])
-    REDUX_CONF = os.path.join(os.environ['REDUX_PATH'], 'config.yaml')
+    config = yaml.load(open(os.environ['REDUX_CONF_ZAK']))
+    #REDUX_CONF = os.path.join(os.environ['REDUX_PATH'], 'config.yaml')
 except:
-    trace(0,"Missing environment variable REDUX_PATH. Aborting.")
+    trace(0,"Missing environment variable REDUX_CONF_ZAK. Aborting.")
     sys.exit()
+sys.path.append(os.environ['REDUX_PATH'])
 
 # parse the remainder of the configuration settings
-config = yaml.load(open(REDUX_CONF))
+#config = yaml.load(open(REDUX_CONF))
 
 
 # basic strategy for command-line arguments

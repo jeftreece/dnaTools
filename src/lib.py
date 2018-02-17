@@ -21,12 +21,20 @@ import time
 
 # read the config file
 # todo: this might need to some bootstrapping (run outside of src dir?)
-config = yaml.load(open('config.yaml'))
 
 # add src and bin directories to path
 import sys
+#sys.path.insert(0, config['REDUX_PATH'])
+#sys.path.insert(0, config['REDUX_BIN'])
+#config = yaml.load(open('config.yaml'))
+try:
+    config = yaml.load(open(os.environ['REDUX_CONF_ZAK']))
+except:
+    trace(0,"Missing environment variable REDUX_CONF_ZAK. Aborting.")
+    sys.exit()
 sys.path.insert(0, config['REDUX_PATH'])
 sys.path.insert(0, config['REDUX_BIN'])
+
 
 
 # routines - debug/diagnostic output

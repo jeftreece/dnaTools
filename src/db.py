@@ -10,8 +10,14 @@
 
 import sys,os,sqlite3,yaml,time,csv,json,numpy as np
 
-REDUX_CONF = 'config.yaml'
-config = yaml.load(open(REDUX_CONF))
+#REDUX_CONF = 'config.yaml'
+#config = yaml.load(open(REDUX_CONF))
+try:
+    config = yaml.load(open(os.environ['REDUX_CONF_ZAK']))
+except:
+    print("Missing environment variable REDUX_CONF_ZAK. Aborting.")
+    sys.exit()
+
 
 
 class DB(object):
