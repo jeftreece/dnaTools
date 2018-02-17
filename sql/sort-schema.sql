@@ -25,6 +25,8 @@ drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
 drop view if exists x_pos_call_chk;
 drop view if exists x_neg_call_chk;
 
+drop view if exists get_max_snpnames;
+
 -- }}}
 -- DROP TABLES {{{
 
@@ -65,6 +67,9 @@ create table x_mx_calls (
 -- }}}
 -- CREATE VIEWS (perfect) {{{
 
+create view get_max_snpnames AS
+ select max(snpname) as snpname,vID from snpnames;
+
 create view x_kit_view AS 
   SELECT DISTINCT pID from vcfcalls;
 
@@ -78,7 +83,7 @@ create view x_perfect_variants AS
   SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
   FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
   -- FROM vcfcalls C, variants V
-  LEFT JOIN snpnames S
+  LEFT JOIN get_max_snpnames S
   ON S.vID = V.ID
   -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
   WHERE -- C.assigned

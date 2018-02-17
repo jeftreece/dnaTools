@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd $REDUX_PATH
-cd /Users/jazdrv/_prj/dnatools/_env/redux2
+cd /Users/jazdrv/_prj/dnatools.zak/_env/redux2
 
 if [ "$1" == "clades" ]; then
     cd ../clades
