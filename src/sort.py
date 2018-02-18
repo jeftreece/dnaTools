@@ -41,7 +41,7 @@ class Variant(object):
     def proc_vname(self,vname):
         self.sort.get_mx_data(recreateFlg = False)
         if vname.isdigit() and int(vname)<=len(self.sort.VARIANTS):
-            print("** Assuming, you're providing a vix ID...")
+            print("\n** Assuming, you're providing a vix ID...")
             vix = int(vname)
         elif vname.isdigit():
             vix = self.sort.get_vix_by_name(vname)
