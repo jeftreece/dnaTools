@@ -502,7 +502,6 @@ class Sort(object):
         self.KITS = None
         self.VARIANTS = None
         self.DATA = None
-        #self.CNTS = {}
         self.NP = None
         self.NONES = []
         self.MDATA = None
@@ -811,17 +810,6 @@ class Sort(object):
                 return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
             else:
                 return sorted(SCH.items(), key=lambda e: e[1][1])
-        #if orderByType in ['kp','kn','kx','vp','vn','vx']:
-        #    if keysOnly:
-        #        return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-        #    else:
-        #        listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-        #        if orderByType in ['vp','vn','vx']:
-        #            print(self.CNTS)
-        #            print(listByCount)
-        #            return [(key, self.VARIANTS[key]) for key in listByCount]
-        #        if orderByType in ['kp','kn','kx']:
-        #            return [(key, self.KITS[key]) for key in listByCount]
 
     def get_mx_row_as_list(self,rownum,noneToStr=True):
         if noneToStr:
@@ -952,125 +940,3 @@ class Sort(object):
         #get count data
         #self.get_mx_count_data()
         
-    def old_get_mx_data(self,recreateFlg=True):
-
-        #recreating from scratch
-        if recreateFlg:
-            sql = "select * from x_perfect_assignments_with_unk;"
-        #going with the saved data
-        else:
-            sql = "select * from x_saved_assignments_with_unk;"
-
-        #get data
-        self.dbo.sql_exec(sql)
-        F = self.dbo.fetchall()
-
-        #retrieve data from sqlite like so: [V][K] [x,x,x,x,x,x,...]
-        DATA = OrderedDict()
-        self.KITS = {}
-        self.VARIANTS = {}
-        cntV = 0
-        cntK = 0
-        for row in F:
-            if row[1] not in DATA:
-                DATA[row[1]] = []
-            #calls
-            DATA[row[1]].append(row[2])
-            #kits
-            if row[0] not in self.KITS:
-                self.KITS[row[0]] = [cntK,cntK]
-                if recreateFlg:
-                    sql = "insert into x_mx_kits (ID) values('%s');" % row[0]
-                    self.dbo.sql_exec(sql)
-                    sql = "insert into x_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (1,row[0],cntK)
-                cntK = cntK + 1
-            #variants
-            if row[1] not in self.VARIANTS:
-                self.VARIANTS[row[1]] = [cntV,cntV]
-                if recreateFlg:
-                    sql = "insert into x_mx_variants (ID,pos,name) values('%s','%s','%s');" % (row[4],row[3],row[1])
-                    self.dbo.sql_exec(sql)
-                    sql = "insert into x_mx_idxs (type_id, axis_id, idx) values (%s,'%s',%s);" % (0,row[1],cntV)
-                    self.dbo.sql_exec(sql)
-                cntV = cntV + 1
-
-        #create numpy version of data
-        for key,value in DATA.items():
-            self.NP = np.matrix(list(DATA.values()))
-
-        #create numpy version of data
-        for key,value in DATA.items():
-            self.NP = np.matrix(list(DATA.values()))
-
-        #cpush this new stuff into saved/matrix tbls (recreation)
-        if recreateFlg:
-            sql = "insert into x_mx_calls (pID,vID,assigned) select pID,vID,assigned from x_perfect_assignments;"
-            self.dbo.sql_exec(sql)
-
-        #get count data
-        #self.get_mx_count_data()
-
-    def old_get_mx_count_data(self):
-
-        #TODO: is this needed? better with numpy?
-
-        #vars
-        self.CNTS = {}
-        sqlc = {}
-
-        sql = '''
-            FROM s_calls C, s_variants V,
-            (SELECT DISTINCT C.variant_loc
-            FROM s_calls C, s_variants V
-            WHERE (C.assigned = -1 OR V.name = 'top') AND
-            V.variant_loc = C.variant_loc
-            )VX
-            WHERE C.variant_loc = VX.variant_loc AND
-            C.variant_loc = V.variant_loc AND
-            '''
-
-        #sql - cnt variants
-        sqlc['vp'] = "SELECT count(V.name), V.name %s C.assigned = 1 GROUP BY 2;" % sql
-        sqlc['vn'] = "SELECT count(V.name), V.name %s C.assigned = -1 GROUP BY 2;" % sql
-        sqlc['vx'] = "SELECT count(V.name), V.name %s C.assigned = 0 GROUP BY 2;" % sql
-
-        #sql - cnt kits
-        sqlc['kp'] = "SELECT count(C.kit_id), C.kit_id %s C.assigned = 1 GROUP BY 2;" % sql
-        sqlc['kn'] = "SELECT count(C.kit_id), C.kit_id %s C.assigned = -1 GROUP BY 2;" % sql
-        sqlc['kx'] = "SELECT count(C.kit_id), C.kit_id %s C.assigned = 0 GROUP BY 2;" % sql
-
-        #get all cnts
-        for key, sql in sqlc.items():
-            self.CNTS[key] = {}
-            self.dbo.sql_exec(sql)
-            F = self.dbo.fetchall()
-            for itm in F:
-                self.CNTS[key][itm[1]] = itm[0]
-        
-    def old_get_mx_count_data(self):
-
-        #TODO: is this needed? better with numpy?
-
-        #vars
-        self.CNTS = {}
-        sqlc = {}
-
-        #sql - cnt variants
-        sqlc['vp'] = "SELECT * from x_perfect_assignments_with_unk_cnt_pos_v";
-        sqlc['vn'] = "SELECT * from x_perfect_assignments_with_unk_cnt_neg_v";
-        sqlc['vx'] = "SELECT * from x_perfect_assignments_with_unk_cnt_unk_v";
-
-        #sql - cnt kits
-        sqlc['kp'] = "SELECT * from x_perfect_assignments_with_unk_cnt_pos_k";
-        sqlc['kn'] = "SELECT * from x_perfect_assignments_with_unk_cnt_neg_k";
-        sqlc['kx'] = "SELECT * from x_perfect_assignments_with_unk_cnt_unk_k";
-
-        #get all cnts
-        for key, sql in sqlc.items():
-            self.CNTS[key] = {}
-            self.dbo.sql_exec(sql)
-            F = self.dbo.fetchall()
-            for itm in F:
-                self.CNTS[key][itm[1]] = itm[0]
-        
-
