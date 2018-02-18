@@ -16,7 +16,7 @@ drop view if exists x_saved_assignments_with_unk;
 
 drop view if exists get_max_snpnames;
 drop view if exists x_perfect_variants_base;
-drop view if exists x_perfect_variants_5;
+drop view if exists x_perfect_variants_lim;
 
 -- drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
 -- drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
@@ -98,7 +98,7 @@ create view x_perfect_variants_base AS
   V.ID = C.vID and V.pos IN
   (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
 
-create view x_perfect_variants_5 AS
+create view x_perfect_variants_lim AS
   SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
   FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
   -- FROM vcfcalls C, variants V
@@ -109,12 +109,12 @@ create view x_perfect_variants_5 AS
   N.vID = V.ID and P.vID = V.ID AND 
   V.ID = C.vID and 
   V.pos not in (13668461,7378685,12060401,19538924) 
-  LIMIT 5;
+  LIMIT 100;
 
 create view x_perfect_variants AS
   SELECT * from x_perfect_variants_base
   UNION
-  SELECT * from x_perfect_variants_5;
+  SELECT * from x_perfect_variants_lim;
 
 create view x_perfect_variants_with_kits AS
   SELECT K.pID, PV.name, PV.pos, PV.ID as vID,K.kitId
