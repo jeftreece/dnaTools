@@ -14,13 +14,13 @@ drop view if exists x_saved_variants_with_kits;
 drop view if exists x_saved_assignments;
 drop view if exists x_saved_assignments_with_unk;
 
-drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
-drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
-drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
 
-drop view if exists x_perfect_assignments_with_unk_cnt_pos_k;
-drop view if exists x_perfect_assignments_with_unk_cnt_neg_k;
-drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_pos_k;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_neg_k;
+-- drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
  
 drop view if exists x_pos_call_chk;
 drop view if exists x_neg_call_chk;
@@ -106,29 +106,29 @@ create view x_perfect_assignments_with_unk AS
   ON PVK.vID = PVKA.vID AND
   PVK.pID = PVKA.pID;
 
-create view x_perfect_assignments_with_unk_cnt_pos_v AS
- SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
- GROUP BY 4;
+-- create view x_perfect_assignments_with_unk_cnt_pos_v AS
+--  SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+--  GROUP BY 4;
 
-create view x_perfect_assignments_with_unk_cnt_neg_v AS
- SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
- GROUP BY 4;
+-- create view x_perfect_assignments_with_unk_cnt_neg_v AS
+--  SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+--  GROUP BY 4;
 
-create view x_perfect_assignments_with_unk_cnt_unk_v AS
- SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
- GROUP BY 4;
+-- create view x_perfect_assignments_with_unk_cnt_unk_v AS
+--  SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
+--  GROUP BY 4;
 
-create view x_perfect_assignments_with_unk_cnt_pos_k AS
- SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
- GROUP BY 2;
+-- create view x_perfect_assignments_with_unk_cnt_pos_k AS
+--  SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+--  GROUP BY 2;
 
-create view x_perfect_assignments_with_unk_cnt_neg_k AS
- SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
- GROUP BY 2;
+-- create view x_perfect_assignments_with_unk_cnt_neg_k AS
+--  SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+--  GROUP BY 2;
 
-create view x_perfect_assignments_with_unk_cnt_unk_k AS
- SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
- GROUP BY 2;
+-- create view x_perfect_assignments_with_unk_cnt_unk_k AS
+--  SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
+--  GROUP BY 2;
 
 -- }}}
 -- CREATE VIEWS (saved) {{{
