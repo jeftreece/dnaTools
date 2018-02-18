@@ -43,7 +43,8 @@ drop table if exists x_mx_calls;
 -- CREATE TABLES {{{
 
 create table x_mx_kits(
- ID int
+ ID int,
+ kitId text
 );
 
 create table x_mx_variants (
@@ -71,10 +72,13 @@ create table x_mx_calls (
 -- CREATE VIEWS (perfect) {{{
 
 create view get_max_snpnames AS
- select max(snpname) as snpname,vID from snpnames group by vID;
+ select max(snpname) as snpname,vID from snpnames group by 2;
 
 create view x_kit_view AS 
-  SELECT DISTINCT pID from vcfcalls;
+  SELECT DISTINCT C.pID,max(D.kitId) as kitId from vcfcalls C, dataset D 
+  WHERE C.pID=D.DNAID -- AND 
+  -- C.pid IN (1049,1321,1707,1747,1801) 
+  GROUP BY 1;
 
 create view x_pos_call_chk as 
   SELECT DISTINCT vID from vcfcalls where assigned = 1;
@@ -113,7 +117,7 @@ create view x_perfect_variants AS
   SELECT * from x_perfect_variants_5;
 
 create view x_perfect_variants_with_kits AS
-  SELECT K.pID, PV.name, PV.pos, PV.ID as vID
+  SELECT K.pID, PV.name, PV.pos, PV.ID as vID,K.kitId
   FROM x_perfect_variants PV
   CROSS JOIN x_kit_view K;
 
@@ -123,7 +127,7 @@ create view x_perfect_assignments AS
   WHERE C.vID = PV.ID;
 
 create view x_perfect_assignments_with_unk AS
-  SELECT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID
+  SELECT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID,PVK.kitId
   FROM x_perfect_variants_with_kits PVK 
   LEFT JOIN x_perfect_assignments PVKA
   ON PVK.vID = PVKA.vID AND
@@ -157,14 +161,14 @@ create view x_perfect_assignments_with_unk AS
 -- CREATE VIEWS (saved) {{{
 
 create view x_saved_kits AS 
-  SELECT DISTINCT ID from x_mx_kits;
+  SELECT DISTINCT ID,kitId from x_mx_kits;
 
 create view x_saved_variants AS 
   SELECT DISTINCT name, pos, ID
   FROM x_mx_variants;
 
 create view x_saved_variants_with_kits AS
-  SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID
+  SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID,SK.kitID
   FROM x_saved_variants SV
   CROSS JOIN x_saved_kits SK;
 
@@ -174,14 +178,14 @@ create view x_saved_assignments AS
   WHERE SC.vID = SV.ID;
 
 create view x_saved_assignments_with_unk AS
-  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID, VI.idx, KI.idx
+  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID, SVK.kitId, VI.idx, KI.idx
   FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
   LEFT JOIN x_saved_assignments SVKA
   ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
   -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
   WHERE VI.type_id = 0 AND VI.axis_id = SVK.name AND  -- fix this
-  KI.type_id = 1 AND KI.axis_id = SVK.pID
-  ORDER BY 6,7;
+  KI.type_id = 1 AND KI.axis_id = SVK.kitId
+  ORDER BY 7,8;
 
 -- }}}
 

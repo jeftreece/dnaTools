@@ -883,10 +883,10 @@ class Sort(object):
             #calls
             DATA[row[1]].append(row[2])
             #kits
-            if row[0] not in self.KITS.keys():
-                self.KITS[row[0]] = [cntK,cntK]
+            if row[5] not in self.KITS.keys():
+                self.KITS[row[5]] = [cntK,cntK]
                 if recreateFlg:
-                    sql = "insert into x_mx_kits (ID) values(%s);" % row[0]
+                    sql = "insert into x_mx_kits (ID,kitId) values(%s,'%s');" % (row[0],row[5])
                     self.dbo.sql_exec(sql)
                     sql = "insert into x_mx_idxs (type_id, axis_id, idx) values (%s,%s,%s);" % (1,row[0],cntK)
                     self.dbo.sql_exec(sql)
