@@ -24,7 +24,7 @@ allowImperfectWithVInfo: True
 
 # db
 
-DBG_SQL: True #False #True
+DBG_SQL: False #True #False #True
 COMMITS_ON: True
 #DB_FILE: sort.db
 

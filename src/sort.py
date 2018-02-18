@@ -609,7 +609,6 @@ class Sort(object):
         self.get_mx_data()
 
         #proc
-        print(self.VARIANTS)
         self.stdout_matrix()
         self.mx_vertical_sort()
         self.stdout_matrix()
@@ -617,7 +616,6 @@ class Sort(object):
         self.stdout_matrix()
         #sys.exit()
         self.save_mx_to_db()
-        print(self.VARIANTS)
         sys.exit()
 
         #step x
@@ -790,16 +788,13 @@ class Sort(object):
             self.VARIANTS[vals[x]] = [0,cnts[x]]
         
     def save_mx_to_db(self):
-        print(self.KITS)
         sql = "delete from x_mx_idxs;"
         self.dbo.sql_exec(sql)
-        print("inside mx_to_db 1")
         itms = [(k,c2) for (n,(k,(c1,c2))) in enumerate(self.get_axis('variants'))]
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
         self.dbo.sql_exec_many(sql,itms)
         itms = [[k,c2] for (n,(k,(c1,c2))) in enumerate(self.get_axis('kits'))]
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
-        print("inside mx_to_db 2")
         self.dbo.sql_exec_many(sql,itms)
 
     def get_axis(self,orderByType=None,keysOnly=False,idx=None):
