@@ -14,6 +14,10 @@ drop view if exists x_saved_variants_with_kits;
 drop view if exists x_saved_assignments;
 drop view if exists x_saved_assignments_with_unk;
 
+drop view if exists get_max_snpnames;
+drop view if exists x_perfect_variants_base;
+drop view if exists x_perfect_variants_5;
+
 -- drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
 -- drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
 -- drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
@@ -67,7 +71,7 @@ create table x_mx_calls (
 -- CREATE VIEWS (perfect) {{{
 
 create view get_max_snpnames AS
- select max(snpname) as snpname,vID from snpnames;
+ select max(snpname) as snpname,vID from snpnames group by vID;
 
 create view x_kit_view AS 
   SELECT DISTINCT pID from vcfcalls;
@@ -78,7 +82,7 @@ create view x_pos_call_chk as
 create view x_neg_call_chk as 
   SELECT DISTINCT vID from vcfcalls where assigned = -1;
 
-create view x_perfect_variants AS
+create view x_perfect_variants_base AS
   SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
   FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
   -- FROM vcfcalls C, variants V
@@ -87,7 +91,26 @@ create view x_perfect_variants AS
   -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
   WHERE -- C.assigned
   N.vID = V.ID and P.vID = V.ID AND 
-  V.ID = C.vID limit 5;
+  V.ID = C.vID and V.pos IN
+  (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
+
+create view x_perfect_variants_5 AS
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
+  FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
+  -- FROM vcfcalls C, variants V
+  LEFT JOIN get_max_snpnames S
+  ON S.vID = V.ID
+  -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
+  WHERE -- C.assigned
+  N.vID = V.ID and P.vID = V.ID AND 
+  V.ID = C.vID and 
+  V.pos not in (13668461,7378685,12060401,19538924) 
+  LIMIT 5;
+
+create view x_perfect_variants AS
+  SELECT * from x_perfect_variants_base
+  UNION
+  SELECT * from x_perfect_variants_5;
 
 create view x_perfect_variants_with_kits AS
   SELECT K.pID, PV.name, PV.pos, PV.ID as vID
@@ -138,7 +161,7 @@ create view x_saved_kits AS
 
 create view x_saved_variants AS 
   SELECT DISTINCT name, pos, ID
-  FROM x_mx_variants limit 5;
+  FROM x_mx_variants;
 
 create view x_saved_variants_with_kits AS
   SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID

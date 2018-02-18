@@ -54,6 +54,8 @@ class Variant(object):
         lev = lev-1
         if vix is not None:
             self.vix = vix
+
+        self.imperfect_vix = self.sort.get_imperfect_variants_idx()
         self.name = self.sort.get_vname_by_vix(self.vix)
         self.vixn = "%s - [%s]"%(self.name,self.vix)
         self.kpc = self.sort.get_kixs_by_val(val=1,vix=self.vix)
@@ -506,7 +508,7 @@ class Sort(object):
         self.NONES = []
         self.MDATA = None
         self.perfect_variants = None
-        self.imperfect_variants = None
+        self.imperfect_vix = None
 
     # schema / sample data
 
