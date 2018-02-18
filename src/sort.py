@@ -611,9 +611,9 @@ class Sort(object):
         self.get_mx_data()
 
         #proc
-        self.stdout_matrix()
+        #self.stdout_matrix()
         self.mx_vertical_sort()
-        self.stdout_matrix()
+        #self.stdout_matrix()
         self.mx_horizontal_sort()
         self.stdout_matrix()
         #sys.exit()
