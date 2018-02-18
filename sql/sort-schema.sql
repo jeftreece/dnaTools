@@ -39,8 +39,7 @@ drop table if exists x_mx_calls;
 -- CREATE TABLES {{{
 
 create table x_mx_kits(
- ID int,
- idx int
+ ID int
 );
 
 create table x_mx_variants (

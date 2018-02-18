@@ -610,6 +610,7 @@ class Sort(object):
         self.get_mx_data()
 
         #proc
+        print(self.VARIANTS)
         self.stdout_matrix()
         self.mx_vertical_sort()
         self.stdout_matrix()
@@ -617,6 +618,7 @@ class Sort(object):
         self.stdout_matrix()
         #sys.exit()
         self.save_mx_to_db()
+        print(self.VARIANTS)
         sys.exit()
 
         #step x
@@ -635,7 +637,7 @@ class Sort(object):
                 print(R[1])
 
         print("")
-        self.get_mx_count_data()
+        #self.get_mx_count_data()
         self.mx_vertical_sort()
         self.mx_horizontal_sort()
 
@@ -809,17 +811,17 @@ class Sort(object):
                 return [i[0] for i in sorted(SCH.items(), key=lambda e: e[1][1])]
             else:
                 return sorted(SCH.items(), key=lambda e: e[1][1])
-        if orderByType in ['kp','kn','kx','vp','vn','vx']:
-            if keysOnly:
-                return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-            else:
-                listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
-                if orderByType in ['vp','vn','vx']:
-                    print(self.CNTS)
-                    print(listByCount)
-                    return [(key, self.VARIANTS[key]) for key in listByCount]
-                if orderByType in ['kp','kn','kx']:
-                    return [(key, self.KITS[key]) for key in listByCount]
+        #if orderByType in ['kp','kn','kx','vp','vn','vx']:
+        #    if keysOnly:
+        #        return list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+        #    else:
+        #        listByCount = list(OrderedDict(sorted(self.CNTS[orderByType].items(), key=lambda item: item[1],reverse=True)).keys())
+        #        if orderByType in ['vp','vn','vx']:
+        #            print(self.CNTS)
+        #            print(listByCount)
+        #            return [(key, self.VARIANTS[key]) for key in listByCount]
+        #        if orderByType in ['kp','kn','kx']:
+        #            return [(key, self.KITS[key]) for key in listByCount]
 
     def get_mx_row_as_list(self,rownum,noneToStr=True):
         if noneToStr:
@@ -948,7 +950,7 @@ class Sort(object):
         #print("here2");
 
         #get count data
-        self.get_mx_count_data()
+        #self.get_mx_count_data()
         
     def old_get_mx_data(self,recreateFlg=True):
 
@@ -1045,7 +1047,7 @@ class Sort(object):
             for itm in F:
                 self.CNTS[key][itm[1]] = itm[0]
         
-    def get_mx_count_data(self):
+    def old_get_mx_count_data(self):
 
         #TODO: is this needed? better with numpy?
 
