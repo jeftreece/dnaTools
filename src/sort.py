@@ -896,9 +896,6 @@ class Sort(object):
                 cntK = cntK + 1
             #variants
             if row[1] not in self.VARIANTS.keys():
-                print("---")
-                print("row1: %s"%row[1])
-                print("variant-keys: %s"%self.VARIANTS.keys())
                 self.VARIANTS[row[1]] = [cntV,cntV]
                 if recreateFlg:
                     sql = "insert into x_mx_variants (ID,pos,name) values(%s,%s,'%s');" % (row[4],row[3],row[1])
@@ -907,36 +904,11 @@ class Sort(object):
                     self.dbo.sql_exec(sql)
                 cntV = cntV + 1
 
-        print("---")
-        print (self.VARIANTS)
-        #create numpy version of data
-        #print("--len")
-        #print(len(DATA))
-
-        print(DATA)
-        #sys.exit()
-        #print("--start dict")
         self.NP = np.matrix(list(DATA.values()))
-        #print(self.NP)
-        #sys.exit()
-        #print(self.NP)
-        #sys.exit()
-        #for key,value in DATA.items():
-        #    print("--key")
-        #    print(key)
-        #    print("--val")
-        #    print(value)
-        #    sys.exit()
-        #    self.NP = np.matrix(list(DATA.values()))
-        #print("here1");
-        #sys.exit()
 
-        #cpush this new stuff into saved/matrix tbls (recreation)
+        #push this new stuff into saved/matrix tbls (recreation)
         if recreateFlg:
             sql = "insert into x_mx_calls (pID,vId,assigned) select pID,vID,assigned from x_perfect_assignments;"
             self.dbo.sql_exec(sql)
-        #print("here2");
 
-        #get count data
-        #self.get_mx_count_data()
         
