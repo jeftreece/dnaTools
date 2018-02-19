@@ -1032,7 +1032,7 @@ class Sort(object):
             #this gets the duplicate variants (based on idx order) 
             itms = list(np.delete(np.argwhere(inv==itm[0]),0))
             #this puts these duplicate variants into the dupes tbl next to the one in their series we're keeping
-            sql = "insert into x_mx_dupe_variants(id,dupe_id) values (%s,?);" % self.get_vid_by_vix(itm[1])
+            sql = "insert into x_mx_dupe_variants(vID,dupe_vID) values (%s,?);" % self.get_vid_by_vix(itm[1])
             self.dbo.sql_exec_many(sql,[tuple([l]) for l in self.get_vid_by_vix(itms)])
             #remove dupe variants from the self.VARIANTS var
             for k in self.get_vname_by_vix(itms):

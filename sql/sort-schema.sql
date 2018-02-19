@@ -56,8 +56,8 @@ create table x_mx_variants (
 );
 
 create table x_mx_dupe_variants (
- ID int,  
- dupe_id int
+ vId int,  
+ dupe_vID int
 );
 
 create table x_mx_idxs(
@@ -82,7 +82,7 @@ create view get_max_snpnames AS
 
 create view x_kit_view AS 
   SELECT DISTINCT C.pID,max(D.kitId) as kitId from vcfcalls C, dataset D 
-  WHERE C.pID=D.DNAID -- AND 
+  WHERE C.pID=D.ID -- AND 
   -- C.pid IN (1049,1321,1707,1747,1801) 
   GROUP BY 1;
 
