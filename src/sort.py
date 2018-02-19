@@ -613,7 +613,6 @@ class Sort(object):
         #proc
         #self.stdout_matrix()
         self.mx_vertical_sort()
-        #self.stdout_matrix()
         self.mx_horizontal_sort()
         self.stdout_matrix()
         #sys.exit()
@@ -650,6 +649,64 @@ class Sort(object):
             rowO[0,kx] = override_val
         return rowO
 
+    def get_vid_by_vix(self,vix,listFlg=False):
+        intFlg = True
+        try:
+            value = int(vix)
+        except:
+            intFlg = False
+        if intFlg: #typically, it's just the order number it's placed in the matrix
+            vid = None
+            #normal variants in the matrix
+            for itm in list(self.VARIANTS.items()):
+                if itm[1][1] == vix:
+                    vid = itm[1][0]
+                    break
+            if listFlg:
+                if vid == None:
+                    return []
+                else:
+                    return [vid]
+            else:
+                return vid
+        else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
+            vidList = []
+            for vo in list(vix):
+                #normal variants in the matrix
+                for itm in list(self.VARIANTS.items()):
+                    if itm[1][1] == vo:
+                        vidList.append(itm[1][0])
+                        break
+            return(vidList)
+        
+    def get_kid_by_kix(self,kix,listFlg=False):
+        intFlg = True
+        try:
+            value = int(kix)
+        except:
+            intFlg = False
+        if intFlg: #typically, it's just the order number it's placed in the matrix
+            kid = None
+            for itm in list(self.KITS.items()):
+                if itm[1][1] == kix:
+                    kid = itm[1][0]
+                    break
+            if listFlg:
+                if kid == None:
+                    return []
+                else:
+                    return [kid]
+            else:
+                return kid
+        else: #assume it's a list/set/numpy array (whatever) > that I can cast to a list if need be
+            kidList = []
+            for ko in list(kix):
+                for itm in list(self.KITS.items()):
+                    if itm[1][1] == ko:
+                        kidList.append(itm[1][0])
+                        break
+            return(kidList)
+        
     def get_vname_by_vix(self,vix,listFlg=False):
         intFlg = True
         try:
@@ -661,10 +718,7 @@ class Sort(object):
             #normal variants in the matrix
             for itm in list(self.VARIANTS.items()):
                 if itm[1][1] == vix:
-                    if listFlg:
-                        variant = itm[0]
-                    else:
-                        variant = itm[0]
+                    variant = itm[0]
                     break
             if listFlg:
                 if variant == None:
@@ -693,10 +747,7 @@ class Sort(object):
             kit = None
             for itm in list(self.KITS.items()):
                 if itm[1][1] == kix:
-                    if listFlg:
-                            kit = itm[0]
-                    else:
-                            kit = itm[0]
+                    kit = itm[0]
                     break
             if listFlg:
                 if kit == None:
@@ -719,6 +770,12 @@ class Sort(object):
         
     def get_kix_by_name(self,kname):
         return self.KITS[kname][1]
+        
+    def get_kid_by_name(self,kname):
+        return self.KITS[kname][0]
+        
+    def get_vid_by_name(self,vname):
+        return self.VARIANTS[vname][0]
         
 
     def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None):
@@ -750,11 +807,65 @@ class Sort(object):
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
     def mx_vertical_sort(self):
+
+        #this de-dupes it{{{
+        #b = np.ascontiguousarray(self.NP).view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
+        #unq, cnt = np.unique(b, return_counts=True)
+        #print(np.asarray((unq,cnt)))
+        #_, idx = np.unique(b, return_index=True)
+        #_, index, inv = np.unique(b, return_index = True, return_inverse = True)
+        #def return_counts(index, inv):
+        #    count = np.zeros(len(index), np.int)
+        #    np.add.at(count, inv, 1)
+        #    return count
+        #counts = return_counts(index, inv)
+        #index_keep = [i for i, j in enumerate(index) if counts[i] > 1]
+        #print(idx) #the uniques
+        #print(index_keep) #the dupes
+        #sys.exit()
+        #}}}
+        #print(len(cnt))
+        #print(len(idx))
+        #sys.exit()
+        #unique_a = self.NP[idx]
+        #print(idx)
+        #print(unq)
+        #sys.exit()
+        #print(len(self.NP))
+        #print(len(unique_a))
+
+        #https://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array/16973510#16973510
+        #b = self.NP.view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
+        #_, index, inv = np.unique(b, return_index = True, return_inverse = True)
+
+        #def return_counts(index, inv):
+        #    count = np.zeros(len(index), np.int)
+        #    np.add.at(count, inv, 1)
+        #    return count
+
+        #counts = return_counts(index, inv)
+
+        #if you want the indices to discard replace with: counts[i] > 1
+        #index_keep = [i for i, j in enumerate(index) if counts[i] == 1]
+
+        #print(self.NP[index_keep])
+        #https://stackoverflow.com/questions/34123122/finding-indices-of-non-unique-elements-in-numpy-array
+        #dt = np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1]))
+        #b = np.ascontiguousarray(self.NP).view(dt)
+        #unq, cnt = np.unique(b, return_counts=True)
+        #print(cnt)
+        #...
         prfIdx = self.get_perfect_variants_idx()
         prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
         unqP, cntP = np.unique(prfPos, return_counts=True)
         allP = np.asarray((prfIdx,cntP))
         allP = allP[:,np.argsort(-allP[1])]
+        #...
+        #dt = np.dtype((np.void, allP.dtype.itemsize * allP.shape[1]))
+        #b = np.ascontiguousarray(allP).view(dt)
+        #unq, cnt = np.unique(b, return_counts=True)
+        #print(cnt)
+        #...
         allPL = allP.T[:,0]
         impIdx = self.get_imperfect_variants_idx()
         impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
@@ -765,7 +876,7 @@ class Sort(object):
         namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
         self.NP = self.NP[np.concatenate((allPL,allIL))]
         for ix,v in enumerate(namesL):
-            self.VARIANTS[v] = (ix,ix)
+            self.VARIANTS[v][1] = ix
         
     def mx_horizontal_sort(self):
         allPosKix = np.argwhere(self.NP==1)[:,1]
@@ -776,7 +887,7 @@ class Sort(object):
         namesL = self.get_kname_by_kix(allL)
         self.NP = self.NP[:,allL]
         for ix,v in enumerate(namesL):
-            self.KITS[v] = (ix,ix)
+            self.KITS[v][1] = ix
 
     def set_new_order(self,val,cnt,kitType=False,variantType=False):
         if kitType:
@@ -792,10 +903,10 @@ class Sort(object):
     def save_mx_to_db(self):
         sql = "delete from x_mx_idxs;"
         self.dbo.sql_exec(sql)
-        itms = [(k,c2) for (n,(k,(c1,c2))) in enumerate(self.get_axis('variants'))]
+        itms = [(vid,idx) for (n,(vname,(vid,idx))) in enumerate(self.get_axis('variants'))]
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
         self.dbo.sql_exec_many(sql,itms)
-        itms = [[k,c2] for (n,(k,(c1,c2))) in enumerate(self.get_axis('kits'))]
+        itms = [[pid,idx] for (n,(kname,(pid,idx))) in enumerate(self.get_axis('kits'))]
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
         self.dbo.sql_exec_many(sql,itms)
 
@@ -884,7 +995,7 @@ class Sort(object):
             DATA[row[1]].append(row[2])
             #kits
             if row[5] not in self.KITS.keys():
-                self.KITS[row[5]] = [cntK,cntK]
+                self.KITS[row[5]] = [row[0],cntK] # self.KITS[name] = [pID,idx]
                 if recreateFlg:
                     sql = "insert into x_mx_kits (ID,kitId) values(%s,'%s');" % (row[0],row[5])
                     self.dbo.sql_exec(sql)
@@ -893,7 +1004,7 @@ class Sort(object):
                 cntK = cntK + 1
             #variants
             if row[1] not in self.VARIANTS.keys():
-                self.VARIANTS[row[1]] = [cntV,cntV]
+                self.VARIANTS[row[1]] = [row[4],cntV] #self.VARIANTS[name] = [vID,idx]
                 if recreateFlg:
                     sql = "insert into x_mx_variants (ID,pos,name) values(%s,%s,'%s');" % (row[4],row[3],row[1])
                     self.dbo.sql_exec(sql)
@@ -902,6 +1013,59 @@ class Sort(object):
                 cntV = cntV + 1
 
         self.NP = np.matrix(list(DATA.values()))
+
+        #create variables that we'll need for finding duplicates among the variants
+        b = np.ascontiguousarray(self.NP).view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
+        _, idx, inv = np.unique(b, return_index=True, return_inverse=True)
+        def return_counts(idx, inv):
+            count = np.zeros(len(idx), np.int)
+            np.add.at(count, inv, 1)
+            return count
+        cnts = return_counts(idx,inv)
+        #idx_d = [i for i,j in enumerate(idx) if cnts[i] > 1]
+        #idx_u = [i for i,j in enumerate(idx) if cnts[i] == 1]
+
+        #print(self.VARIANTS)
+
+        #find and separate dupe variants
+        for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
+            #this gets the duplicate variants (based on idx order) 
+            itms = list(np.delete(np.argwhere(inv==itm[0]),0))
+            #this puts these duplicate variants into the dupes tbl next to the one in their series we're keeping
+            sql = "insert into x_mx_dupe_variants(id,dupe_id) values (%s,?);" % self.get_vid_by_vix(itm[1])
+            self.dbo.sql_exec_many(sql,[tuple([l]) for l in self.get_vid_by_vix(itms)])
+            #remove dupe variants from the self.VARIANTS var
+            for k in self.get_vname_by_vix(itms):
+                self.VARIANTS.pop(k,None)
+
+        #reset the matrix index for the remaining non-dupe variants
+        for ix,vn in enumerate(self.get_vname_by_vix(idx)):
+            self.VARIANTS[vn][1] = ix
+            
+        #print(self.VARIANTS)
+
+        #print("hey! - uniqs")
+        #print(l2s(idx_u)) #the uniques
+        #print("hey! - dupes")
+        #print(l2s(idx_d)) #the dupes
+        #print("idx")
+        #print(idx)
+        #print("dupes")
+        #print(dupes)
+        #print(self.NP[58,])
+        #print(self.NP[94,])
+        #print(self.NP)
+        #print("")
+        #print("")
+        self.NP = self.NP[idx,]
+
+        #self.mx_vertical_sort()
+        #self.mx_horizontal_sort()
+
+        #print(self.NP[0,])
+        #print(self.NP[1,])
+        #print(self.NP)
+        #sys.exit()
 
         #push this new stuff into saved/matrix tbls (recreation)
         if recreateFlg:

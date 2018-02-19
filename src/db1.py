@@ -47,12 +47,6 @@ class DB1(object):
         
     def sql_exec_many(self,sql,itms,dc=None):
         if config['DBG_SQL']: print("[SQL] "+sql)
-        #print(itms)
-        #['30520', 'C', 'A', 'FAIL', '37', '0', '1', '1']
-        # [2, '33126', 'C', 'G', 1049, 3988277503]
-        #['30133', 'G', 'A', 'FAIL', '31.1118', '51.9832', '4', '1', 1573782783]
-        #[2, '33126', 'C', 'G', 1049, 3988277503]
-        #[1, '33126', 'C', 'G', 'PASS', 1049, 3988277503]
         if dc is not None:
             dc.executemany(sql,itms)
         else:

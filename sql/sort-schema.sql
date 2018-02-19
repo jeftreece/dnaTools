@@ -38,6 +38,7 @@ drop table if exists x_mx_kits;
 drop table if exists x_mx_variants;
 drop table if exists x_mx_idxs;
 drop table if exists x_mx_calls;
+drop table if exists x_mx_dupe_variants;
 
 -- }}}
 -- CREATE TABLES {{{
@@ -54,8 +55,13 @@ create table x_mx_variants (
  name text
 );
 
+create table x_mx_dupe_variants (
+ ID int,  
+ dupe_id int
+);
+
 create table x_mx_idxs(
- type_id int,           -- 0 = variants, 1 = kits (people)
+ type_id int,   -- 0 = variants, 1 = kits (people)
  axis_id int,   -- either the variant id (vID) or the kit_id (pID) 
  idx int
 );
@@ -133,30 +139,6 @@ create view x_perfect_assignments_with_unk AS
   ON PVK.vID = PVKA.vID AND
   PVK.pID = PVKA.pID;
 
--- create view x_perfect_assignments_with_unk_cnt_pos_v AS
---  SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
---  GROUP BY 4;
-
--- create view x_perfect_assignments_with_unk_cnt_neg_v AS
---  SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
---  GROUP BY 4;
-
--- create view x_perfect_assignments_with_unk_cnt_unk_v AS
---  SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,name,assigned,vID from x_perfect_assignments_with_unk 
---  GROUP BY 4;
-
--- create view x_perfect_assignments_with_unk_cnt_pos_k AS
---  SELECT sum(case when assigned <> 1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
---  GROUP BY 2;
-
--- create view x_perfect_assignments_with_unk_cnt_neg_k AS
---  SELECT sum(case when assigned <> -1 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
---  GROUP BY 2;
-
--- create view x_perfect_assignments_with_unk_cnt_unk_k AS
---  SELECT sum(case when assigned <> 0 then 0 else 1 end) as cnt,pID,assigned from x_perfect_assignments_with_unk 
---  GROUP BY 2;
-
 -- }}}
 -- CREATE VIEWS (saved) {{{
 
@@ -183,8 +165,8 @@ create view x_saved_assignments_with_unk AS
   LEFT JOIN x_saved_assignments SVKA
   ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
   -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
-  WHERE VI.type_id = 0 AND VI.axis_id = SVK.name AND  -- fix this
-  KI.type_id = 1 AND KI.axis_id = SVK.kitId
+  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
+  KI.type_id = 1 AND KI.axis_id = SVK.pID
   ORDER BY 7,8;
 
 -- }}}
