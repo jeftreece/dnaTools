@@ -8,6 +8,7 @@
 import sys,os,yaml,csv,json,h5py,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
+import pandas as pd
 
 #}}}
 
@@ -517,6 +518,7 @@ class Sort(object):
         print("---------------------------------------------------------------------")
         print("")
 
+
         #(beg)matrix
         table = BeautifulTable(max_width=95)
         table.column_headers = ['c']+['v']+[str(x) for x in self.get_axis('kits',keysOnly=True)]
@@ -570,8 +572,8 @@ class Sort(object):
 
         #proc
         #self.stdout_matrix()
-        self.mx_hsort()
         self.mx_vsort()
+        self.mx_hsort()
         self.stdout_matrix()
         #sys.exit()
         self.save_mx()
@@ -755,13 +757,46 @@ class Sort(object):
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
     def mx_vsort(self):
+        #Note: (Zak) I think I need to sep perfect/imperfect in self.NP (and self arrays) before I do the rest here
         #perfect variants
-        prfIdx = self.get_perfect_variants_idx()
-        prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
-        unqP, cntP = np.unique(prfPos, return_counts=True)
-        allP = np.asarray((prfIdx,cntP))
-        allP = allP[:,np.argsort(-allP[1])]
-        allPL = allP.T[:,0]
+        #prfIdx = self.get_perfect_variants_idx()
+        PI = self.get_perfect_variants_idx()
+        print(l2s(PI))
+        print(self.NP[PI,])
+        PIX = np.argwhere(self.NP[PI]==1)
+        unqP, cntP = np.unique(PIX[:,0], return_counts=True)
+        CNT = np.asarray((unqP,cntP)).T
+        pdMRG = pd.merge(pd.DataFrame(CNT,columns=['A','B']),pd.DataFrame(PIX,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
+        print(pdMRG)
+        newO = pdMRG.as_matrix(columns=pdMRG.columns[0:1]).T
+        _, idx = np.unique(newO, return_index=True)
+        #{{{
+        print("---")
+        print(newO[:,idx])
+        print("---")
+        print(newO)
+        print("---")
+        print(newO[:,np.sort(idx)].tolist()[0])
+        print("---")
+        #print(inv)
+        #print("---")
+        #def return_counts(idx, inv):
+        #    count = np.zeros(len(idx), np.int)
+        #    np.add.at(count, inv, 1)
+        #    return count
+        #cnts = return_counts(idx,inv)
+        #for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
+        #    print(itm)
+        #print(np.argwhere(self.NP[prfIdx]==1))
+        #}}}
+        #self.NP[newO[:,np.sort(idx)].tolist()[0]],)
+        allPL = newO[:,np.sort(idx)].tolist()[0]
+        #prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
+        #unqP, cntP = np.unique(prfPos, return_counts=True)
+        #allP = np.asarray((prfIdx,cntP))
+        #allP = allP[:,np.argsort(-allP[1])]
+        #allPL = allP.T[:,0]
+
         #imperfect variants
         impIdx = self.get_imperfect_variants_idx()
         impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
@@ -989,6 +1024,8 @@ class Sort(object):
             
         #reset the matrix (now that the dupes are out)
         self.NP = self.NP[idx,]
+
+        self.stdout_matrix()
 
         #save matrix data
         #self.save_mx()

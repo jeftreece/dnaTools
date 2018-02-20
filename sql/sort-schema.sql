@@ -114,7 +114,7 @@ create view x_perfect_variants_lim AS
   N.vID = V.ID and P.vID = V.ID AND 
   V.ID = C.vID and 
   V.pos not in (13668461,7378685,12060401,19538924) 
-  LIMIT 100;
+  LIMIT 30;
 
 create view x_perfect_variants AS
   SELECT * from x_perfect_variants_base
