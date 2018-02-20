@@ -1001,7 +1001,7 @@ class Sort(object):
             return count
         cnts = return_counts(idx,inv)
         dupes = [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]
-        if len(dupes):
+        if len(dupes) > 0:
             print("\nThere are %s dupes: moving them" % len(dupes))
         else:
             print("\nThere are 0 dupes")
