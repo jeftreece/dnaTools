@@ -76,6 +76,10 @@ parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema 
 # maintenance
 parser.add_argument('-b', '--backup', help='do a "backup"', action='store_true')
 
+#reference
+parser.add_argument('-vl', '--variant_lib', help='variant lib reference')
+parser.add_argument('rest', nargs=argparse.REMAINDER)
+
 # output
 
 args = parser.parse_args()
@@ -154,6 +158,13 @@ if args.unknowns:
     sort = Sort()
     sort.dbo = DB1()
     sort.stdout_unknowns()
+
+if args.variant_lib:
+    vt = Variant()
+    vt.dbo = DB1()
+    vt.dbo.db = vt.dbo.db_init()
+    vt.dbo.dc = vt.dbo.cursor()
+    vt.lib([args.variant_lib]+args.rest)
 
 trace(0, "** script complete.\n")
 trace(1, 'done at {:.2f} seconds'.format(time.time() - t0))

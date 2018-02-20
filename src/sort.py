@@ -38,6 +38,33 @@ class Variant(object):
         self.set_info(lev=2,allowImperfect=allowImperfect)
         self.stdout_info()
         
+    def lib(self,argL):
+        argL = [x.upper() for x in argL]
+        for a in argL[:]:
+            if a.find(','):
+                argL = argL + a.split(",")
+                argL.remove(a)
+
+        sqlw = "'"+"','".join(str(x) for x in sorted(list(set(argL))))+"'"
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos
+            FROM snpnames S,variants V
+            WHERE
+            S.snpname in (%s) and V.ID = S.vID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        table = BeautifulTable()
+        table.column_headers = ['name']+['vID']+['pos']
+        for row in F:
+            table.append_row([row[0]]+[row[1]]+[row[2]])
+            table.row_seperator_char = ''
+            table.column_seperator_char = ''
+        print(table)
+                 
+
     def proc_vname(self,vname):
         self.sort.restore_mx_data()
         if vname.isdigit() and int(vname)<=len(self.sort.VARIANTS):
