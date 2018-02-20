@@ -572,8 +572,8 @@ class Sort(object):
 
         #proc
         #self.stdout_matrix()
-        self.mx_vsort()
-        self.mx_hsort()
+        self.mx_vandh_npsort()
+        #self.mx_hsort()
         self.stdout_matrix()
         #sys.exit()
         self.save_mx()
@@ -596,8 +596,8 @@ class Sort(object):
 
         print("")
         #self.get_mx_count_data()
-        self.mx_vsort()
-        self.mx_hsort()
+        self.mx_vandh_npsort()
+        #self.mx_hsort()
 
     def get_vid_by_vix(self,vix,listFlg=False):
         intFlg = True
@@ -756,132 +756,78 @@ class Sort(object):
         else:
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
-    def old_mx_vsort(self):
-
-        PI = self.get_perfect_variants_idx()
-        print(l2s(PI))
-        print(self.NP[PI,])
-        PIX = np.argwhere(self.NP[PI]==1)
-        unqP, cntP = np.unique(PIX[:,0], return_counts=True)
-        CNT = np.asarray((unqP,cntP)).T
-        pdMRG = pd.merge(pd.DataFrame(CNT,columns=['A','B']),pd.DataFrame(PIX,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
-        print(pdMRG)
+    def mx_vandh_npsort(self):
+        #perfect variants
+        prfVix = self.get_perfect_variants_idx()
+        prfVixPos = np.argwhere(self.NP[prfVix]==1)[:,0]
+        unqPV, cntPV = np.unique(prfVixPos, return_counts=True)
+        allPV = np.asarray((prfVix,cntPV)) #index with counts
+        allPV = allPV[:,np.argsort(-allPV[1])] #vsort
+        prfVixSorted = allPV.T[:,0] #sorted vix
+        #imperfect variants
+        impVix = self.get_imperfect_variants_idx()
+        impVixPos = np.argwhere(self.NP[impVix]==1)[:,0]
+        unqIV, cntIV = np.unique(impVixPos, return_counts=True)
+        allIV = np.asarray((impVix,cntIV))
+        allIV = allIV[:,np.argsort(-allIV[1])]
+        impVixSorted = allIV.T[:,0]
+        #kits for perfect variants
+        prfKixPos = np.argwhere(self.NP[prfVix]==1)[:,1]
+        unqPK, cntPK = np.unique(prfKixPos, return_counts=True)
+        allPK = np.asarray((unqPK,cntPK))
+        allPK = allPK[:,np.argsort(-allPK[1])]
+        prfKixSorted = allPK.T[:,0]
+        #names
+        vnamesL = self.get_vname_by_vix(np.concatenate((prfVixSorted,impVixSorted)))
+        knamesL = self.get_kname_by_kix(prfKixSorted)
+        #new matrix
+        self.NP = self.NP[np.concatenate((prfVixSorted,impVixSorted)),]
+        self.NP = self.NP[:,prfKixSorted]
+        #variants
+        for ix,v in enumerate(vnamesL):
+            self.VARIANTS[v][1] = ix
+        #kits
+        for ix,k in enumerate(knamesL):
+            self.KITS[k][1] = ix
+        
+    def mx_vandh_pdsort(self):
+        #Note: panda version of the vandh sort. Currently not working. Perhaps with some debugging this might be faster?
+        #kits for perfect variants
+        prfVix = self.get_perfect_variants_idx()
+        prfKixPos = np.argwhere(self.NP[prfVix]==1)[:,1]
+        unqPK, cntPK = np.unique(prfKixPos, return_counts=True)
+        allPK = np.asarray((prfVix,cntPK))
+        allPK = allPK[:,np.argsort(-allPK[1])]
+        prfKixSorted = allPK.T[:,0]
+        #perfect variants
+        self.NP = self.NP[:,prfKixSorted]
+        prfVixPos = np.argwhere(self.NP[prfVix]==1)
+        unqPV, cntPV = np.unique(prfVixPos[:,0], return_counts=True)
+        allPV = np.asarray((unqPV,cntPV)).T
+        pdMRG = pd.merge(pd.DataFrame(allPV,columns=['A','B']),pd.DataFrame(prfVixPos,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
         newO = pdMRG.as_matrix(columns=pdMRG.columns[0:1]).T
         _, idx = np.unique(newO, return_index=True)
-
-        #{{{
-        print("---")
-        print(newO[:,idx])
-        print("---")
-        print(newO)
-        print("---")
-        print(newO[:,np.sort(idx)].tolist()[0])
-        print("---")
-
-        #print(inv)
-        #print("---")
-        #def return_counts(idx, inv):
-        #    count = np.zeros(len(idx), np.int)
-        #    np.add.at(count, inv, 1)
-        #    return count
-        #cnts = return_counts(idx,inv)
-        #for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
-        #    print(itm)
-        #print(np.argwhere(self.NP[prfIdx]==1))
-        #}}}
-        #self.NP[newO[:,np.sort(idx)].tolist()[0]],)
-
-        allPL = newO[:,np.sort(idx)].tolist()[0]
-
-        #prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
-        #unqP, cntP = np.unique(prfPos, return_counts=True)
-        #allP = np.asarray((prfIdx,cntP))
-        #allP = allP[:,np.argsort(-allP[1])]
-        #allPL = allP.T[:,0]
-
+        prfVixSorted = newO[:,np.sort(idx)].tolist()[0]
         #imperfect variants
-        impIdx = self.get_imperfect_variants_idx()
-        impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
-        unqI, cntI = np.unique(impPos, return_counts=True)
-        allI = np.asarray((impIdx,cntI))
-        allI = allI[:,np.argsort(-allI[1])]
-        allIL = allI.T[:,0]
-        #names
-        namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
-        #new matrix
-        self.NP = self.NP[np.concatenate((allPL,allIL))]
-        #variants + kits
-        for ix,v in enumerate(namesL):
-            self.VARIANTS[v][1] = ix
-        
-    def mx_vsort(self):
-
-        PI = self.get_perfect_variants_idx()
-        print(l2s(PI))
-        print(self.NP[PI,])
-        PIX = np.argwhere(self.NP[PI]==1)
-        unqP, cntP = np.unique(PIX[:,0], return_counts=True)
-        CNT = np.asarray((unqP,cntP)).T
-        pdMRG = pd.merge(pd.DataFrame(CNT,columns=['A','B']),pd.DataFrame(PIX,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
-        print(pdMRG)
+        impVix = self.get_imperfect_variants_idx()
+        impVixPos = np.argwhere(self.NP[impVix]==1)
+        unqIV, cntIV = np.unique(impVixPos[:,0], return_counts=True)
+        allIV = np.asarray((impVix,cntIV)).T
+        pdMRG = pd.merge(pd.DataFrame(allIV,columns=['A','B']),pd.DataFrame(impVixPos,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
         newO = pdMRG.as_matrix(columns=pdMRG.columns[0:1]).T
         _, idx = np.unique(newO, return_index=True)
-
-        #{{{
-        print("---")
-        print(newO[:,idx])
-        print("---")
-        print(newO)
-        print("---")
-        print(newO[:,np.sort(idx)].tolist()[0])
-        print("---")
-
-        #print(inv)
-        #print("---")
-        #def return_counts(idx, inv):
-        #    count = np.zeros(len(idx), np.int)
-        #    np.add.at(count, inv, 1)
-        #    return count
-        #cnts = return_counts(idx,inv)
-        #for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
-        #    print(itm)
-        #print(np.argwhere(self.NP[prfIdx]==1))
-        #}}}
-        #self.NP[newO[:,np.sort(idx)].tolist()[0]],)
-
-        allPL = newO[:,np.sort(idx)].tolist()[0]
-
-        #prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
-        #unqP, cntP = np.unique(prfPos, return_counts=True)
-        #allP = np.asarray((prfIdx,cntP))
-        #allP = allP[:,np.argsort(-allP[1])]
-        #allPL = allP.T[:,0]
-
-        #imperfect variants
-        impIdx = self.get_imperfect_variants_idx()
-        impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
-        unqI, cntI = np.unique(impPos, return_counts=True)
-        allI = np.asarray((impIdx,cntI))
-        allI = allI[:,np.argsort(-allI[1])]
-        allIL = allI.T[:,0]
+        impVixSorted = newO[:,np.sort(idx)].tolist()[0]
         #names
-        namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
+        vnamesL = self.get_vname_by_vix(np.concatenate((prfVixSorted,impVixSorted)))
+        knamesL = self.get_kname_by_kix(prfKixSorted)
         #new matrix
-        self.NP = self.NP[np.concatenate((allPL,allIL))]
-        #variants + kits
-        for ix,v in enumerate(namesL):
+        self.NP = self.NP[np.concatenate((prfVixSorted,impVixSorted)),]
+        #variants
+        for ix,v in enumerate(vnamesL):
             self.VARIANTS[v][1] = ix
-        
-    def mx_hsort(self):
-        allPosKix = np.argwhere(self.NP==1)[:,1]
-        unqA, cntA = np.unique(allPosKix, return_counts=True)
-        allA = np.asarray((unqA,cntA))
-        allA = allA[:,np.argsort(-allA[1])]
-        allL = allA.T[:,0]
-        namesL = self.get_kname_by_kix(allL)
-        self.NP = self.NP[:,allL]
-        for ix,v in enumerate(namesL):
-            self.KITS[v][1] = ix
+        #kits
+        for ix,k in enumerate(knamesL):
+            self.KITS[k][1] = ix
 
     def get_axis(self,orderByType=None,keysOnly=False,idx=None):
         #Note: this is a useful function for being able to enumerate the VARIANTS/KITS dictionaries
