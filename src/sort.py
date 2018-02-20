@@ -49,20 +49,41 @@ class Variant(object):
                 argL.remove(a)
 
         sqlw = "'"+"','".join(str(x) for x in sorted(list(set(argL))))+"'"
+
+        #build 2
         sql = '''
-            SELECT S.snpname,V.ID,V.pos
-            FROM snpnames S,variants V
-            WHERE
-            S.snpname in (%s) and V.ID = S.vID
+            SELECT S.snpname,V.ID,V.pos,B.ID
+            FROM snpnames S,variants V, build B
+            WHERE B.ID = V.buildId and 
+            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
             ORDER BY 1;
             ''' % sqlw
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
         table = BeautifulTable()
-        table.column_headers = ['name']+['vID']+['pos']
+        table.column_headers = ['buildId']+['name']+['vID']+['pos']
         for row in F:
-            table.append_row([row[0]]+[row[1]]+[row[2]])
+            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+            table.row_seperator_char = ''
+            table.column_seperator_char = ''
+        print(table)
+
+        #build 1
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos,B.ID
+            FROM snpnames S,variants V, build B
+            WHERE B.ID = V.buildId and  
+            S.snpname in (%s) and V.ID = S.vID and B.ID = 1 
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        table = BeautifulTable()
+        table.column_headers = ['buildId']+['name']+['vID']+['pos']
+        for row in F:
+            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
         print(table)

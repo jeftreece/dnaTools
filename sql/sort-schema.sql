@@ -100,7 +100,7 @@ create view x_perfect_variants_base AS
   ON S.vID = V.ID
   -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
   WHERE -- C.assigned
-  N.vID = V.ID and P.vID = V.ID AND 
+  N.vID = V.ID and P.vID = V.ID AND V.buildID = 2 and
   V.ID = C.vID and V.pos IN
   -- (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
   (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911);
@@ -113,7 +113,7 @@ create view x_perfect_variants_lim AS
   ON S.vID = V.ID
   -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
   WHERE -- C.assigned
-  N.vID = V.ID and P.vID = V.ID AND 
+  N.vID = V.ID and P.vID = V.ID AND V.buildId = 2 AND
   V.ID = C.vID and 
   V.pos not in 
   -- (13668461,7378685,12060401,19538924) 
