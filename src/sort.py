@@ -52,9 +52,10 @@ class Variant(object):
 
         #build 1
         sql = '''
-            SELECT S.snpname,V.ID,V.pos,B.ID
-            FROM snpnames S,variants V, build B
+            SELECT S.snpname,V.ID,V.pos,B.ID, AA.allele as anc, DA.allele as der
+            FROM snpnames S,variants V, build B, alleles AA, alleles DA
             WHERE B.ID = V.buildId and 
+            V.anc = AA.ID and V.der = DA.ID and
             S.snpname in (%s) and V.ID = S.vID and B.ID = 1
             ORDER BY 1;
             ''' % sqlw
@@ -63,32 +64,33 @@ class Variant(object):
 
         print("")
         table = BeautifulTable()
-        table.column_headers = ['buildId']+['name']+['vID']+['pos']
+        table.column_headers = ['buildId']+['name']+['vID']+['pos']+['anc']+['der']
         for row in F:
-            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
         print(table)
         print("")
 
         #build 2
-        #sql = '''
-        #    SELECT S.snpname,V.ID,V.pos,B.ID
-        #    FROM snpnames S,variants V, build B
-        #    WHERE B.ID = V.buildId and  
-        #    S.snpname in (%s) and V.ID = S.vID and B.ID = 2
-        #    ORDER BY 1;
-        #    ''' % sqlw
-        #self.dbo.sql_exec(sql)
-        #F = self.dbo.fetchall()
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos,B.ID, AA.allele as anc, DA.allele as der
+            FROM snpnames S,variants V, build B, alleles AA, alleles DA
+            WHERE B.ID = V.buildId and  
+            V.anc = AA.ID and V.der = DA.ID and
+            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
 
-        #table = BeautifulTable()
-        #table.column_headers = ['buildId']+['name']+['vID']+['pos']
-        #for row in F:
-        #    table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
-        #    table.row_seperator_char = ''
-        #    table.column_seperator_char = ''
-        #print(table)
+        table = BeautifulTable()
+        table.column_headers = ['buildId']+['name']+['vID']+['pos']+['anc']+['der']
+        for row in F:
+            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+            table.row_seperator_char = ''
+            table.column_seperator_char = ''
+        print(table)
                  
 
     def proc_vname(self,vname):

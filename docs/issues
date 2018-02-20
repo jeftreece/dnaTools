@@ -1,3 +1,7 @@
+bid = get_build_byname(db, 'hg38')
+
+...
+
 http://www.jb.man.ac.uk/~mcdonald/genetics/short-report.csv
 http://www.jb.man.ac.uk/~mcdonald/genetics.html
 
