@@ -51,7 +51,6 @@ create table x_mx_kits(
 create table x_mx_variants (
  ID int,  
  ref_variant_id int,
- pos int,
  name text
 );
 
@@ -149,25 +148,25 @@ create view x_saved_variants AS
   SELECT DISTINCT name, pos, ID
   FROM x_mx_variants;
 
-create view x_saved_variants_with_kits AS
-  SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID,SK.kitID
-  FROM x_saved_variants SV
-  CROSS JOIN x_saved_kits SK;
+-- create view x_saved_variants_with_kits AS
+--  SELECT SK.ID as pID, SV.name, SV.pos, SV.ID as vID,SK.kitID
+--  FROM x_saved_variants SV
+--  CROSS JOIN x_saved_kits SK;
 
-create view x_saved_assignments AS
-  SELECT SC.pID, SV.name, SV.pos, SV.ID as vID, SC.assigned
-  FROM x_mx_calls SC, x_saved_variants SV
-  WHERE SC.vID = SV.ID;
+--create view x_saved_assignments AS
+--  SELECT SC.pID, SV.name, SV.pos, SV.ID as vID, SC.assigned
+--  FROM x_mx_calls SC, x_saved_variants SV
+--  WHERE SC.vID = SV.ID;
 
-create view x_saved_assignments_with_unk AS
-  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID, SVK.kitId, VI.idx, KI.idx
-  FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
-  LEFT JOIN x_saved_assignments SVKA
-  ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
-  -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
-  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
-  KI.type_id = 1 AND KI.axis_id = SVK.pID
-  ORDER BY 7,8;
+-- create view x_saved_assignments_with_unk AS
+--  SELECT SVK.pID, SVK.name, ifnull(SVKA.assigned,0) as assigned, SVK.pos, SVK.vID, SVK.kitId, VI.idx, KI.idx
+--   FROM x_mx_idxs VI, x_mx_idxs KI, x_saved_variants_with_kits SVK
+--  LEFT JOIN x_saved_assignments SVKA
+--  ON SVK.vID = SVKA.vID AND SVK.pID = SVKA.pID
+--  -- WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
+--  WHERE VI.type_id = 0 AND VI.axis_id = SVK.vID AND  -- fix this
+--  KI.type_id = 1 AND KI.axis_id = SVK.pID
+--  ORDER BY 7,8;
 
 -- }}}
 

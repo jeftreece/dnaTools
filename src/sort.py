@@ -8,6 +8,7 @@
 import sys,os,yaml,csv,json,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
+import h5py
 
 #}}}
 
@@ -39,7 +40,7 @@ class Variant(object):
         self.stdout_info()
         
     def proc_vname(self,vname):
-        self.sort.get_mx_data(recreateFlg = False)
+        self.sort.restore_mx_data()
         if vname.isdigit() and int(vname)<=len(self.sort.VARIANTS):
             print("\n** Assuming, you're providing a vix ID...")
             vix = int(vname)
@@ -553,19 +554,34 @@ class Sort(object):
         if refreshDbFlg:
             self.dbo.db = self.dbo.db_init()
             self.dbo.dc = self.dbo.cursor()
-            self.get_mx_data(recreateFlg = False)
+            self.restore_mx_data()
 
         print("")
         print("---------------------------------------------------------------------")
         print("")
 
+        #print(self.NP)
+        #print(type(self.NP))
+        #print("")
+        #print(self.NP[0,:])
+        #print("")
+        #print(self.NP[0,:].tolist())
+        #print("")
+        #print(self.NP[0,:].tolist()[0])
+        #sys.exit()
+
         #(beg)matrix
-        table = BeautifulTable()
+        table = BeautifulTable(max_width=95)
         table.column_headers = ['c']+['v']+[str(x) for x in self.get_axis('kits',keysOnly=True)]
         #table.append_row(['']+['']+[str(x) for x in list(range(10))])
         #table.append_row(['','','','','','','','','','','',''])
         cntV = 0
+        #print (self.get_axis('variants',idx=vix))
+        #sys.exit()
         for K,V in self.get_axis('variants',idx=vix):
+            #print(cntV)
+            #print(V[1])
+            #print(self.get_mx_row_as_list(V[1]))
             table.append_row([cntV]+[str(K)]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
@@ -582,7 +598,7 @@ class Sort(object):
     def stdout_unknowns(self):
         self.dbo.db = self.dbo.db_init()
         self.dbo.dc = self.dbo.cursor()
-        self.get_mx_data(recreateFlg = False)
+        self.restore_mx_data()
         print("")
         print("---------------------------------------------------------------------")
         print("")
@@ -608,7 +624,7 @@ class Sort(object):
         self.dbo.dc = self.dbo.cursor()
 
         #get data
-        self.get_mx_data()
+        self.create_mx_data()
 
         #proc
         #self.stdout_matrix()
@@ -616,13 +632,13 @@ class Sort(object):
         self.mx_horizontal_sort()
         self.stdout_matrix()
         #sys.exit()
-        self.save_mx_to_db()
+        self.save_mx()
         sys.exit()
 
         #step x
         self.sort_step() # this can be expanded upon
         self.stdout_matrix()
-        self.save_mx_to_db()
+        self.save_mx()
         sys.exit()
         
     def sort_step(self):
@@ -808,75 +824,39 @@ class Sort(object):
 
     def mx_vertical_sort(self):
 
-        #this de-dupes it{{{
-        #b = np.ascontiguousarray(self.NP).view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
-        #unq, cnt = np.unique(b, return_counts=True)
-        #print(np.asarray((unq,cnt)))
-        #_, idx = np.unique(b, return_index=True)
-        #_, index, inv = np.unique(b, return_index = True, return_inverse = True)
-        #def return_counts(index, inv):
-        #    count = np.zeros(len(index), np.int)
-        #    np.add.at(count, inv, 1)
-        #    return count
-        #counts = return_counts(index, inv)
-        #index_keep = [i for i, j in enumerate(index) if counts[i] > 1]
-        #print(idx) #the uniques
-        #print(index_keep) #the dupes
-        #sys.exit()
-        #}}}
-        #print(len(cnt))
-        #print(len(idx))
-        #sys.exit()
-        #unique_a = self.NP[idx]
-        #print(idx)
-        #print(unq)
-        #sys.exit()
-        #print(len(self.NP))
-        #print(len(unique_a))
-
-        #https://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array/16973510#16973510
-        #b = self.NP.view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
-        #_, index, inv = np.unique(b, return_index = True, return_inverse = True)
-
-        #def return_counts(index, inv):
-        #    count = np.zeros(len(index), np.int)
-        #    np.add.at(count, inv, 1)
-        #    return count
-
-        #counts = return_counts(index, inv)
-
-        #if you want the indices to discard replace with: counts[i] > 1
-        #index_keep = [i for i, j in enumerate(index) if counts[i] == 1]
-
-        #print(self.NP[index_keep])
-        #https://stackoverflow.com/questions/34123122/finding-indices-of-non-unique-elements-in-numpy-array
-        #dt = np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1]))
-        #b = np.ascontiguousarray(self.NP).view(dt)
-        #unq, cnt = np.unique(b, return_counts=True)
-        #print(cnt)
-        #...
+        #print(self.VARIANTS)
+        #print(len(self.VARIANTS))
+        #perfect variants
         prfIdx = self.get_perfect_variants_idx()
         prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
         unqP, cntP = np.unique(prfPos, return_counts=True)
         allP = np.asarray((prfIdx,cntP))
         allP = allP[:,np.argsort(-allP[1])]
-        #...
-        #dt = np.dtype((np.void, allP.dtype.itemsize * allP.shape[1]))
-        #b = np.ascontiguousarray(allP).view(dt)
-        #unq, cnt = np.unique(b, return_counts=True)
-        #print(cnt)
-        #...
         allPL = allP.T[:,0]
+        #print("prfCnt: %s"%len(prfIdx))
+        #print("prfIdx: %s"%prfIdx)
+        #print("prfNames: %s"%self.get_vname_by_vix(prfIdx))
+        #imperfect variants
         impIdx = self.get_imperfect_variants_idx()
         impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
         unqI, cntI = np.unique(impPos, return_counts=True)
         allI = np.asarray((impIdx,cntI))
         allI = allI[:,np.argsort(-allI[1])]
         allIL = allI.T[:,0]
+        #print("impCnt: %s"%len(impIdx))
+        #print("impIdx: %s"%impIdx)
+        #print("impNames: %s"%self.get_vname_by_vix(impIdx))
+        #print("intersection: %s"%set(allPL).intersection(set(allIL)))
+        #names
         namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
+        #print("namesCnt: %s"%len(namesL))
+        #new matrix
         self.NP = self.NP[np.concatenate((allPL,allIL))]
+        #variants + kits
         for ix,v in enumerate(namesL):
             self.VARIANTS[v][1] = ix
+        #print(self.VARIANTS)
+        #print(len(self.VARIANTS))
         
     def mx_horizontal_sort(self):
         allPosKix = np.argwhere(self.NP==1)[:,1]
@@ -900,17 +880,40 @@ class Sort(object):
         for x in range(len(vals)):
             self.VARIANTS[vals[x]] = [0,cnts[x]]
         
-    def save_mx_to_db(self):
+    def save_mx(self):
+        #push kit/variant/numpy data into saved/matrix tbls + h5py file
+        #deletes
+        sql = "delete from x_mx_variants;"
+        self.dbo.sql_exec(sql)
+        sql = "delete from x_mx_kits;"
+        self.dbo.sql_exec(sql)
         sql = "delete from x_mx_idxs;"
         self.dbo.sql_exec(sql)
-        itms = [(vid,idx) for (n,(vname,(vid,idx))) in enumerate(self.get_axis('variants'))]
+        #save matrix variants
+        sql = "insert into x_mx_variants (ID,name) values (?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([vid,nm])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        #save matrix variants (idx order)
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
-        self.dbo.sql_exec_many(sql,itms)
-        itms = [[pid,idx] for (n,(kname,(pid,idx))) in enumerate(self.get_axis('kits'))]
+        self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        #save matrix kits
+        sql = "insert into x_mx_kits (ID,kitId) values (?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([kid,nm])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
+        #save matrix kits (idx order)
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
-        self.dbo.sql_exec_many(sql,itms)
+        self.dbo.sql_exec_many(sql,[(tuple([kid,idx])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
+        #save numpy data
+        #https://stackoverflow.com/questions/20928136/input-and-output-numpy-arrays-to-h5py
+        h5f = h5py.File('data.h5', 'w')
+        h5f.create_dataset('dataset_1', data=self.NP)
+        h5f.close()
+        #print("---")
+        #print(self.VARIANTS)
+        #print("---")
+        #print(self.get_axis('variants'))
+        #print("---")
 
     def get_axis(self,orderByType=None,keysOnly=False,idx=None):
+        #Note: this is a useful function for being able to enumerate the VARIANTS/KITS dictionaries
         if orderByType in ['variants','kits']:
             if orderByType == 'variants' : SCH = self.VARIANTS
             if orderByType == 'kits' : SCH = self.KITS
@@ -938,7 +941,8 @@ class Sort(object):
             return self.NP[:,kix].T
 
     def get_perfect_variants_idx(self):
-        prf_idx = idx = list(range(len(self.VARIANTS)))
+        idx = list(range(len(self.VARIANTS)))
+        prf_idx = idx[:]
         unk_idx = list(np.unique(np.argwhere(self.NP==0)[:,0]))
         for x in idx:
             if x in unk_idx:
@@ -969,16 +973,51 @@ class Sort(object):
 
     # data 
 
-    def get_mx_data(self,recreateFlg=True):
+    def restore_mx_data(self):
+        self.VARIANTS = {}
+        self.KITS = {}
+        #variants
+        sql = '''
+            SELECT V.name, V.ID, IX.idx
+            FROM x_mx_idxs IX, x_mx_variants V
+            WHERE IX.type_id = 0 AND
+            IX.axis_id = V.ID
+            ORDER BY IX.idx;
+            ''';
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+        for row in F:
+            self.VARIANTS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
+        #print("---")
+        #print(self.VARIANTS)
+        #print("---")
+        #kits
+        sql = '''
+            SELECT K.kitId, K.ID, IX.idx
+            FROM x_mx_idxs IX, x_mx_kits K
+            WHERE IX.type_id = 1 AND
+            IX.axis_id = K.ID
+            ORDER BY IX.idx;
+            ''';
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+        for row in F:
+            self.KITS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
+        #print(self.KITS)
+        #print("---")
+        #sys.exit()
+        #numpy data
+        h5f = h5py.File('data.h5','r')
+        self.NP = np.asmatrix(h5f['dataset_1'][:])
+        h5f.close()
+        #print(self.KITS)
+        #print(self.VARIANTS)
+        #print(self.NP)
+        
+    def create_mx_data(self):
 
-        #recreating from scratch
-        if recreateFlg:
-            sql = "select * from x_perfect_assignments_with_unk;"
-        #going with the saved data
-        else:
-            sql = "select * from x_saved_assignments_with_unk;"
-
-        #get data
+        #sql to fetch data
+        sql = "select * from x_perfect_assignments_with_unk;"
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
@@ -996,20 +1035,10 @@ class Sort(object):
             #kits
             if row[5] not in self.KITS.keys():
                 self.KITS[row[5]] = [row[0],cntK] # self.KITS[name] = [pID,idx]
-                if recreateFlg:
-                    sql = "insert into x_mx_kits (ID,kitId) values(%s,'%s');" % (row[0],row[5])
-                    self.dbo.sql_exec(sql)
-                    sql = "insert into x_mx_idxs (type_id, axis_id, idx) values (%s,%s,%s);" % (1,row[0],cntK)
-                    self.dbo.sql_exec(sql)
                 cntK = cntK + 1
             #variants
             if row[1] not in self.VARIANTS.keys():
                 self.VARIANTS[row[1]] = [row[4],cntV] #self.VARIANTS[name] = [vID,idx]
-                if recreateFlg:
-                    sql = "insert into x_mx_variants (ID,pos,name) values(%s,%s,'%s');" % (row[4],row[3],row[1])
-                    self.dbo.sql_exec(sql)
-                    sql = "insert into x_mx_idxs (type_id, axis_id, idx) values (%s,%s,%s);" % (0,row[4],cntV)
-                    self.dbo.sql_exec(sql)
                 cntV = cntV + 1
 
         self.NP = np.matrix(list(DATA.values()))
@@ -1017,16 +1046,23 @@ class Sort(object):
         #create variables that we'll need for finding duplicates among the variants
         b = np.ascontiguousarray(self.NP).view(np.dtype((np.void, self.NP.dtype.itemsize * self.NP.shape[1])))
         _, idx, inv = np.unique(b, return_index=True, return_inverse=True)
+
         def return_counts(idx, inv):
             count = np.zeros(len(idx), np.int)
             np.add.at(count, inv, 1)
             return count
         cnts = return_counts(idx,inv)
-        #idx_d = [i for i,j in enumerate(idx) if cnts[i] > 1]
-        #idx_u = [i for i,j in enumerate(idx) if cnts[i] == 1]
 
-        #print(self.VARIANTS)
+        print("\nThere are %s dupes: moving them" % len([(i,j) for i,j in enumerate(idx) if cnts[i] > 1]))
 
+        #idx_uniq = [i for i, j in enumerate(idx) if cnts[i] == 1]
+        #idx_dupe = [i for i, j in enumerate(idx) if cnts[i] > 1]
+        #print("idx: %s"%idx)
+        #print("idx_uniq: %s"%idx_uniq)
+        #print("idx_dupe: %s"%idx_dupe)
+        #print("inv: %s"%inv)
+
+        #https://stackoverflow.com/questions/34123122/finding-indices-of-non-unique-elements-in-numpy-array
         #find and separate dupe variants
         for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
             #this gets the duplicate variants (based on idx order) 
@@ -1042,34 +1078,9 @@ class Sort(object):
         for ix,vn in enumerate(self.get_vname_by_vix(idx)):
             self.VARIANTS[vn][1] = ix
             
-        #print(self.VARIANTS)
-
-        #print("hey! - uniqs")
-        #print(l2s(idx_u)) #the uniques
-        #print("hey! - dupes")
-        #print(l2s(idx_d)) #the dupes
-        #print("idx")
-        #print(idx)
-        #print("dupes")
-        #print(dupes)
-        #print(self.NP[58,])
-        #print(self.NP[94,])
-        #print(self.NP)
-        #print("")
-        #print("")
+        #reset the matrix (now that the dupes are out)
         self.NP = self.NP[idx,]
 
-        #self.mx_vertical_sort()
-        #self.mx_horizontal_sort()
+        #save matrix data
+        #self.save_mx()
 
-        #print(self.NP[0,])
-        #print(self.NP[1,])
-        #print(self.NP)
-        #sys.exit()
-
-        #push this new stuff into saved/matrix tbls (recreation)
-        if recreateFlg:
-            sql = "insert into x_mx_calls (pID,vId,assigned) select pID,vID,assigned from x_perfect_assignments;"
-            self.dbo.sql_exec(sql)
-
-        
