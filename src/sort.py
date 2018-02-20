@@ -44,6 +44,9 @@ class Variant(object):
             if a.find(','):
                 argL = argL + a.split(",")
                 argL.remove(a)
+            if a.find('/'):
+                argL = argL + a.split("/")
+                argL.remove(a)
 
         sqlw = "'"+"','".join(str(x) for x in sorted(list(set(argL))))+"'"
         sql = '''
