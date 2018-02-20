@@ -21,20 +21,12 @@ import time
 
 # read the config file
 # todo: this might need to some bootstrapping (run outside of src dir?)
+config = yaml.load(open('config.yaml'))
 
 # add src and bin directories to path
 import sys
-#sys.path.insert(0, config['REDUX_PATH'])
-#sys.path.insert(0, config['REDUX_BIN'])
-#config = yaml.load(open('config.yaml'))
-try:
-    config = yaml.load(open(os.environ['REDUX_CONF_ZAK']))
-except:
-    trace(0,"Missing environment variable REDUX_CONF_ZAK. Aborting.")
-    sys.exit()
 sys.path.insert(0, config['REDUX_PATH'])
 sys.path.insert(0, config['REDUX_BIN'])
-
 
 
 # routines - debug/diagnostic output
@@ -251,6 +243,25 @@ def populate_age(dbo):
                            select id from bedranges
                            inner join tmpt t on t.b=minaddr and t.c=maxaddr''')
         dbo.dc.execute('drop table tmpt')
+
+# populate reference positives
+def populate_refpos(dbo):
+    trace(1, 'populate refpos table')
+    with open('refpos.txt') as refposfile:
+        cf = csv.reader(refposfile)
+        snps = []
+        for row in cf:
+            if row[0].startswith('#'):
+                continue
+            try:
+                snps.append(row[0])
+            except:
+                trace(0, 'failed on row of refpos.txt:{}'.format(row))
+        dbo.dc.execute('delete from refpos')
+        for snpname in snps:
+           dbo.dc.execute('''insert into refpos select v.id from variants v
+                       inner join snpnames s on s.vid=v.id and s.snpname=?''',
+                       (snpname,))
 
 
 # populate a table of STR definitions
@@ -675,15 +686,17 @@ def populate_from_VCF_file(dbo, bid, pid, fileobj):
     call_info = [t + [pack_call(t)] for t in passes]
 
     # execute sql on results to save in vcfcalls
-    #dc.execute('delete from tmpt')
     dc.execute('drop table if exists tmpt')
+    #zak
+    #dc.execute('''create temporary table tmpt(a integer, b integer,
+    #              c text, d text, e integer, f integer)''')
     dc.execute('''create temporary table tmpt(a integer, b integer,
                   c text, d text, g text, e integer, f integer)''')
+    #zak
     #dc.executemany('insert into tmpt values(?,?,?,?,?,?)',
     #                      [[bid]+v[0:3]+[pid]+[v[-1]] for v in call_info])
     dc.executemany('insert into tmpt values(?,?,?,?,?,?,?)',
                           [[bid]+v[0:4]+[pid]+[v[-1]] for v in call_info])
-
     # fixme - performance
     trace(3,'VCF update variants at {}'.format(time.clock()))
     dc.execute('''insert or ignore into variants(buildID, pos, anc, der)
@@ -692,6 +705,7 @@ def populate_from_VCF_file(dbo, bid, pid, fileobj):
                   inner join alleles dr on dr.allele = d''')
     trace(3,'done at {}'.format(time.clock()))
     trace(3,'VCF update calls at {}'.format(time.clock()))
+    #zak
     #dc.execute('''insert into vcfcalls (pid,vid,callinfo)
     #              select e, v.id, f from tmpt
     dc.execute('''insert into vcfcalls (pid,vid,callinfo,assigned)
@@ -701,9 +715,8 @@ def populate_from_VCF_file(dbo, bid, pid, fileobj):
                   inner join variants v on v.buildID = a and v.pos = b
                   and v.anc=an.id and v.der=dr.id''')
     trace(3,'done at {}'.format(time.clock()))
-    #dc.execute('drop table tmpt')
+    dc.execute('drop table tmpt')
     dc.close()
-    #sys.exit()
 
     trace(500, '{} vcf calls: {}...'.format(len(passes), passes[:5]))
     return
@@ -757,8 +770,7 @@ def populate_from_dataset(dbo):
         if not os.path.exists(zipf):
             trace(10, 'not present: {}'.format(zipf))
             continue
-        #try:
-        if 1 == 1:
+        try:
             with zipfile.ZipFile(zipf) as zf:
                 trace(1, '{}-{}'.format(nkits,zf.filename[:70]))
                 listfiles = zf.namelist()
@@ -779,9 +791,9 @@ def populate_from_dataset(dbo):
                     trace(2, 'populate from vcf {}'.format(vcffile))
                     populate_from_VCF_file(dbo, buildid, pid, vcff)
             nkits += 1
-        #except:
-        #    trace(0, 'FAIL on file {} (not loaded)'.format(zipf))
-        #    # raise
+        except:
+            trace(0, 'FAIL on file {} (not loaded)'.format(zipf))
+            # raise
         if nkits >= config['kitlimit']:
             break
         # fixme - if BED passes and VCF fails, cruft is left behind. This loop
@@ -843,4 +855,5 @@ def db_creation():
     populate_SNPs(db)
     populate_contigs(db)
     populate_age(db)
+    populate_refpos(db)
     return db
