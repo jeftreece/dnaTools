@@ -51,7 +51,8 @@ create table x_mx_kits(
 create table x_mx_variants (
  ID int,  
  ref_variant_id int,
- name text
+ name text,
+ pos int
 );
 
 create table x_mx_dupe_variants (
@@ -101,7 +102,8 @@ create view x_perfect_variants_base AS
   WHERE -- C.assigned
   N.vID = V.ID and P.vID = V.ID AND 
   V.ID = C.vID and V.pos IN
-  (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
+  -- (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
+  (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911);
 
 create view x_perfect_variants_lim AS
   SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
@@ -113,7 +115,9 @@ create view x_perfect_variants_lim AS
   WHERE -- C.assigned
   N.vID = V.ID and P.vID = V.ID AND 
   V.ID = C.vID and 
-  V.pos not in (13668461,7378685,12060401,19538924) 
+  V.pos not in 
+  -- (13668461,7378685,12060401,19538924) 
+  (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911)
   LIMIT 20;
 
 create view x_perfect_variants AS

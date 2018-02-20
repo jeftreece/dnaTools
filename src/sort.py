@@ -518,15 +518,14 @@ class Sort(object):
         print("---------------------------------------------------------------------")
         print("")
 
-
         #(beg)matrix
-        table = BeautifulTable(max_width=95)
-        table.column_headers = ['c']+['v']+[str(x) for x in self.get_axis('kits',keysOnly=True)]
+        table = BeautifulTable(max_width=105)
+        table.column_headers = ['c']+['p']+['v']+[str(x) for x in self.get_axis('kits',keysOnly=True)]
         #table.append_row(['']+['']+[str(x) for x in list(range(10))])
         #table.append_row(['','','','','','','','','','','',''])
         cntV = 0
         for K,V in self.get_axis('variants',idx=vix):
-            table.append_row([cntV]+[str(K)]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
+            table.append_row([cntV]+[str(V[2])]+[str(K)]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
             table.column_alignments['v'] = BeautifulTable.ALIGN_LEFT
@@ -726,7 +725,6 @@ class Sort(object):
         
     def get_vid_by_name(self,vname):
         return self.VARIANTS[vname][0]
-        
 
     def get_kixs_by_val(self,val,vix=None,vname=None,overrideData=None):
         if vname is not None:
@@ -915,11 +913,11 @@ class Sort(object):
         sql = "delete from x_mx_idxs;"
         self.dbo.sql_exec(sql)
         #save matrix variants
-        sql = "insert into x_mx_variants (ID,name) values (?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([vid,nm])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        sql = "insert into x_mx_variants (ID,name,pos) values (?,?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([vid,nm,pos])) for (n,(nm,(vid,idx,pos))) in enumerate(self.get_axis('variants'))])
         #save matrix variants (idx order)
         sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx,pos))) in enumerate(self.get_axis('variants'))])
         #save matrix kits
         sql = "insert into x_mx_kits (ID,kitId) values (?,?);"
         self.dbo.sql_exec_many(sql,[(tuple([kid,nm])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
@@ -937,7 +935,7 @@ class Sort(object):
         self.KITS = {}
         #variants
         sql = '''
-            SELECT V.name, V.ID, IX.idx
+            SELECT V.name, V.ID, IX.idx, V.pos
             FROM x_mx_idxs IX, x_mx_variants V
             WHERE IX.type_id = 0 AND
             IX.axis_id = V.ID
@@ -946,7 +944,7 @@ class Sort(object):
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
         for row in F:
-            self.VARIANTS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
+            self.VARIANTS[row[0]] = (row[1],row[2],row[3]) #self.VARIANTS[name] = [vID,idx]
         #kits
         sql = '''
             SELECT K.kitId, K.ID, IX.idx
@@ -984,11 +982,11 @@ class Sort(object):
             DATA[row[1]].append(row[2])
             #kits
             if row[5] not in self.KITS.keys():
-                self.KITS[row[5]] = [row[0],cntK] # self.KITS[name] = [pID,idx]
+                self.KITS[row[5]] = [row[0],cntK] # self.KITS[name] = (pID,idx)
                 cntK = cntK + 1
             #variants
             if row[1] not in self.VARIANTS.keys():
-                self.VARIANTS[row[1]] = [row[4],cntV] #self.VARIANTS[name] = [vID,idx]
+                self.VARIANTS[row[1]] = [row[4],cntV,row[3]] #self.VARIANTS[name] = (vID,idx,pos)
                 cntV = cntV + 1
 
         self.NP = np.matrix(list(DATA.values()))
@@ -1002,8 +1000,11 @@ class Sort(object):
             np.add.at(count, inv, 1)
             return count
         cnts = return_counts(idx,inv)
-
-        print("\nThere are %s dupes: moving them" % len([(i,j) for i,j in enumerate(idx) if cnts[i] > 1]))
+        dupes = [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]
+        if len(dupes):
+            print("\nThere are %s dupes: moving them" % len(dupes))
+        else:
+            print("\nThere are 0 dupes")
 
         #idx_uniq = [i for i, j in enumerate(idx) if cnts[i] == 1]
         #idx_dupe = [i for i, j in enumerate(idx) if cnts[i] > 1]
@@ -1031,7 +1032,7 @@ class Sort(object):
         #reset the matrix (now that the dupes are out)
         self.NP = self.NP[idx,]
 
-        self.stdout_matrix()
+        #self.stdout_matrix()
 
         #save matrix data
         #self.save_mx()
