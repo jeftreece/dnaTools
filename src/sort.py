@@ -61,6 +61,7 @@ class Variant(object):
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
+        print("")
         table = BeautifulTable()
         table.column_headers = ['buildId']+['name']+['vID']+['pos']
         for row in F:
@@ -68,25 +69,26 @@ class Variant(object):
             table.row_seperator_char = ''
             table.column_seperator_char = ''
         print(table)
+        print("")
 
         #build 2
-        sql = '''
-            SELECT S.snpname,V.ID,V.pos,B.ID
-            FROM snpnames S,variants V, build B
-            WHERE B.ID = V.buildId and  
-            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
-            ORDER BY 1;
-            ''' % sqlw
-        self.dbo.sql_exec(sql)
-        F = self.dbo.fetchall()
+        #sql = '''
+        #    SELECT S.snpname,V.ID,V.pos,B.ID
+        #    FROM snpnames S,variants V, build B
+        #    WHERE B.ID = V.buildId and  
+        #    S.snpname in (%s) and V.ID = S.vID and B.ID = 2
+        #    ORDER BY 1;
+        #    ''' % sqlw
+        #self.dbo.sql_exec(sql)
+        #F = self.dbo.fetchall()
 
-        table = BeautifulTable()
-        table.column_headers = ['buildId']+['name']+['vID']+['pos']
-        for row in F:
-            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
-            table.row_seperator_char = ''
-            table.column_seperator_char = ''
-        print(table)
+        #table = BeautifulTable()
+        #table.column_headers = ['buildId']+['name']+['vID']+['pos']
+        #for row in F:
+        #    table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+        #    table.row_seperator_char = ''
+        #    table.column_seperator_char = ''
+        #print(table)
                  
 
     def proc_vname(self,vname):
