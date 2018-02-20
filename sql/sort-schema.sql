@@ -152,3 +152,6 @@ create view x_saved_variants AS
 
 -- }}}
 
+drop index if exists snpidx;
+create index snpidx on snpnames(snpname);
+
