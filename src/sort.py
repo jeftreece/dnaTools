@@ -761,22 +761,22 @@ class Sort(object):
         prfVix = self.get_perfect_variants_idx()
         prfVixPos = np.argwhere(self.NP[prfVix]==1)[:,0]
         unqPV, cntPV = np.unique(prfVixPos, return_counts=True)
-        allPV = np.asarray((prfVix,cntPV)) #index with counts
+        allPV = np.asarray((prfVix,cntPV)) #idx w/counts
         allPV = allPV[:,np.argsort(-allPV[1])] #vsort
         prfVixSorted = allPV.T[:,0] #sorted vix
         #imperfect variants
         impVix = self.get_imperfect_variants_idx()
         impVixPos = np.argwhere(self.NP[impVix]==1)[:,0]
         unqIV, cntIV = np.unique(impVixPos, return_counts=True)
-        allIV = np.asarray((impVix,cntIV))
-        allIV = allIV[:,np.argsort(-allIV[1])]
-        impVixSorted = allIV.T[:,0]
+        allIV = np.asarray((impVix,cntIV)) #idx w/counts
+        allIV = allIV[:,np.argsort(-allIV[1])] #vsort
+        impVixSorted = allIV.T[:,0] #sorted vix
         #kits for perfect variants
         prfKixPos = np.argwhere(self.NP[prfVix]==1)[:,1]
         unqPK, cntPK = np.unique(prfKixPos, return_counts=True)
-        allPK = np.asarray((unqPK,cntPK))
-        allPK = allPK[:,np.argsort(-allPK[1])]
-        prfKixSorted = allPK.T[:,0]
+        allPK = np.asarray((unqPK,cntPK)) #idx w/counts
+        allPK = allPK[:,np.argsort(-allPK[1])] #hsort
+        prfKixSorted = allPK.T[:,0] #sorted kix
         #names
         vnamesL = self.get_vname_by_vix(np.concatenate((prfVixSorted,impVixSorted)))
         knamesL = self.get_kname_by_kix(prfKixSorted)
