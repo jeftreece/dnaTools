@@ -560,28 +560,13 @@ class Sort(object):
         print("---------------------------------------------------------------------")
         print("")
 
-        #print(self.NP)
-        #print(type(self.NP))
-        #print("")
-        #print(self.NP[0,:])
-        #print("")
-        #print(self.NP[0,:].tolist())
-        #print("")
-        #print(self.NP[0,:].tolist()[0])
-        #sys.exit()
-
         #(beg)matrix
         table = BeautifulTable(max_width=95)
         table.column_headers = ['c']+['v']+[str(x) for x in self.get_axis('kits',keysOnly=True)]
         #table.append_row(['']+['']+[str(x) for x in list(range(10))])
         #table.append_row(['','','','','','','','','','','',''])
         cntV = 0
-        #print (self.get_axis('variants',idx=vix))
-        #sys.exit()
         for K,V in self.get_axis('variants',idx=vix):
-            #print(cntV)
-            #print(V[1])
-            #print(self.get_mx_row_as_list(V[1]))
             table.append_row([cntV]+[str(K)]+[str(x).replace('-1','') for x in self.get_mx_row_as_list(V[1])])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
@@ -975,9 +960,6 @@ class Sort(object):
         F = self.dbo.fetchall()
         for row in F:
             self.VARIANTS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
-        #print("---")
-        #print(self.VARIANTS)
-        #print("---")
         #kits
         sql = '''
             SELECT K.kitId, K.ID, IX.idx
@@ -990,16 +972,10 @@ class Sort(object):
         F = self.dbo.fetchall()
         for row in F:
             self.KITS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
-        #print(self.KITS)
-        #print("---")
-        #sys.exit()
         #numpy data
         h5f = h5py.File('data.h5','r')
         self.NP = np.asmatrix(h5f['dataset_1'][:])
         h5f.close()
-        #print(self.KITS)
-        #print(self.VARIANTS)
-        #print(self.NP)
         
     def create_mx_data(self):
 
