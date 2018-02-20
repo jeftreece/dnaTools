@@ -628,8 +628,8 @@ class Sort(object):
 
         #proc
         #self.stdout_matrix()
-        self.mx_vertical_sort()
         self.mx_horizontal_sort()
+        self.mx_vertical_sort()
         self.stdout_matrix()
         #sys.exit()
         self.save_mx()
@@ -823,9 +823,6 @@ class Sort(object):
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
     def mx_vertical_sort(self):
-
-        #print(self.VARIANTS)
-        #print(len(self.VARIANTS))
         #perfect variants
         prfIdx = self.get_perfect_variants_idx()
         prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
@@ -833,9 +830,6 @@ class Sort(object):
         allP = np.asarray((prfIdx,cntP))
         allP = allP[:,np.argsort(-allP[1])]
         allPL = allP.T[:,0]
-        #print("prfCnt: %s"%len(prfIdx))
-        #print("prfIdx: %s"%prfIdx)
-        #print("prfNames: %s"%self.get_vname_by_vix(prfIdx))
         #imperfect variants
         impIdx = self.get_imperfect_variants_idx()
         impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
@@ -843,20 +837,13 @@ class Sort(object):
         allI = np.asarray((impIdx,cntI))
         allI = allI[:,np.argsort(-allI[1])]
         allIL = allI.T[:,0]
-        #print("impCnt: %s"%len(impIdx))
-        #print("impIdx: %s"%impIdx)
-        #print("impNames: %s"%self.get_vname_by_vix(impIdx))
-        #print("intersection: %s"%set(allPL).intersection(set(allIL)))
         #names
         namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
-        #print("namesCnt: %s"%len(namesL))
         #new matrix
         self.NP = self.NP[np.concatenate((allPL,allIL))]
         #variants + kits
         for ix,v in enumerate(namesL):
             self.VARIANTS[v][1] = ix
-        #print(self.VARIANTS)
-        #print(len(self.VARIANTS))
         
     def mx_horizontal_sort(self):
         allPosKix = np.argwhere(self.NP==1)[:,1]
