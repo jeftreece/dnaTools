@@ -1,0 +1,75 @@
+www.jb.man.ac.uk/~mcdonald/genetics/report.html
+
+sample placeholders{{{
+33204|FTDNA/b38/33204_Little_IE_BigY_RawData_2018-02-13.zip
+206335|FTDNA/b38/206335_Teague_GB_BigY_RawData_2018-02-13.zip
+391787|FTDNA/b38/391787_Bitchener__BigY_RawData_2018-02-13.zip
+N160218|FTDNA/b38/N160218_Callahan_IE_BigY_RawData_2018-02-13.zip
+449436|FTDNA/b38/449436_McElroy_US_BigY_RawData_2018-02-13.zip
+176550|FTDNA/b38/176550_Ballard_US_BigY_RawData_2018-02-13.zip
+360259|FTDNA/b38/360259_Roberts_US_BigY_RawData_2018-02-13.zip
+393983|FTDNA/b38/393983_Hansen__BigY_RawData_2018-02-13.zip
+B148772|FTDNA/b38/B148772___BigY_RawData_2018-02-13.zip
+HZNW9|FGC/b38/HZNW9_Crawford_IE_YElite2_RawData_2018-02-13.zip
+}}}
+------------------------------------------------------------
+I have these - in the JSON + the url (4)
+
+(1024|7221) Cooke-7221-bigy2-d28fbf83-3a67-4fc1-8fbf-ce5301dcb329.zip
+(1707|216600) 216600_John-Key_GB_BigY_RawData_2017-11-16.zip
+(1801|22654) 22654_Neely_IE_BigY_RawData_2017-11-08.zip
+(1024|5962) 5962_Johnson_US_BigY_RawData_2017-11-12.zip
+
+------------------------------------------------------------
+sql{{{
+-- sqlite>  select distinct C.pID,D.ID,D.kitId,d.fileNm,D.origFileNm from vcfcalls C,dataset D where C.pID=D.ID;
+-- 1707|1707|216600|FTDNA/b38/216600_John-Key_GB_BigY_RawData_2017-11-16.zip|bigy2-1833ae96-f699-443f-bc32-c153668847ec.zip
+-- 1321|1321|224096|FTDNA/b38/224096_Warburton_GB_BigY_RawData_2017-12-07.zip|bigy2-ac39fb50-302f-485d-9b89-4a48059f9181.zip
+-- 1801|1801|22654|FTDNA/b38/22654_Neely_IE_BigY_RawData_2017-11-08.zip|bigy2-eaa2bb77-438b-4cbc-acff-3e525cf8ca56.zip
+-- 1747|1747|5962|FTDNA/b38/5962_Johnson_US_BigY_RawData_2017-11-12.zip|bigy2-a1c3e805-996f-44d4-b794-f57c1baff482.zip
+-- 1049|1049|N4826|FTDNA/b38/N4826_Treece_US_BigY_RawData_2018-01-03.zip|bigy2-a43f22dd-845d-481d-ac72-ab2f1337d426.zip
+}}}
+I have these - in the JSON, not in the url (4)
+
+(20386) 120386_Donald_UK_BigY_RawData_2018-01-03.zip --> 120386_Donald_GB_BigY_RawData_2018-01-03.zip
+(1321|224096) 224096_Warburton_GB_BigY_RawData_2017-12-07.zip
+ok(1049|N4826) N4826_Treece_US_BigY_RawData_2018-01-03.zip
+...
+ok(867|163973) bigy2-4b393057-8a54-48a2-91d5-b95db9b1db3d.zip --> 163973_Wright_US_BigY_RawData_2018-01-08.zip
+(1238|124134) (Charles Wright) - bigy2-9a001faa-b1f7-45b2-b1c3-816e72317ec6.zip --> 124134_Wright_GB_BigY_RawData_2017-12-15.zip 
+
+------------------------------------------------------------
+I have these - not in the JSON - but in the url (2)
+
+ok(1|33204) Zak Jones (B30884) - bigy2-e60d0b11-e650-4a2f-adab-9d06be65b221.zip - 33204|FTDNA/b38/33204_Little_IE_BigY_RawData_2018-02-13.zip
+ok(2|206335) James A Wright (637069) - bigy2-bf35d4bc-a99b-464a-b6eb-c0572823c031.zip - 206335|FTDNA/b38/206335_Teague_GB_BigY_RawData_2018-02-13.zip
+
+------------------------------------------------------------
+other Jones:
+- Leo 99623
+------------------------------------------------------------
+other Wrights: (x are ones that are in the JSON,y are ones I have)
+x/y - Charles: 124134
+x - Michael: 122898 (bigy2-5e00eabe-08fe-4d10-96d8-5000e534b632.zip)
+x - Khris - 499807 (bigy2-cfd8e3d7-8158-406a-964f-9ad59353028e.zip)
+x - Daniel Jackson - B171074 (bigy2-fd09ef8f-3fec-4d45-9560-0c79da900e51.zip)
+x - Stephen Wright - (163973) bigy2-4b393057-8a54-48a2-91d5-b95db9b1db3d.zip --> 163973_Wright_US_BigY_RawData_2018-01-08.zip
+- Nielson (510668)
+- Arthur: 317604,293507
+- Dan Dane: 280503
+- Jimmie: 280291
+- Jonathan: 293820
+- Wayne: 521793
+- Richard: B189932
+- Nancy Barton - 152286
+- Kenneth Smith - 147130
+------------------------------------------------------------
+Unk (1)
+
+prob 177312
+
+ok(3|391787) bigy2-2fca3bf3-512f-458c-9df0-632628132005.zip - 391787|FTDNA/b38/391787_Bitchener__BigY_RawData_2018-02-13.zip
+------------------------------------------------------------
+
+
+

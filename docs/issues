@@ -1,0 +1,54 @@
+http://www.jb.man.ac.uk/~mcdonald/genetics/short-report.csv
+http://www.jb.man.ac.uk/~mcdonald/genetics.html
+
+https://stackoverflow.com/questions/20763012/creating-a-pandas-dataframe-from-a-numpy-array-how-do-i-specify-the-index-colum
+https://stackoverflow.com/questions/47463515/numpy-simple-join-2-arrays
+https://stackoverflow.com/questions/2774949/merging-indexed-array-in-python
+https://stackoverflow.com/questions/13795390/numpy-append-field-gives-shape-error-for-new-field-with-2d-shape
+
+first:
+
+- better vert/horz sort (not just by # of amts)
+- step through real data ... and assess whether vp switch working well.
+- work with old *.txt files and report to try and figure out how this sort is
+  going with that too
+
+refactor:
+
+- should check the subset code ... shorten?
+- consolidate get_vix/get_kix routines
+- should check get get_vname_by_vix stuff .. shorten?
+
+need help:
+
+- the results need bed info? where is the bed info?
+
+more refactor:
+
+- rename the tables/columns/db sql things a bit better ... more in sync with the way
+  master arch is ... also so uses db.py (not my temporary db1.py)
+- what's up with all those saved views? still need those?
+- x_mx_idxs necessary?
+
+ideas:
+
+- dtype fields would help w/matrix? (ie - can save it "all" to hf5?)
+
+make list of suggestions to Jef/Iain for master:
+
+- how call config.yaml
+- enhancements to db.py
+
+- reference: www.jb.man.ac.uk/~mcdonald/genetics/report.html
+
+done:
+
+[x] matrix vertical sort isn't working, why?
+[x] sql stuff is slow (recreating saved matrix info), how to optimize better?
+[x] Iain's request -- that it show kit #'s for the col names
+
+urls:
+
+https://stackoverflow.com/questions/34123122/finding-indices-of-non-unique-elements-in-numpy-array
+https://stackoverflow.com/questions/34999090/finding-duplicate-matrices-in-python
+
