@@ -50,12 +50,12 @@ class Variant(object):
 
         sqlw = "'"+"','".join(str(x) for x in sorted(list(set(argL))))+"'"
 
-        #build 2
+        #build 1
         sql = '''
             SELECT S.snpname,V.ID,V.pos,B.ID
             FROM snpnames S,variants V, build B
             WHERE B.ID = V.buildId and 
-            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
+            S.snpname in (%s) and V.ID = S.vID and B.ID = 1
             ORDER BY 1;
             ''' % sqlw
         self.dbo.sql_exec(sql)
@@ -69,12 +69,12 @@ class Variant(object):
             table.column_seperator_char = ''
         print(table)
 
-        #build 1
+        #build 2
         sql = '''
             SELECT S.snpname,V.ID,V.pos,B.ID
             FROM snpnames S,variants V, build B
             WHERE B.ID = V.buildId and  
-            S.snpname in (%s) and V.ID = S.vID and B.ID = 1 
+            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
             ORDER BY 1;
             ''' % sqlw
         self.dbo.sql_exec(sql)
