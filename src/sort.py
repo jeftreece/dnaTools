@@ -5,10 +5,9 @@
 # For free distribution under the terms of the GNU General Public License,
 # version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
 
-import sys,os,yaml,csv,json,numpy as np
+import sys,os,yaml,csv,json,h5py,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
-import h5py
 
 #}}}
 
@@ -21,7 +20,6 @@ sys.path.append(config['REDUX_PATH'])
 
 def l2s(lst):
     return ",".join(str(x) for x in lst)
-    
 
 class Variant(object):
 
@@ -504,49 +502,8 @@ class Sort(object):
         self.dbo = None #db object
         self.KITS = None
         self.VARIANTS = None
-        self.DATA = None
         self.NP = None
-        self.NONES = []
-        self.MDATA = None
-        self.perfect_variants = None
         self.imperfect_vix = None
-
-    # schema / sample data
-
-    def sort_schema(self):
-        self.dbo.db = self.dbo.db_init()
-        self.dbo.dc = self.dbo.cursor()
-        self.dbo.sql_exec_file('sort-schema.sql')
-        
-    def sort_ins_sample_data(self):
-
-        #kits
-        kits = "A B C D E F G H I J"
-        for k in kits.split():
-            sql = "insert into s_kits (kit_id) values ('%s');" % k
-            self.dbo.sql_exec(sql)
-
-        #artificial top
-        sql = "INSERT into s_variants (variant_id,variant_loc,name) VALUES (%s,'%s','%s');" % (-999,'top','top')
-        self.dbo.sql_exec(sql)
-        for k in kits.split():
-            sql = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('%s','%s',%s);" % (k,'top',1)
-            self.dbo.sql_exec(sql)
-
-        #variants + calls
-        with open(config['REDUX_DATA']+'/sample-sort-data.csv','r') as FILE:
-            for row in csv.DictReader(FILE,'vi v n A B C D E F G H I J'.split()):
-                row = json.loads(json.dumps(row).replace('\\ufeff','')) #hack: remove byte order mark
-                #s_variants
-                sql = "INSERT into s_variants (variant_id,variant_loc,name) VALUES (%s,'%s','%s');" % (row['vi'],row['v'],row['n'])
-                self.dbo.sql_exec(sql)
-                for k in kits.split(): #kit_id
-                    kv = str(row[str(k)]) #assigned
-                    vv = str(row['v']) #variant_loc
-                    #s_calls
-                    if kv != 0:
-                        sql1 = "INSERT into s_calls (kit_id,variant_loc,assigned) VALUES ('%s','%s',%s);" % (k,vv,kv)
-                        self.dbo.sql_exec(sql1)
 
     # argparser special routines
 
@@ -613,8 +570,8 @@ class Sort(object):
 
         #proc
         #self.stdout_matrix()
-        self.mx_horizontal_sort()
-        self.mx_vertical_sort()
+        self.mx_hsort()
+        self.mx_vsort()
         self.stdout_matrix()
         #sys.exit()
         self.save_mx()
@@ -637,18 +594,8 @@ class Sort(object):
 
         print("")
         #self.get_mx_count_data()
-        self.mx_vertical_sort()
-        self.mx_horizontal_sort()
-
-    def get_row_when_override_kixs(self,override_val,vix,kixs):
-        row = self.get_mx_kit_data(vix=vix)
-        if len(kixs) == 0:
-            return row
-        rowO = np.empty_like(row)
-        rowO[:] = row #make duplicate copy - important!
-        for kx in kixs:
-            rowO[0,kx] = override_val
-        return rowO
+        self.mx_vsort()
+        self.mx_hsort()
 
     def get_vid_by_vix(self,vix,listFlg=False):
         intFlg = True
@@ -807,7 +754,7 @@ class Sort(object):
         else:
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
-    def mx_vertical_sort(self):
+    def mx_vsort(self):
         #perfect variants
         prfIdx = self.get_perfect_variants_idx()
         prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
@@ -830,7 +777,7 @@ class Sort(object):
         for ix,v in enumerate(namesL):
             self.VARIANTS[v][1] = ix
         
-    def mx_horizontal_sort(self):
+    def mx_hsort(self):
         allPosKix = np.argwhere(self.NP==1)[:,1]
         unqA, cntA = np.unique(allPosKix, return_counts=True)
         allA = np.asarray((unqA,cntA))
@@ -840,49 +787,6 @@ class Sort(object):
         self.NP = self.NP[:,allL]
         for ix,v in enumerate(namesL):
             self.KITS[v][1] = ix
-
-    def set_new_order(self,val,cnt,kitType=False,variantType=False):
-        if kitType:
-            self.KITS[val][1] = cnt
-        if variantType:
-            self.VARIANTS[val][1] = cnt
-        
-    def set_new_axis(self,vals,cnts,kitType=False,variantType=False):
-        self.VARIANTS = {}
-        for x in range(len(vals)):
-            self.VARIANTS[vals[x]] = [0,cnts[x]]
-        
-    def save_mx(self):
-        #push kit/variant/numpy data into saved/matrix tbls + h5py file
-        #deletes
-        sql = "delete from x_mx_variants;"
-        self.dbo.sql_exec(sql)
-        sql = "delete from x_mx_kits;"
-        self.dbo.sql_exec(sql)
-        sql = "delete from x_mx_idxs;"
-        self.dbo.sql_exec(sql)
-        #save matrix variants
-        sql = "insert into x_mx_variants (ID,name) values (?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([vid,nm])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
-        #save matrix variants (idx order)
-        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
-        #save matrix kits
-        sql = "insert into x_mx_kits (ID,kitId) values (?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([kid,nm])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
-        #save matrix kits (idx order)
-        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
-        self.dbo.sql_exec_many(sql,[(tuple([kid,idx])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
-        #save numpy data
-        #https://stackoverflow.com/questions/20928136/input-and-output-numpy-arrays-to-h5py
-        h5f = h5py.File('data.h5', 'w')
-        h5f.create_dataset('dataset_1', data=self.NP)
-        h5f.close()
-        #print("---")
-        #print(self.VARIANTS)
-        #print("---")
-        #print(self.get_axis('variants'))
-        #print("---")
 
     def get_axis(self,orderByType=None,keysOnly=False,idx=None):
         #Note: this is a useful function for being able to enumerate the VARIANTS/KITS dictionaries
@@ -936,6 +840,16 @@ class Sort(object):
                     vix.remove(vix[itm[0]])
             return vix
 
+    def get_row_when_override_kixs(self,override_val,vix,kixs):
+        row = self.get_mx_kit_data(vix=vix)
+        if len(kixs) == 0:
+            return row
+        rowO = np.empty_like(row)
+        rowO[:] = row #make duplicate copy - important!
+        for kx in kixs:
+            rowO[0,kx] = override_val
+        return rowO
+        
     def get_row_when_override_coord(self,override_val,kix=None,vix=None,kname=None,vname=None):
         row = self.get_mx_kit_data(vix=vix)
         rowO = np.empty_like(row)
@@ -945,6 +859,38 @@ class Sort(object):
 
     # data 
 
+    def sort_schema(self):
+        self.dbo.db = self.dbo.db_init()
+        self.dbo.dc = self.dbo.cursor()
+        self.dbo.sql_exec_file('sort-schema.sql')
+        
+    def save_mx(self):
+        #push kit/variant/numpy data into saved/matrix tbls + h5py file
+        #deletes
+        sql = "delete from x_mx_variants;"
+        self.dbo.sql_exec(sql)
+        sql = "delete from x_mx_kits;"
+        self.dbo.sql_exec(sql)
+        sql = "delete from x_mx_idxs;"
+        self.dbo.sql_exec(sql)
+        #save matrix variants
+        sql = "insert into x_mx_variants (ID,name) values (?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([vid,nm])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        #save matrix variants (idx order)
+        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx))) in enumerate(self.get_axis('variants'))])
+        #save matrix kits
+        sql = "insert into x_mx_kits (ID,kitId) values (?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([kid,nm])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
+        #save matrix kits (idx order)
+        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
+        self.dbo.sql_exec_many(sql,[(tuple([kid,idx])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
+        #save numpy data
+        #https://stackoverflow.com/questions/20928136/input-and-output-numpy-arrays-to-h5py
+        h5f = h5py.File('data.h5', 'w')
+        h5f.create_dataset('dataset_1', data=self.NP)
+        h5f.close()
+        
     def restore_mx_data(self):
         self.VARIANTS = {}
         self.KITS = {}
