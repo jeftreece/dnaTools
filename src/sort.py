@@ -756,10 +756,8 @@ class Sort(object):
         else:
             return self.get_vname_by_vix(self.get_vixs_by_val(val,kix,kname,overrideData))
 
-    def mx_vsort(self):
-        #Note: (Zak) I think I need to sep perfect/imperfect in self.NP (and self arrays) before I do the rest here
-        #perfect variants
-        #prfIdx = self.get_perfect_variants_idx()
+    def old_mx_vsort(self):
+
         PI = self.get_perfect_variants_idx()
         print(l2s(PI))
         print(self.NP[PI,])
@@ -770,6 +768,7 @@ class Sort(object):
         print(pdMRG)
         newO = pdMRG.as_matrix(columns=pdMRG.columns[0:1]).T
         _, idx = np.unique(newO, return_index=True)
+
         #{{{
         print("---")
         print(newO[:,idx])
@@ -778,6 +777,7 @@ class Sort(object):
         print("---")
         print(newO[:,np.sort(idx)].tolist()[0])
         print("---")
+
         #print(inv)
         #print("---")
         #def return_counts(idx, inv):
@@ -790,7 +790,67 @@ class Sort(object):
         #print(np.argwhere(self.NP[prfIdx]==1))
         #}}}
         #self.NP[newO[:,np.sort(idx)].tolist()[0]],)
+
         allPL = newO[:,np.sort(idx)].tolist()[0]
+
+        #prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
+        #unqP, cntP = np.unique(prfPos, return_counts=True)
+        #allP = np.asarray((prfIdx,cntP))
+        #allP = allP[:,np.argsort(-allP[1])]
+        #allPL = allP.T[:,0]
+
+        #imperfect variants
+        impIdx = self.get_imperfect_variants_idx()
+        impPos = np.argwhere(self.NP[impIdx]==1)[:,0]
+        unqI, cntI = np.unique(impPos, return_counts=True)
+        allI = np.asarray((impIdx,cntI))
+        allI = allI[:,np.argsort(-allI[1])]
+        allIL = allI.T[:,0]
+        #names
+        namesL = self.get_vname_by_vix(np.concatenate((allPL,allIL)))
+        #new matrix
+        self.NP = self.NP[np.concatenate((allPL,allIL))]
+        #variants + kits
+        for ix,v in enumerate(namesL):
+            self.VARIANTS[v][1] = ix
+        
+    def mx_vsort(self):
+
+        PI = self.get_perfect_variants_idx()
+        print(l2s(PI))
+        print(self.NP[PI,])
+        PIX = np.argwhere(self.NP[PI]==1)
+        unqP, cntP = np.unique(PIX[:,0], return_counts=True)
+        CNT = np.asarray((unqP,cntP)).T
+        pdMRG = pd.merge(pd.DataFrame(CNT,columns=['A','B']),pd.DataFrame(PIX,columns=['A','C']), on='A').sort_values(['C','B','A'], ascending=[False, False, True])
+        print(pdMRG)
+        newO = pdMRG.as_matrix(columns=pdMRG.columns[0:1]).T
+        _, idx = np.unique(newO, return_index=True)
+
+        #{{{
+        print("---")
+        print(newO[:,idx])
+        print("---")
+        print(newO)
+        print("---")
+        print(newO[:,np.sort(idx)].tolist()[0])
+        print("---")
+
+        #print(inv)
+        #print("---")
+        #def return_counts(idx, inv):
+        #    count = np.zeros(len(idx), np.int)
+        #    np.add.at(count, inv, 1)
+        #    return count
+        #cnts = return_counts(idx,inv)
+        #for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
+        #    print(itm)
+        #print(np.argwhere(self.NP[prfIdx]==1))
+        #}}}
+        #self.NP[newO[:,np.sort(idx)].tolist()[0]],)
+
+        allPL = newO[:,np.sort(idx)].tolist()[0]
+
         #prfPos = np.argwhere(self.NP[prfIdx]==1)[:,0]
         #unqP, cntP = np.unique(prfPos, return_counts=True)
         #allP = np.asarray((prfIdx,cntP))

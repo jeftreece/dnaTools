@@ -27,6 +27,10 @@ more refactor:
 - what's up with all those saved views? still need those?
 - x_mx_idxs necessary?
 
+ideas:
+
+- dtype fields would help w/matrix? (ie - can save it "all" to hf5?)
+
 make list of suggestions to Jef/Iain for master:
 
 - how call config.yaml
