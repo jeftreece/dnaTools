@@ -1,3 +1,10 @@
+explain query plan
+
+'d probably write that query more like         SELECT S.snpname,V.ID,V.pos, B.buildnm, AA.allele as anc, DA.allele as der from variants v 
+inner join snpnames s on s.vid=v.id and s.snpname in ('S264','Z156') inner join alleles aa on v.anc=aa.id inner join alleles da 
+on v.der=da.id inner join build b on b.id=v.buildid and b.buildnm like '%38%'  but it's a matter of style and there's nothing 
+technically wrong with a big where clause. Depending on the query execution engine, you might get different plans.
+
 bid = get_build_byname(db, 'hg38')
 
 ...

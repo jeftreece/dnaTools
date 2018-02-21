@@ -9,6 +9,7 @@ import sys,os,yaml,csv,json,h5py,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
 import pandas as pd
+import time
 
 #}}}
 
@@ -29,7 +30,7 @@ class Variant(object):
 
     def proc(self,vname):
         self.proc_vname(vname)
-        self.set_info(lev=2)
+        #self.set_info(lev=2)
         self.proc_chk(allowImperfect=False)
         
     def info(self,vname):
@@ -50,13 +51,19 @@ class Variant(object):
 
         sqlw = "'"+"','".join(str(x) for x in sorted(list(set(argL))))+"'"
 
-        #build 1
+        #build hg38
         sql = '''
-            SELECT S.snpname,V.ID,V.pos,B.ID, AA.allele as anc, DA.allele as der
-            FROM snpnames S,variants V, build B, alleles AA, alleles DA
-            WHERE B.ID = V.buildId and 
+            SELECT S.snpname,V.ID,V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der , IX.idx
+            FROM snpnames S, build B,
+            alleles AA, alleles DA, variants V
+            LEFT JOIN x_mx_idxs IX
+            ON IX.axis_id = V.ID and IX.type_id=0
+            WHERE
             V.anc = AA.ID and V.der = DA.ID and
-            S.snpname in (%s) and V.ID = S.vID and B.ID = 1
+            S.snpname in (%s) and V.ID = S.vID
+            and B.buildNm = 'hg38'
+            and V.buildID = B.ID
             ORDER BY 1;
             ''' % sqlw
         self.dbo.sql_exec(sql)
@@ -64,30 +71,33 @@ class Variant(object):
 
         print("")
         table = BeautifulTable()
-        table.column_headers = ['buildId']+['name']+['vID']+['pos']+['anc']+['der']
+        table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
         for row in F:
-            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+            table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
+            table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
         print(table)
         print("")
 
-        #build 2
+        #build hg19
         sql = '''
-            SELECT S.snpname,V.ID,V.pos,B.ID, AA.allele as anc, DA.allele as der
-            FROM snpnames S,variants V, build B, alleles AA, alleles DA
-            WHERE B.ID = V.buildId and  
-            V.anc = AA.ID and V.der = DA.ID and
-            S.snpname in (%s) and V.ID = S.vID and B.ID = 2
+            SELECT S.snpname,V.ID,V.pos, B.buildNm
+            FROM snpnames S, build B, variants V
+            WHERE
+            S.snpname in (%s)
+            and V.ID = S.vID
+            and B.buildNm = 'hg19'
+            and V.buildID = B.ID
             ORDER BY 1;
             ''' % sqlw
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
         table = BeautifulTable()
-        table.column_headers = ['buildId']+['name']+['vID']+['pos']+['anc']+['der']
+        table.column_headers = ['build']+['name']+['id']+['pos']
         for row in F:
-            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
             table.row_seperator_char = ''
             table.column_seperator_char = ''
         print(table)
@@ -199,6 +209,21 @@ class Variant(object):
         print("---------------------------------------------------------------------")
         print("")
 
+        #needed vars 
+        self.kuc = self.sort.get_kixs_by_val(val=0,vix=self.vix)
+        self.sups = self.get_rel(relType=1,allowImperfect=allowImperfect)
+        self.eqv = self.get_rel(relType=0,allowImperfect=allowImperfect)
+
+        #debugging
+        self.kucn = "kuc: %s [%s]"%(l2s(self.sort.get_kname_by_kix(self.kuc)),l2s(self.kuc))
+        self.supsn = "sups: %s [%s]" %(l2s(self.sort.get_vname_by_vix(self.sups)),l2s(self.sups))
+        self.eqvn = "eqv: %s [%s]"%(l2s(self.sort.get_vname_by_vix(vix=self.eqv)),l2s(self.eqv))
+        print(self.kucn)
+        print("num of sups: %s"%len(self.sups))
+        print(self.supsn)
+        print(self.eqvn)
+        sys.exit()
+
         #starting unk list
         unkL = self.kuc
         unkD = {}
@@ -234,6 +259,7 @@ class Variant(object):
 
                 #(beg)sup check
                 knc4sup = self.sort.get_kixs_by_val(val=-1,vix=sup)
+                self.knc = self.sort.get_kixs_by_val(val=-1,vix=self.vix)
                 diffKnc = list(set(self.knc)-set(knc4sup))
                 if len(diffKnc) > 0:
                     pN = list(set(self.kuc).intersection(set(knc4sup)))
@@ -259,7 +285,9 @@ class Variant(object):
                 v1.dbo = self.dbo
                 v1.sort = self.sort
                 v1.vix = sup
-                v1.set_info()
+                #v1.set_info()
+                self.subs = self.get_rel(relType=-1)
+                v1.subs = v1.get_rel(relType=-1)
 
                 #remove any target subs or target equivalent variants from consideration
                 v1subs = list(set(v1.subs)-set(self.subs)-set(self.eqv))
@@ -473,6 +501,8 @@ class Variant(object):
         #subsets shouldn't have diff intersecting positives with common supersets
         subsc = list(VAR5)
         invalid_subs = []
+        self.sups = self.get_rel(relType=1,allowImperfect=False)
+        self.kpc = self.sort.get_kixs_by_val(val=1,vix=self.vix)
         for v in subsc:
             v1 = Variant()
             v1.dbo = self.dbo
@@ -564,10 +594,19 @@ class Sort(object):
     # argparser special routines
 
     def stdout_matrix(self,vix=None,refreshDbFlg=False):
+        print("beg matrix: %s" % format(time.clock()))
+
         if refreshDbFlg:
             self.dbo.db = self.dbo.db_init()
             self.dbo.dc = self.dbo.cursor()
             self.restore_mx_data()
+
+        if len(self.NP) > 100:
+            print("Matrix too large for presentation.")
+            np.set_printoptions(threshold=np.inf)
+            print(self.NP)
+            return
+
 
         print("")
         print("---------------------------------------------------------------------")
@@ -591,6 +630,7 @@ class Sort(object):
         print("")
         print("---------------------------------------------------------------------")
         print("")
+        print("end matrix: %s" % format(time.clock()))
 
         
     def stdout_unknowns(self):
@@ -602,12 +642,11 @@ class Sort(object):
         print("")
         cnt = 1
         for vix in self.get_imperfect_variants_idx():
-            vt = Variant()
-            vt.sort = self
-            vt.dbo = self.dbo
-            vt.set_info(vix)
-            print("[%s]  var: %s" %(vt.vix,vt.name))
-            print("     %s" %(vt.kucn))
+            name = self.get_vname_by_vix(vix)
+            kuc = self.get_kixs_by_val(val=0,vix=vix)
+            kucn = "kuc: %s [%s]"%(l2s(self.get_kname_by_kix(kuc)),l2s(kuc))
+            print("[%s]  var: %s" %(vix,name))
+            print("     %s" %kucn)
             print("")
             cnt = cnt + 1
         print("---------------------------------------------------------------------")
@@ -920,7 +959,7 @@ class Sort(object):
         return prf_idx
         
     def get_imperfect_variants_idx(self):
-        return list(np.unique(np.argwhere(self.NP==0)[:,0]))[:] #make it a copy
+        return list(np.unique(np.argwhere(self.NP==0)[:,0])) #make it a copy
         
     def filter_perfect_variants(self,vix):
         if any(isinstance(el, list) for el in vix):
@@ -986,6 +1025,7 @@ class Sort(object):
         h5f.close()
         
     def restore_mx_data(self):
+        print("beg restore: %s" % format(time.clock()))
         self.VARIANTS = {}
         self.KITS = {}
         #variants
@@ -1016,8 +1056,10 @@ class Sort(object):
         h5f = h5py.File('data.h5','r')
         self.NP = np.asmatrix(h5f['dataset_1'][:])
         h5f.close()
+        print("end restore: %s" % format(time.clock()))
         
     def create_mx_data(self):
+        print("beg create: %s" % format(time.clock()))
 
         #sql to fetch data
         sql = "select * from x_perfect_assignments_with_unk;"
@@ -1087,6 +1129,7 @@ class Sort(object):
         #reset the matrix (now that the dupes are out)
         self.NP = self.NP[idx,]
 
+        print("end create: %s" % format(time.clock()))
         #self.stdout_matrix()
 
         #save matrix data

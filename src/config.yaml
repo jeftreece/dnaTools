@@ -2,10 +2,10 @@
 # debugging
 
 DBG_RELS: False 
-DBG_SUPS: False #True #False
-DBG_SUPS_IN: False #True #False 
-DBG_SUBS: False 
-DBG_SUBS_IN: False
+DBG_SUPS: True #False #True #False
+DBG_SUPS_IN: True #False #True #False 
+DBG_SUBS: True #False 
+DBG_SUBS_IN: True #False
 
 # special handling
 

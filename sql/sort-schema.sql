@@ -100,23 +100,23 @@ create view x_perfect_variants_base AS
   ON S.vID = V.ID
   -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
   WHERE -- C.assigned
-  N.vID = V.ID and P.vID = V.ID and V.buildID = 1 and
+  1==2 and N.vID = V.ID and P.vID = V.ID and -- V.buildID = 1 and
   V.ID = C.vID and V.pos IN
   -- (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
   (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911);
 
 create view x_perfect_variants_lim AS
-  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID --, v.buildId
   FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
   LEFT JOIN get_max_snpnames S
   ON S.vID = V.ID
   WHERE 
-  N.vID = V.ID and P.vID = V.ID AND V.buildId = 1 AND
+  N.vID = V.ID and P.vID = V.ID AND -- V.buildId = 1 AND
   V.ID = C.vID and 
   V.pos not in 
   -- (13668461,7378685,12060401,19538924) 
   (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911)
-  LIMIT 20;
+  ;-- LIMIT 20;
 
 create view x_perfect_variants AS
   SELECT * from x_perfect_variants_base
@@ -124,17 +124,17 @@ create view x_perfect_variants AS
   SELECT * from x_perfect_variants_lim;
 
 create view x_perfect_variants_with_kits AS
-  SELECT K.pID, PV.name, PV.pos, PV.ID as vID,K.kitId
+  SELECT DISTINCT K.pID, PV.name, PV.pos, PV.ID as vID,K.kitId
   FROM x_perfect_variants PV
   CROSS JOIN x_kit_view K;
 
 create view x_perfect_assignments AS
-  SELECT C.pID, PV.name, PV.pos, PV.ID as vID, C.assigned -- C.assigned
+  SELECT DISTINCT C.pID, PV.name, PV.pos, PV.ID as vID, C.assigned -- C.assigned
   FROM vcfcalls C, x_perfect_variants PV
   WHERE C.vID = PV.ID;
 
 create view x_perfect_assignments_with_unk AS
-  SELECT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID,PVK.kitId
+  SELECT DISTINCT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID,PVK.kitId
   FROM x_perfect_variants_with_kits PVK 
   LEFT JOIN x_perfect_assignments PVKA
   ON PVK.vID = PVKA.vID AND
