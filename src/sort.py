@@ -52,15 +52,18 @@ class Variant(object):
 
         #build hg38
         sql = '''
-            SELECT S.snpname,V.ID,V.pos, B.buildNm,
-            AA.allele as anc, DA.allele as der , IX.idx
+            SELECT S.snpname, V.ID, V.pos, B.buildNm, AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
             FROM snpnames S, build B,
             alleles AA, alleles DA, variants V
             LEFT JOIN x_mx_idxs IX
             ON IX.axis_id = V.ID and IX.type_id=0
+            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            ON D1.vID = V.ID
+            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            ON D2.dupe_vID = V.ID
             WHERE
-            V.anc = AA.ID and V.der = DA.ID and
-            S.snpname in (%s) and V.ID = S.vID
+            V.anc = AA.ID and V.der = DA.ID
+            and S.snpname in (%s) and V.ID = S.vID
             and B.buildNm = 'hg38'
             and V.buildID = B.ID
             ORDER BY 1;
@@ -70,10 +73,16 @@ class Variant(object):
 
         if len(F) > 0:
             print("")
-            table = BeautifulTable()
-            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            table = BeautifulTable(max_width=60)
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']+['dupeP']
             for row in F:
-                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                if row[7] == None and row[8] == None:
+                    dupeP = 'N'
+                elif row[7] != None:
+                    dupeP = 'Y'
+                elif row[8] != 'None':
+                    dupeP = row[8]
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]]+[dupeP])
                 table.row_seperator_char = ''
                 table.column_seperator_char = ''
                 table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
@@ -117,13 +126,17 @@ class Variant(object):
 
         #build hg38
         sql = '''
-            SELECT S.snpname, V.ID, V.pos, B.buildNm,
-            AA.allele as anc, DA.allele as der, IX.idx
+            SELECT DISTINCT S.snpname, V.ID, V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
             FROM build B, alleles AA, alleles DA, variants V
             LEFT JOIN x_mx_idxs IX
             ON IX.axis_id = V.ID and IX.type_id = 0
             LEFT JOIN snpnames S
             ON S.vID = v.ID
+            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            ON D1.vID = V.ID
+            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            ON D2.dupe_vID = V.ID
             WHERE
             V.anc = AA.ID and V.der = DA.ID
             and V.pos in (%s)
@@ -136,10 +149,16 @@ class Variant(object):
 
         if len(F) > 0:
             print("")
-            table = BeautifulTable()
-            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            table = BeautifulTable(max_width=60)
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']+['dupeP']
             for row in F:
-                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                if row[7] == None and row[8] == None:
+                    dupeP = 'N'
+                elif row[7] != None:
+                    dupeP = 'Y'
+                elif row[8] != 'None':
+                    dupeP = row[8]
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]]+[dupeP])
                 table.row_seperator_char = ''
                 table.column_seperator_char = ''
                 table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
@@ -171,6 +190,7 @@ class Variant(object):
             print(table)
                  
     def lib_id(self,argL):
+        #dupe kix: 803470|805350
         argL = [x.upper() for x in argL]
         for a in argL[:]:
             if a.find(','):
@@ -184,15 +204,20 @@ class Variant(object):
 
         #build hg38
         sql = '''
-            SELECT S.snpname,V.ID,V.pos, B.buildNm,
-            AA.allele as anc, DA.allele as der , IX.idx
-            FROM snpnames S, build B,
-            alleles AA, alleles DA, variants V
+            SELECT DISTINCT S.snpname, V.ID, V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der , IX.idx, D1.vID, D2.vID
+            FROM build B, alleles AA, alleles DA, variants V
             LEFT JOIN x_mx_idxs IX
-            ON IX.axis_id = V.ID and IX.type_id=0
+            ON IX.axis_id = V.ID and IX.type_id = 0
+            LEFT JOIN snpnames S
+            ON S.vID = V.ID
+            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            ON D1.vID = V.ID
+            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            ON D2.dupe_vID = V.ID
             WHERE
-            V.anc = AA.ID and V.der = DA.ID and
-            V.ID in (%s) and V.ID = S.vID
+            V.anc = AA.ID and V.der = DA.ID
+            and V.ID in (%s)
             and B.buildNm = 'hg38'
             and V.buildID = B.ID
             ORDER BY 1;
@@ -202,10 +227,16 @@ class Variant(object):
 
         if len(F) > 0:
             print("")
-            table = BeautifulTable()
-            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            table = BeautifulTable(max_width=60)
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']+['dupeP']
             for row in F:
-                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                if row[7] == None and row[8] == None:
+                    dupeP = 'N'
+                elif row[7] != None:
+                    dupeP = 'Y'
+                elif row[8] != 'None':
+                    dupeP = row[8]
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]]+[dupeP])
                 table.row_seperator_char = ''
                 table.column_seperator_char = ''
                 table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
@@ -215,10 +246,11 @@ class Variant(object):
         #build hg19
         sql = '''
             SELECT S.snpname,V.ID,V.pos, B.buildNm
-            FROM snpnames S, build B, variants V
+            FROM build B, variants V
+            LEFT JOIN snpnames S
+            ON S.vID = V.ID
             WHERE
             V.id in (%s)
-            and V.ID = S.vID
             and B.buildNm = 'hg19'
             and V.buildID = B.ID
             ORDER BY 1;
@@ -249,10 +281,14 @@ class Variant(object):
 
         #build hg38
         sql = '''
-            SELECT S.snpname,V.ID,V.pos, B.buildNm,
-            AA.allele as anc, DA.allele as der, IX.idx
+            SELECT S.snpname,V.ID,V.pos, B.buildNm, AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
             FROM build B, alleles AA, alleles DA, x_mx_idxs IX, variants V
-            LEFT JOIN snpnames S ON V.ID = S.vID
+            LEFT JOIN snpnames S
+            ON V.ID = S.vID
+            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            ON D1.vID = V.ID
+            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            ON D2.dupe_vID = V.ID
             WHERE
             IX.axis_id = V.ID and IX.type_id=0
             and V.anc = AA.ID and V.der = DA.ID
@@ -266,10 +302,16 @@ class Variant(object):
 
         if len(F) > 0:
             print("")
-            table = BeautifulTable()
-            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            table = BeautifulTable(max_width=60)
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']+['dupeP']
             for row in F:
-                table.append_row([row[6]]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                if row[7] == None and row[8] == None:
+                    dupeP = 'N'
+                elif row[7] != None:
+                    dupeP = 'Y'
+                elif row[8] != 'None':
+                    dupeP = row[8]
+                table.append_row([row[6]]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]]+[dupeP])
                 table.row_seperator_char = ''
                 table.column_seperator_char = ''
                 table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
