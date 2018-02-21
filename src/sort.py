@@ -5,10 +5,9 @@
 # For free distribution under the terms of the GNU General Public License,
 # version 3 (29 June 2007) https://www.gnu.org/licenses/gpl.html
 
-import sys,os,yaml,csv,json,h5py,numpy as np
+import sys,os,yaml,csv,json,numpy as np
 from beautifultable import BeautifulTable
 from collections import OrderedDict
-import pandas as pd
 import time
 
 #}}}
@@ -38,8 +37,8 @@ class Variant(object):
         self.proc_vname(vname)
         self.set_info(lev=2,allowImperfect=allowImperfect)
         self.stdout_info()
-        
-    def lib(self,argL):
+
+    def lib_name(self,argL):
         argL = [x.upper() for x in argL]
         for a in argL[:]:
             if a.find(','):
@@ -69,16 +68,17 @@ class Variant(object):
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
-        print("")
-        table = BeautifulTable()
-        table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
-        for row in F:
-            table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
-            table.row_seperator_char = ''
-            table.column_seperator_char = ''
-            table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
-        print(table)
-        print("")
+        if len(F) > 0:
+            print("")
+            table = BeautifulTable()
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            for row in F:
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+                table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
+            print(table)
+            print("")
 
         #build hg19
         sql = '''
@@ -94,14 +94,209 @@ class Variant(object):
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
-        table = BeautifulTable()
-        table.column_headers = ['build']+['name']+['id']+['pos']
-        for row in F:
-            table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
-            table.row_seperator_char = ''
-            table.column_seperator_char = ''
-        print(table)
+        if len(F) > 0:
+            table = BeautifulTable()
+            table.column_headers = ['build']+['name']+['id']+['pos']
+            for row in F:
+                table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+            print(table)
                  
+    def lib_pos(self,argL):
+        argL = [x.upper() for x in argL]
+        for a in argL[:]:
+            if a.find(','):
+                argL = argL + a.split(",")
+                argL.remove(a)
+            if a.find('/'):
+                argL = argL + a.split("/")
+                argL.remove(a)
+
+        sqlw = ",".join(str(x) for x in sorted(list(set(argL))))
+
+        #build hg38
+        sql = '''
+            SELECT S.snpname, V.ID, V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der, IX.idx
+            FROM build B, alleles AA, alleles DA, variants V
+            LEFT JOIN x_mx_idxs IX
+            ON IX.axis_id = V.ID and IX.type_id = 0
+            LEFT JOIN snpnames S
+            ON S.vID = v.ID
+            WHERE
+            V.anc = AA.ID and V.der = DA.ID
+            and V.pos in (%s)
+            and B.buildNm = 'hg38'
+            and V.buildID = B.ID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        if len(F) > 0:
+            print("")
+            table = BeautifulTable()
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            for row in F:
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+                table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
+            print(table)
+            print("")
+
+        #build hg19
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos, B.buildNm
+            FROM build B, variants V
+            LEFT JOIN snpnames S
+            ON S.vID = v.ID
+            WHERE
+            V.pos in (%s)
+            and B.buildNm = 'hg19'
+            and V.buildID = B.ID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        if len(F) > 0:
+            table = BeautifulTable()
+            table.column_headers = ['build']+['name']+['id']+['pos']
+            for row in F:
+                table.append_row([row[3]]+[row[0]]+[str(row[1]).replace('None','-')]+[row[2]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+            print(table)
+                 
+    def lib_id(self,argL):
+        argL = [x.upper() for x in argL]
+        for a in argL[:]:
+            if a.find(','):
+                argL = argL + a.split(",")
+                argL.remove(a)
+            if a.find('/'):
+                argL = argL + a.split("/")
+                argL.remove(a)
+
+        sqlw = ",".join(str(x) for x in sorted(list(set(argL))))
+
+        #build hg38
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der , IX.idx
+            FROM snpnames S, build B,
+            alleles AA, alleles DA, variants V
+            LEFT JOIN x_mx_idxs IX
+            ON IX.axis_id = V.ID and IX.type_id=0
+            WHERE
+            V.anc = AA.ID and V.der = DA.ID and
+            V.ID in (%s) and V.ID = S.vID
+            and B.buildNm = 'hg38'
+            and V.buildID = B.ID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        if len(F) > 0:
+            print("")
+            table = BeautifulTable()
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            for row in F:
+                table.append_row([str(row[6]).replace('None','-')]+[row[3]]+[row[0]]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+                table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
+            print(table)
+            print("")
+
+        #build hg19
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos, B.buildNm
+            FROM snpnames S, build B, variants V
+            WHERE
+            V.id in (%s)
+            and V.ID = S.vID
+            and B.buildNm = 'hg19'
+            and V.buildID = B.ID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        if len(F) > 0:
+            table = BeautifulTable()
+            table.column_headers = ['build']+['name']+['id']+['pos']
+            for row in F:
+                table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+            print(table)
+        
+    def lib_vix(self,argL):
+        argL = [x.upper() for x in argL]
+        for a in argL[:]:
+            if a.find(','):
+                argL = argL + a.split(",")
+                argL.remove(a)
+            if a.find('/'):
+                argL = argL + a.split("/")
+                argL.remove(a)
+
+        sqlw = ",".join(str(x) for x in sorted(list(set(argL))))
+
+        #build hg38
+        sql = '''
+            SELECT S.snpname,V.ID,V.pos, B.buildNm,
+            AA.allele as anc, DA.allele as der, IX.idx
+            FROM build B, alleles AA, alleles DA, x_mx_idxs IX, variants V
+            LEFT JOIN snpnames S ON V.ID = S.vID
+            WHERE
+            IX.axis_id = V.ID and IX.type_id=0
+            and V.anc = AA.ID and V.der = DA.ID
+            and IX.idx in (%s)
+            and B.buildNm = 'hg38'
+            and V.buildID = B.ID
+            ORDER BY 1;
+            ''' % sqlw
+        self.dbo.sql_exec(sql)
+        F = self.dbo.fetchall()
+
+        if len(F) > 0:
+            print("")
+            table = BeautifulTable()
+            table.column_headers = ['vix']+['build']+['name']+['id']+['pos']+['anc']+['der']
+            for row in F:
+                table.append_row([row[6]]+[row[3]]+[str(row[0]).replace('None','-')]+[row[1]]+[row[2]]+[row[4]]+[row[5]])
+                table.row_seperator_char = ''
+                table.column_seperator_char = ''
+                table.column_alignments['name'] = BeautifulTable.ALIGN_LEFT
+            print(table)
+            print("")
+
+        #build hg19
+        #sql = '''
+        #    SELECT S.snpname,V.ID,V.pos, B.buildNm
+        #    FROM snpnames S, build B, variants V
+        #    WHERE
+        #    V.id in (%s)
+        #    and V.ID = S.vID
+        #    and B.buildNm = 'hg19'
+        #    and V.buildID = B.ID
+        #    ORDER BY 1;
+        #    ''' % sqlw
+        #self.dbo.sql_exec(sql)
+        #F = self.dbo.fetchall()
+
+        #table = BeautifulTable()
+        #table.column_headers = ['build']+['name']+['id']+['pos']
+        #for row in F:
+        #    table.append_row([row[3]]+[row[0]]+[row[1]]+[row[2]])
+        #    table.row_seperator_char = ''
+        #    table.column_seperator_char = ''
+        #print(table)
 
     def proc_vname(self,vname):
         self.sort.restore_mx_data()
@@ -883,6 +1078,7 @@ class Sort(object):
             self.KITS[k][1] = ix
         
     def mx_vandh_pdsort(self):
+        import pandas as pd
         #Note: panda version of the vandh sort. Currently not working. Perhaps with some debugging this might be faster?
         #kits for perfect variants
         prfVix = self.get_perfect_variants_idx()
@@ -1020,6 +1216,7 @@ class Sort(object):
         self.dbo.sql_exec_many(sql,[(tuple([kid,idx])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
         #save numpy data
         #https://stackoverflow.com/questions/20928136/input-and-output-numpy-arrays-to-h5py
+        import h5py
         h5f = h5py.File('data.h5', 'w')
         h5f.create_dataset('dataset_1', data=self.NP)
         h5f.close()
@@ -1053,6 +1250,7 @@ class Sort(object):
         for row in F:
             self.KITS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
         #numpy data
+        import h5py
         h5f = h5py.File('data.h5','r')
         self.NP = np.asmatrix(h5f['dataset_1'][:])
         h5f.close()

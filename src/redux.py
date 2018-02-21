@@ -77,7 +77,10 @@ parser.add_argument('-o', '--sort', help='sort matrix data prototype (s_ schema 
 parser.add_argument('-b', '--backup', help='do a "backup"', action='store_true')
 
 #reference
-parser.add_argument('-vl', '--variant_lib', help='variant lib reference')
+parser.add_argument('-vln', '--variant_lib_name', help='variant lib name reference')
+parser.add_argument('-vli', '--variant_lib_id', help='variant lib id reference')
+parser.add_argument('-vlp', '--variant_lib_pos', help='variant lib pos reference')
+parser.add_argument('-vlx', '--variant_lib_vix', help='variant lib vix reference')
 parser.add_argument('rest', nargs=argparse.REMAINDER)
 
 # output
@@ -159,12 +162,33 @@ if args.unknowns:
     sort.dbo = DB1()
     sort.stdout_unknowns()
 
-if args.variant_lib:
+if args.variant_lib_name:
     vt = Variant()
     vt.dbo = DB1()
     vt.dbo.db = vt.dbo.db_init()
     vt.dbo.dc = vt.dbo.cursor()
-    vt.lib([args.variant_lib]+args.rest)
+    vt.lib_name([args.variant_lib_name]+args.rest)
+
+if args.variant_lib_id:
+    vt = Variant()
+    vt.dbo = DB1()
+    vt.dbo.db = vt.dbo.db_init()
+    vt.dbo.dc = vt.dbo.cursor()
+    vt.lib_id([args.variant_lib_id]+args.rest)
+
+if args.variant_lib_pos:
+    vt = Variant()
+    vt.dbo = DB1()
+    vt.dbo.db = vt.dbo.db_init()
+    vt.dbo.dc = vt.dbo.cursor()
+    vt.lib_pos([args.variant_lib_pos]+args.rest)
+
+if args.variant_lib_vix:
+    vt = Variant()
+    vt.dbo = DB1()
+    vt.dbo.db = vt.dbo.db_init()
+    vt.dbo.dc = vt.dbo.cursor()
+    vt.lib_vix([args.variant_lib_vix]+args.rest)
 
 trace(0, "** script complete.\n")
 trace(1, 'done at {:.2f} seconds'.format(time.time() - t0))
