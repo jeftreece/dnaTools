@@ -2,71 +2,72 @@
 
 -- DROP VIEWS {{{
 
-drop view if exists x_kit_view;
-drop view if exists x_perfect_variants;
-drop view if exists x_perfect_variants_with_kits;
-drop view if exists x_perfect_assignments;
-drop view if exists x_perfect_assignments_with_unk;
+DROP VIEW IF EXISTS v_imx_kits;
+DROP VIEW IF EXISTS v_imx_variants;
+DROP VIEW IF EXISTS v_imx_variants_test;
+DROP VIEW IF EXISTS v_imx_variants_all;
+DROP VIEW IF EXISTS v_imx_variants_with_kits;
+DROP VIEW IF EXISTS v_imx_assignments;
+DROP VIEW IF EXISTS v_imx_assignments_with_unk;
 
-drop view if exists x_saved_kits;
-drop view if exists x_saved_variants;
-drop view if exists x_saved_variants_with_kits;
-drop view if exists x_saved_assignments;
-drop view if exists x_saved_assignments_with_unk;
+DROP VIEW IF EXISTS v_mx_kits;
+DROP VIEW IF EXISTS v_mx_variants;
 
-drop view if exists get_max_snpnames;
-drop view if exists x_perfect_variants_base;
-drop view if exists x_perfect_variants_lim;
+-- DROP VIEW IF EXISTS x_saved_variants_with_kits;
+-- DROP VIEW IF EXISTS x_saved_assignments;
+-- DROP VIEW IF EXISTS x_saved_assignments_with_unk;
 
--- drop view if exists x_perfect_assignments_with_unk_cnt_pos_v;
--- drop view if exists x_perfect_assignments_with_unk_cnt_neg_v;
--- drop view if exists x_perfect_assignments_with_unk_cnt_unk_v;
+DROP VIEW IF EXISTS v_imx_variants_base;
+DROP VIEW IF EXISTS v_imx_variants_lim;
 
--- drop view if exists x_perfect_assignments_with_unk_cnt_pos_k;
--- drop view if exists x_perfect_assignments_with_unk_cnt_neg_k;
--- drop view if exists x_perfect_assignments_with_unk_cnt_unk_k;
- 
-drop view if exists x_pos_call_chk;
-drop view if exists x_neg_call_chk;
+DROP VIEW IF EXISTS v_pos_call_chk;
+DROP VIEW IF EXISTS v_neg_call_chk;
+DROP VIEW IF EXISTS v_max_snpnames;
 
-drop view if exists get_max_snpnames;
+DROP VIEW IF EXISTS v_only_pos_variants;
+DROP VIEW IF EXISTS v_only_neg_variants;
 
 -- }}}
 -- DROP TABLES {{{
 
-drop table if exists x_mx_kits;
-drop table if exists x_mx_variants;
-drop table if exists x_mx_idxs;
-drop table if exists x_mx_calls;
-drop table if exists x_mx_dupe_variants;
+DROP TABLE IF EXISTS mx_kits;
+DROP TABLE IF EXISTS mx_variants;
+DROP TABLE IF EXISTS mx_idxs;
+DROP TABLE IF EXISTS mx_calls;
+DROP TABLE IF EXISTS mx_dupe_variants;
+
+-- }}}
+-- DROP INDEXES {{{
+
+DROP INDEX IF EXISTS snpidx;
 
 -- }}}
 -- CREATE TABLES {{{
 
-create table x_mx_kits(
+CREATE TABLE mx_kits(
  ID int,
  kitId text
 );
 
-create table x_mx_variants (
+CREATE TABLE mx_variants (
  ID int,  
  ref_variant_id int,
  name text,
  pos int
 );
 
-create table x_mx_dupe_variants (
+CREATE TABLE mx_dupe_variants (
  vId int,  
  dupe_vID int
 );
 
-create table x_mx_idxs(
+CREATE TABLE mx_idxs(
  type_id int,   -- 0 = variants, 1 = kits (people)
  axis_id int,   -- either the variant id (vID) or the kit_id (pID) 
  idx int
 );
 
-create table x_mx_calls (
+CREATE TABLE mx_calls (
  pID int,
  vID int,
  assigned boolean,
@@ -75,83 +76,111 @@ create table x_mx_calls (
 );
 
 -- }}}
--- CREATE VIEWS (perfect) {{{
+-- CREATE VIEWS (import to matrix) {{{
 
-create view get_max_snpnames AS
- select max(snpname) as snpname,vID from snpnames group by 2;
+CREATE VIEW v_max_snpnames AS
+  SELECT max(snpname) as snpname,vID from snpnames group by 2;
 
-create view x_kit_view AS 
+CREATE VIEW v_imx_kits AS 
   SELECT DISTINCT C.pID,max(D.kitId) as kitId from vcfcalls C, dataset D 
-  WHERE C.pID=D.ID -- AND 
-  -- C.pid IN (1049,1321,1707,1747,1801) 
+  WHERE C.pID=D.ID 
   GROUP BY 1;
 
-create view x_pos_call_chk as 
+CREATE VIEW v_pos_call_chk as 
   SELECT DISTINCT vID from vcfcalls where assigned = 1;
 
-create view x_neg_call_chk as 
+CREATE VIEW v_neg_call_chk as 
   SELECT DISTINCT vID from vcfcalls where assigned = -1;
 
-create view x_perfect_variants_base AS
-  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID -- what is the right thing here? ID or pos with something?
-  FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V 
-  -- FROM vcfcalls C, variants V
-  LEFT JOIN get_max_snpnames S
+-- To create test data
+-- --------------------
+CREATE VIEW v_imx_variants_base AS
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID 
+  FROM vcfcalls C, v_pos_call_chk P, v_neg_call_chk N, variants V 
+  LEFT JOIN v_max_snpnames S
   ON S.vID = V.ID
-  -- WHERE (C.assigned = -1 OR V.ID = -999) AND -- C.assigned
-  WHERE -- C.assigned
-  1==2 and N.vID = V.ID and P.vID = V.ID and -- V.buildID = 1 and
-  V.ID = C.vID and V.pos IN
-  -- (13668461,7378685,12060401,19538924); -- z156, z381, z301, z28 -- u106, l48, z156, z8
+  WHERE
+  N.vID = V.ID AND P.vID = V.ID AND 
+  V.ID = C.vID AND V.pos IN
   (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911);
 
-create view x_perfect_variants_lim AS
-  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID --, v.buildId
-  FROM vcfcalls C, x_pos_call_chk P, x_neg_call_chk N, variants V
-  LEFT JOIN get_max_snpnames S
+-- To create test data
+-- --------------------
+CREATE VIEW v_imx_variants_lim AS
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID 
+  FROM vcfcalls C, v_pos_call_chk P, v_neg_call_chk N, variants V
+  LEFT JOIN v_max_snpnames S
   ON S.vID = V.ID
   WHERE 
-  N.vID = V.ID and P.vID = V.ID AND -- V.buildId = 1 AND
-  V.ID = C.vID and 
-  V.pos not in 
-  -- (13668461,7378685,12060401,19538924) 
+  N.vID = V.ID AND P.vID = V.ID AND
+  V.ID = C.vID AND 
+  V.pos NOT IN 
   (3019783,15732138,20577481,8928037,21450311,6920349,12879820,13668461,19995425,20029258,7378686,12060401,19538924,20323911)
-  ;-- LIMIT 20;
+  LIMIT 20;
 
-create view x_perfect_variants AS
-  SELECT * from x_perfect_variants_base
+-- To create test data
+-- --------------------
+CREATE VIEW v_imx_variants_test AS
+  SELECT * from v_imx_variants_base
   UNION
-  SELECT * from x_perfect_variants_lim;
+  SELECT * from v_imx_variants_lim;
 
-create view x_perfect_variants_with_kits AS
-  SELECT DISTINCT K.pID, PV.name, PV.pos, PV.ID as vID,K.kitId
-  FROM x_perfect_variants PV
-  CROSS JOIN x_kit_view K;
+-- To create all data
+-- --------------------
+CREATE VIEW v_imx_variants_all AS
+  SELECT DISTINCT ifnull(S.snpname,V.ID) as name, V.pos, V.ID 
+  FROM vcfcalls C, v_pos_call_chk P, v_neg_call_chk N, variants V
+  LEFT JOIN v_max_snpnames S
+  ON S.vID = V.ID
+  WHERE 
+  N.vID = V.ID AND P.vID = V.ID AND
+  V.ID = C.vID;
 
-create view x_perfect_assignments AS
-  SELECT DISTINCT C.pID, PV.name, PV.pos, PV.ID as vID, C.assigned -- C.assigned
-  FROM vcfcalls C, x_perfect_variants PV
+CREATE VIEW v_imx_variants AS
+  SELECT * from v_imx_variants_all; -- this is a toggle btw test and all
+
+CREATE VIEW v_only_pos_variants AS
+  SELECT DISTINCT P.vID from v_pos_call_chk P 
+  LEFT JOIN v_neg_call_chk N
+  ON P.vID = N.vID
+  WHERE N.vID is Null;
+  
+CREATE VIEW v_only_neg_variants AS
+  SELECT DISTINCT N.vID from v_neg_call_chk N
+  LEFT JOIN v_pos_call_chk P
+  ON P.vID = N.vID
+  WHERE P.vID is Null;
+  
+CREATE VIEW v_imx_variants_with_kits AS
+  SELECT DISTINCT K.pID, PV.name, PV.pos, PV.ID as vID, K.kitId
+  FROM v_imx_variants PV
+  CROSS JOIN v_imx_kits K;
+
+CREATE VIEW v_imx_assignments AS
+  SELECT DISTINCT C.pID, PV.name, PV.pos, PV.ID as vID, C.assigned 
+  FROM vcfcalls C, v_imx_variants PV
   WHERE C.vID = PV.ID;
 
-create view x_perfect_assignments_with_unk AS
-  SELECT DISTINCT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID,PVK.kitId
-  FROM x_perfect_variants_with_kits PVK 
-  LEFT JOIN x_perfect_assignments PVKA
+CREATE VIEW v_imx_assignments_with_unk AS
+  SELECT DISTINCT PVK.pID, PVK.name, ifnull(PVKA.assigned,0) as assigned, PVK.pos, PVK.vID, PVK.kitId
+  FROM v_imx_variants_with_kits PVK 
+  LEFT JOIN v_imx_assignments PVKA
   ON PVK.vID = PVKA.vID AND
   PVK.pID = PVKA.pID;
 
 -- }}}
--- CREATE VIEWS (saved) {{{
+-- CREATE VIEWS (inside matrix) {{{
 
-create view x_saved_kits AS 
-  SELECT DISTINCT ID,kitId from x_mx_kits;
+CREATE VIEW v_mx_kits AS 
+  SELECT DISTINCT ID,kitId from mx_kits;
 
-create view x_saved_variants AS 
+CREATE VIEW v_mx_variants AS 
   SELECT DISTINCT name, pos, ID
-  FROM x_mx_variants;
+  FROM mx_variants;
 
 -- }}}
+-- CREATE INDEXES{{{
 
-drop index if exists snpidx;
-create index snpidx on snpnames(snpname);
+CREATE INDEX snpidx on snpnames(snpname);
 
+/*}}}*/

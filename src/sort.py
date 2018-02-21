@@ -55,11 +55,11 @@ class Variant(object):
             SELECT S.snpname, V.ID, V.pos, B.buildNm, AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
             FROM snpnames S, build B,
             alleles AA, alleles DA, variants V
-            LEFT JOIN x_mx_idxs IX
+            LEFT JOIN mx_idxs IX
             ON IX.axis_id = V.ID and IX.type_id=0
-            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            LEFT JOIN mx_dupe_variants D1 -- #is a parent to dupe "children"
             ON D1.vID = V.ID
-            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            LEFT JOIN mx_dupe_variants D2 -- #is a dupe "child" of another vix
             ON D2.dupe_vID = V.ID
             WHERE
             V.anc = AA.ID and V.der = DA.ID
@@ -129,13 +129,13 @@ class Variant(object):
             SELECT DISTINCT S.snpname, V.ID, V.pos, B.buildNm,
             AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
             FROM build B, alleles AA, alleles DA, variants V
-            LEFT JOIN x_mx_idxs IX
+            LEFT JOIN mx_idxs IX
             ON IX.axis_id = V.ID and IX.type_id = 0
             LEFT JOIN snpnames S
             ON S.vID = v.ID
-            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            LEFT JOIN mx_dupe_variants D1 -- #is a parent to dupe "children"
             ON D1.vID = V.ID
-            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            LEFT JOIN mx_dupe_variants D2 -- #is a dupe "child" of another vix
             ON D2.dupe_vID = V.ID
             WHERE
             V.anc = AA.ID and V.der = DA.ID
@@ -207,13 +207,13 @@ class Variant(object):
             SELECT DISTINCT S.snpname, V.ID, V.pos, B.buildNm,
             AA.allele as anc, DA.allele as der , IX.idx, D1.vID, D2.vID
             FROM build B, alleles AA, alleles DA, variants V
-            LEFT JOIN x_mx_idxs IX
+            LEFT JOIN mx_idxs IX
             ON IX.axis_id = V.ID and IX.type_id = 0
             LEFT JOIN snpnames S
             ON S.vID = V.ID
-            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            LEFT JOIN mx_dupe_variants D1 -- #is a parent to dupe "children"
             ON D1.vID = V.ID
-            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            LEFT JOIN mx_dupe_variants D2 -- #is a dupe "child" of another vix
             ON D2.dupe_vID = V.ID
             WHERE
             V.anc = AA.ID and V.der = DA.ID
@@ -282,12 +282,12 @@ class Variant(object):
         #build hg38
         sql = '''
             SELECT S.snpname,V.ID,V.pos, B.buildNm, AA.allele as anc, DA.allele as der, IX.idx, D1.vID, D2.vID
-            FROM build B, alleles AA, alleles DA, x_mx_idxs IX, variants V
+            FROM build B, alleles AA, alleles DA, mx_idxs IX, variants V
             LEFT JOIN snpnames S
             ON V.ID = S.vID
-            LEFT JOIN x_mx_dupe_variants D1 -- #is a parent to dupe "children"
+            LEFT JOIN mx_dupe_variants D1 -- #is a parent to dupe "children"
             ON D1.vID = V.ID
-            LEFT JOIN x_mx_dupe_variants D2 -- #is a dupe "child" of another vix
+            LEFT JOIN mx_dupe_variants D2 -- #is a dupe "child" of another vix
             ON D2.dupe_vID = V.ID
             WHERE
             IX.axis_id = V.ID and IX.type_id=0
@@ -844,9 +844,6 @@ class Sort(object):
             print(self.NP)
             return
 
-
-        print("")
-        print("---------------------------------------------------------------------")
         print("")
 
         #(beg)matrix
@@ -864,8 +861,6 @@ class Sort(object):
         print(table)
         #(end)matrix
 
-        print("")
-        print("---------------------------------------------------------------------")
         print("")
         print("end matrix: %s" % format(time.clock()))
 
@@ -1238,27 +1233,36 @@ class Sort(object):
     def save_mx(self):
         #push kit/variant/numpy data into saved/matrix tbls + h5py file
         #deletes
-        sql = "delete from x_mx_variants;"
+        sql = "delete from mx_variants;"
         self.dbo.sql_exec(sql)
-        sql = "delete from x_mx_kits;"
+        sql = "delete from mx_kits;"
         self.dbo.sql_exec(sql)
-        sql = "delete from x_mx_idxs;"
+        sql = "delete from mx_idxs;"
         self.dbo.sql_exec(sql)
         #save matrix variants
-        sql = "insert into x_mx_variants (ID,name,pos) values (?,?,?);"
+        sql = "insert into mx_variants (ID,name,pos) values (?,?,?);"
         self.dbo.sql_exec_many(sql,[(tuple([vid,nm,pos])) for (n,(nm,(vid,idx,pos))) in enumerate(self.get_axis('variants'))])
         #save matrix variants (idx order)
-        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (0,?,?);"
+        sql = "insert into mx_idxs (type_id,axis_id,idx) values (0,?,?);"
         self.dbo.sql_exec_many(sql,[(tuple([vid,idx])) for (n,(nm,(vid,idx,pos))) in enumerate(self.get_axis('variants'))])
         #save matrix kits
-        sql = "insert into x_mx_kits (ID,kitId) values (?,?);"
+        sql = "insert into mx_kits (ID,kitId) values (?,?);"
         self.dbo.sql_exec_many(sql,[(tuple([kid,nm])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
         #save matrix kits (idx order)
-        sql = "insert into x_mx_idxs (type_id,axis_id,idx) values (1,?,?);"
+        sql = "insert into mx_idxs (type_id,axis_id,idx) values (1,?,?);"
         self.dbo.sql_exec_many(sql,[(tuple([kid,idx])) for (n,(nm,(kid,idx))) in enumerate(self.get_axis('kits'))])
         #save numpy data
         #https://stackoverflow.com/questions/20928136/input-and-output-numpy-arrays-to-h5py
-        import h5py
+        #note: hacking stderr/stdout -- so it doesn't show deprecation msg
+        #_stderr = sys.stderr
+        #_stdout = sys.stdout
+        devnull = open(os.devnull, 'w')
+        from mock import patch
+        with patch('sys.stdout', devnull):
+            with patch('sys.stderr', devnull):
+                import h5py
+        #sys.stderr = _stderr
+        #sys.stdout = _stdout
         h5f = h5py.File('data.h5', 'w')
         h5f.create_dataset('dataset_1', data=self.NP)
         h5f.close()
@@ -1270,7 +1274,7 @@ class Sort(object):
         #variants
         sql = '''
             SELECT V.name, V.ID, IX.idx, V.pos
-            FROM x_mx_idxs IX, x_mx_variants V
+            FROM mx_idxs IX, mx_variants V
             WHERE IX.type_id = 0 AND
             IX.axis_id = V.ID
             ORDER BY IX.idx;
@@ -1282,7 +1286,7 @@ class Sort(object):
         #kits
         sql = '''
             SELECT K.kitId, K.ID, IX.idx
-            FROM x_mx_idxs IX, x_mx_kits K
+            FROM mx_idxs IX, mx_kits K
             WHERE IX.type_id = 1 AND
             IX.axis_id = K.ID
             ORDER BY IX.idx;
@@ -1292,7 +1296,16 @@ class Sort(object):
         for row in F:
             self.KITS[row[0]] = (row[1],row[2]) #self.VARIANTS[name] = [vID,idx]
         #numpy data
-        import h5py
+        #note: hacking stderr/stdout -- so it doesn't show deprecation msg
+        #_stderr = sys.stderr
+        #_stdout = sys.stdout
+        devnull = open(os.devnull, 'w')
+        from mock import patch
+        with patch('sys.stdout', devnull):
+            with patch('sys.stderr', devnull):
+                import h5py
+        #sys.stderr = _stderr
+        #sys.stdout = _stdout
         h5f = h5py.File('data.h5','r')
         self.NP = np.asmatrix(h5f['dataset_1'][:])
         h5f.close()
@@ -1301,8 +1314,20 @@ class Sort(object):
     def create_mx_data(self):
         print("beg create: %s" % format(time.clock()))
 
+        #all data or test data
+        if config['GEN_ALL_DATA']:
+            sql = "drop view if exists v_imx_variants;"
+            self.dbo.sql_exec(sql)
+            sql = "create view v_imx_variants as select * from v_imx_variants_all;"
+            self.dbo.sql_exec(sql)
+        else:
+            sql = "drop view if exists v_imx_variants;"
+            self.dbo.sql_exec(sql)
+            sql = "create view v_imx_variants as select * from v_imx_variants_test;"
+            self.dbo.sql_exec(sql)
+
         #sql to fetch data
-        sql = "select * from x_perfect_assignments_with_unk;"
+        sql = "select * from v_imx_assignments_with_unk;"
         self.dbo.sql_exec(sql)
         F = self.dbo.fetchall()
 
@@ -1350,13 +1375,17 @@ class Sort(object):
         #print("idx_dupe: %s"%idx_dupe)
         #print("inv: %s"%inv)
 
+        print(inv)
         #https://stackoverflow.com/questions/34123122/finding-indices-of-non-unique-elements-in-numpy-array
         #find and separate dupe variants
         for itm in [(i,j) for i,j in enumerate(idx) if cnts[i] > 1]:
             #this gets the duplicate variants (based on idx order) 
             itms = list(np.delete(np.argwhere(inv==itm[0]),0))
+            print(itm)  #(0, 14924)
+            print(itms) #[14925, 14928, 14932, 14933, 14934, 14935, 14936]
+            sys.exit()
             #this puts these duplicate variants into the dupes tbl next to the one in their series we're keeping
-            sql = "insert into x_mx_dupe_variants(vID,dupe_vID) values (%s,?);" % self.get_vid_by_vix(itm[1])
+            sql = "insert into mx_dupe_variants(vID,dupe_vID) values (%s,?);" % self.get_vid_by_vix(itm[1])
             self.dbo.sql_exec_many(sql,[tuple([l]) for l in self.get_vid_by_vix(itms)])
             #remove dupe variants from the self.VARIANTS var
             for k in self.get_vname_by_vix(itms):
